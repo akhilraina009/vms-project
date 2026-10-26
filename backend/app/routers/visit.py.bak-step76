@@ -1,0 +1,1204 @@
+from datetime import datetime
+from uuid import UUID
+from html import escape
+
+from fastapi import APIRouter, Depends, Response
+from fastapi.responses import HTMLResponse
+from sqlalchemy import select, func, desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
+from app.db.database import get_db
+from app.models.visit import Visit
+from app.models.pre_approval import PreApproval
+from app.models.audit_log import AuditLog
+from app.models.security_user import SecurityUser
+from app.services.auth_dependencies import get_current_user, require_roles
+from app.schemas.visit import (
+    VisitCreate,
+    VisitResponse,
+    SecurityVisitResponse,
+)
+from app.services.qr_service import generate_visit_qr
+
+
+router = APIRouter(
+    prefix="/visits",
+    tags=["Visits"]
+)
+
+
+# ============================================================
+# 1. CREATE VISIT
+# ============================================================
+
+@router.post(
+    "/",
+    response_model=VisitResponse
+)
+async def create_visit(
+    visit_data: VisitCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    visit = Visit(
+        visitor_id=visit_data.visitor_id,
+        host_employee_id=visit_data.host_employee_id,
+        purpose=visit_data.purpose,
+        expected_out_time=visit_data.expected_out_time,
+    )
+
+    db.add(visit)
+    await db.flush()
+
+    performer = f"{current_user.email} ({current_user.role})"
+
+    audit_log = AuditLog(
+        visit_id=visit.visit_id,
+        action="VISIT_CREATED",
+        description=(
+            "Visit created and activated. "
+            f"Purpose: {visit.purpose}"
+        ),
+        performed_by=performer,
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(visit)
+
+    return visit
+
+
+# ============================================================
+# 2. GENERATE VISIT QR
+# ============================================================
+
+@router.get("/{visit_id}/qr")
+async def get_visit_qr(
+    visit_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Visit).where(
+            Visit.visit_id == visit_id
+        )
+    )
+
+    visit = result.scalar_one_or_none()
+
+    if visit is None:
+        return {
+            "error": "Visit not found"
+        }
+
+    qr_image = generate_visit_qr(
+        str(visit.visit_id)
+    )
+
+    return Response(
+        content=qr_image,
+        media_type="image/png"
+    )
+
+
+# ============================================================
+# 3. DASHBOARD DATA API
+# ============================================================
+
+@router.get("/dashboard")
+async def get_dashboard_data(
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    """
+    Return today's visitor statistics and
+    visitor records for the Security Guard Dashboard.
+    """
+    result = await db.execute(
+        select(Visit)
+        .options(
+            selectinload(Visit.visitor),
+            selectinload(Visit.host_employee)
+        )
+    )
+
+    visits = result.scalars().all()
+
+    today = datetime.utcnow().date()
+
+    today_visits = [
+        visit
+        for visit in visits
+        if visit.check_in_time
+        and visit.check_in_time.date() == today
+    ]
+
+    visitors_today = len(today_visits)
+
+    currently_inside = sum(
+        1
+        for visit in today_visits
+        if visit.status == "ACTIVE"
+    )
+
+    checked_out_today = sum(
+        1
+        for visit in today_visits
+        if visit.status == "CHECKED_OUT"
+    )
+
+    # Count approved pre-approvals scheduled for today.
+    # Use the local date because expected arrival times are
+    # entered through the frontend's local datetime input.
+    expected_today = datetime.now().date()
+    result = await db.execute(
+        select(func.count())
+        .select_from(PreApproval)
+        .where(
+            PreApproval.status == "APPROVED",
+            func.date(PreApproval.expected_in_time) == expected_today,
+        )
+    )
+    expected_visitors = result.scalar_one()
+
+    visitor_records = []
+
+    for visit in today_visits:
+        visitor_records.append(
+            {
+                "visit_id": str(visit.visit_id),
+                "visitor_id": visit.visitor.visitor_id,
+                "visitor_name": f"{visit.visitor.first_name} {visit.visitor.last_name}",
+                "company_name": visit.visitor.company_name or "N/A",
+                "purpose": visit.purpose,
+                "host_name": f"{visit.host_employee.first_name} {visit.host_employee.last_name}",
+                "department": visit.host_employee.department or "N/A",
+                "check_in_time": visit.check_in_time,
+                "expected_out_time": visit.expected_out_time,
+                "check_out_time": visit.check_out_time,
+                "status": visit.status,
+                "decision": (
+                    "ALLOW"
+                    if visit.status == "ACTIVE"
+                    else "REJECT"
+                ),
+            }
+        )
+
+    return {
+        "date": today,
+        "statistics": {
+            "visitors_today": visitors_today,
+            "currently_inside": currently_inside,
+            "expected_visitors": expected_visitors,
+            "checked_out": checked_out_today,
+        },
+        "visitors": visitor_records,
+    }
+
+
+# ============================================================
+# 4. MOBILE QR SCAN PAGE
+# ============================================================
+
+@router.get(
+    "/scan/{visit_id}",
+    response_class=HTMLResponse
+)
+async def scan_visit_qr(
+    visit_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Visit)
+        .options(
+            selectinload(Visit.visitor),
+            selectinload(Visit.host_employee),
+            selectinload(Visit.assets)
+        )
+        .where(
+            Visit.visit_id == visit_id
+        )
+    )
+
+    visit = result.scalar_one_or_none()
+
+    # --------------------------------------------------------
+    # VISIT NOT FOUND
+    # --------------------------------------------------------
+    if visit is None:
+        return HTMLResponse(
+            content="""<!DOCTYPE html>
+<html>
+<head>
+    <title>VMS - Invalid QR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f7fb;
+            color: #101828;
+        }
+        .container {
+            max-width: 430px;
+            margin: 40px auto;
+            background: white;
+            padding: 28px;
+            border-radius: 18px;
+            box-shadow: 0 8px 30px rgba(16, 24, 40, 0.10);
+            text-align: center;
+        }
+        .icon {
+            width: 70px;
+            height: 70px;
+            margin: 0 auto 18px;
+            border-radius: 50%;
+            background: #fef3f2;
+            color: #d92d20;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 35px;
+        }
+        h1 { margin: 0 0 10px; font-size: 24px; }
+        p { color: #667085; line-height: 1.5; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">✕</div>
+        <h1>Invalid QR Code</h1>
+        <p>This visitor QR code is invalid or the visit no longer exists.</p>
+    </div>
+</body>
+</html>""",
+            status_code=404
+        )
+
+    # --------------------------------------------------------
+    # VISITOR INFORMATION
+    # --------------------------------------------------------
+    visitor_name = escape(f"{visit.visitor.first_name} {visit.visitor.last_name}")
+    company_name = escape(visit.visitor.company_name or "N/A")
+    phone_number = escape(visit.visitor.phone_number)
+    host_name = escape(f"{visit.host_employee.first_name} {visit.host_employee.last_name}")
+    department = escape(visit.host_employee.department or "N/A")
+    purpose = escape(visit.purpose)
+    visit_id_text = escape(str(visit.visit_id))
+    check_in_time = escape(str(visit.check_in_time))
+    status = escape(visit.status)
+
+    # --------------------------------------------------------
+    # STATUS DISPLAY
+    # --------------------------------------------------------
+    if visit.status == "ACTIVE":
+        status_title = "VISIT ACTIVE"
+        status_message = "This visitor has a valid active visit."
+        status_class = "active"
+        status_icon = "✓"
+    else:
+        status_title = "VISIT CLOSED"
+        status_message = f"This visit currently has status: {status}"
+        status_class = "inactive"
+        status_icon = "!"
+
+    # --------------------------------------------------------
+    # MOBILE HTML PAGE
+    # --------------------------------------------------------
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>VMS - Visitor QR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{
+            margin: 0;
+            padding: 16px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: linear-gradient(180deg, #eef4ff 0%, #f8fafc 45%, #f4f6f8 100%);
+            color: #101828;
+        }}
+        .container {{
+            width: 100%;
+            max-width: 430px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 30px rgba(16, 24, 40, 0.12);
+        }}
+        .header {{
+            background: linear-gradient(135deg, #175cd3, #2563eb);
+            color: white;
+            padding: 28px 22px;
+            text-align: center;
+        }}
+        .logo {{
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 12px;
+            border-radius: 16px;
+            background: rgba(255,255,255,0.16);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 27px;
+            font-weight: bold;
+        }}
+        .header h1 {{ margin: 0; font-size: 24px; }}
+        .header p {{ margin: 7px 0 0; color: rgba(255,255,255,0.85); font-size: 13px; }}
+        .content {{ padding: 20px; }}
+        .verification {{
+            padding: 18px;
+            border-radius: 14px;
+            text-align: center;
+            margin-bottom: 20px;
+        }}
+        .verification.active {{
+            background: #ecfdf3;
+            border: 1px solid #abefc6;
+            color: #027a48;
+        }}
+        .verification.inactive {{
+            background: #fef3f2;
+            border: 1px solid #fecdca;
+            color: #b42318;
+        }}
+        .verification-icon {{
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 10px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.75);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            font-weight: bold;
+        }}
+        .verification h2 {{ margin: 0; font-size: 18px; }}
+        .verification p {{ margin: 7px 0 0; font-size: 13px; color: inherit; }}
+        .section {{ margin-top: 20px; }}
+        .section-title {{
+            font-size: 14px;
+            font-weight: bold;
+            color: #344054;
+            margin-bottom: 10px;
+        }}
+        .info-card {{
+            background: #f8fafc;
+            border: 1px solid #eaecf0;
+            border-radius: 12px;
+            padding: 14px;
+        }}
+        .info-row {{
+            padding: 10px 0;
+            border-bottom: 1px solid #eaecf0;
+        }}
+        .info-row:last-child {{ border-bottom: none; }}
+        .label {{
+            display: block;
+            font-size: 11px;
+            color: #667085;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }}
+        .value {{
+            font-size: 14px;
+            font-weight: 600;
+            color: #101828;
+            word-break: break-word;
+        }}
+        .visit-id {{
+            font-size: 10px;
+            font-weight: normal;
+            color: #667085;
+            word-break: break-all;
+        }}
+        .footer {{
+            text-align: center;
+            padding: 18px;
+            border-top: 1px solid #eaecf0;
+            color: #98a2b3;
+            font-size: 11px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">V</div>
+            <h1>VMS</h1>
+            <p>Visitor Management System</p>
+        </div>
+        <div class="content">
+            <div class="verification {status_class}">
+                <div class="verification-icon">{status_icon}</div>
+                <h2>{status_title}</h2>
+                <p>{status_message}</p>
+            </div>
+            <div class="section">
+                <div class="section-title">Visitor Information</div>
+                <div class="info-card">
+                    <div class="info-row">
+                        <span class="label">Name</span>
+                        <div class="value">{visitor_name}</div>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Company</span>
+                        <div class="value">{company_name}</div>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Phone</span>
+                        <div class="value">{phone_number}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="section">
+                <div class="section-title">Visit Information</div>
+                <div class="info-card">
+                    <div class="info-row">
+                        <span class="label">Purpose</span>
+                        <div class="value">{purpose}</div>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Host</span>
+                        <div class="value">{host_name}</div>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Department</span>
+                        <div class="value">{department}</div>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Check-in</span>
+                        <div class="value">{check_in_time}</div>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Status</span>
+                        <div class="value">{status}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="section" style="text-align:center;">
+                <span class="label">Visit ID</span>
+                <div class="visit-id">{visit_id_text}</div>
+            </div>
+        </div>
+        <div class="footer">
+            VMS - Visitor Management System
+        </div>
+    </div>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html)
+
+
+# ============================================================
+# 5. GET VISIT DETAILS API / PAGE
+# ============================================================
+
+@router.get("/{visit_id}")
+async def get_visit_details(
+    visit_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Visit)
+        .options(
+            selectinload(Visit.visitor),
+            selectinload(Visit.host_employee),
+            selectinload(Visit.assets)
+        )
+        .where(
+            Visit.visit_id == visit_id
+        )
+    )
+
+    visit = result.scalar_one_or_none()
+
+    if visit is None:
+        return HTMLResponse(
+            content="""<!DOCTYPE html>
+<html>
+<head>
+    <title>VMS - Visit Not Found</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        h1 { color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Visit Not Found</h1>
+        <p>The QR code is invalid or the visit does not exist.</p>
+    </div>
+</body>
+</html>""",
+            status_code=404
+        )
+
+    visitor_name = escape(f"{visit.visitor.first_name} {visit.visitor.last_name}")
+    visitor_phone = escape(visit.visitor.phone_number)
+    visitor_email = escape(visit.visitor.email or "N/A")
+    visitor_company = escape(visit.visitor.company_name or "N/A")
+
+    host_name = escape(f"{visit.host_employee.first_name} {visit.host_employee.last_name}")
+    host_email = escape(visit.host_employee.email)
+    host_department = escape(visit.host_employee.department or "N/A")
+
+    purpose = escape(visit.purpose)
+    status = escape(visit.status)
+    visit_id_text = escape(str(visit.visit_id))
+    check_in_time = escape(str(visit.check_in_time))
+
+    assets_html = ""
+    for asset in visit.assets:
+        asset_type = escape(asset.asset_type)
+        brand_model = escape(asset.brand_model or "N/A")
+        serial_number = escape(asset.serial_number or "N/A")
+        clearance = "Cleared for Exit" if asset.is_cleared_for_exit else "Not Cleared for Exit"
+
+        assets_html += f"""
+        <div class="asset-card">
+            <p><strong>Asset Type:</strong> {asset_type}</p>
+            <p><strong>Brand / Model:</strong> {brand_model}</p>
+            <p><strong>Serial Number:</strong> {serial_number}</p>
+            <p><strong>Exit Status:</strong> {escape(clearance)}</p>
+        </div>
+        """
+
+    if not assets_html:
+        assets_html = """
+        <p class="empty">No assets registered for this visit.</p>
+        """
+
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>VMS - Visitor Details</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }}
+        .container {{
+            max-width: 650px;
+            margin: 20px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+        }}
+        .header {{ text-align: center; margin-bottom: 25px; }}
+        .header h1 {{ margin: 0; font-size: 28px; color: #1f2937; }}
+        .header p {{ color: #666; margin-top: 8px; }}
+        .section {{ margin-top: 25px; }}
+        .section h2 {{
+            font-size: 20px;
+            color: #1f2937;
+            border-bottom: 2px solid #eeeeee;
+            padding-bottom: 8px;
+        }}
+        .info-row {{ margin: 10px 0; line-height: 1.5; }}
+        .label {{ font-weight: bold; color: #555; }}
+        .status {{
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-weight: bold;
+        }}
+        .asset-card {{
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            padding: 15px;
+            margin-top: 12px;
+            border-radius: 10px;
+        }}
+        .asset-card p {{ margin: 7px 0; }}
+        .empty {{ color: #777; }}
+        .footer {{
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eeeeee;
+            color: #777;
+            font-size: 13px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Visitor Details</h1>
+            <p>Visitor Management System</p>
+        </div>
+        <div class="section">
+            <h2>Visit Information</h2>
+            <div class="info-row"><span class="label">Visit ID:</span> {visit_id_text}</div>
+            <div class="info-row"><span class="label">Purpose:</span> {purpose}</div>
+            <div class="info-row"><span class="label">Check-in Time:</span> {check_in_time}</div>
+            <div class="info-row"><span class="label">Status:</span> <span class="status">{status}</span></div>
+        </div>
+        <div class="section">
+            <h2>Visitor</h2>
+            <div class="info-row"><span class="label">Name:</span> {visitor_name}</div>
+            <div class="info-row"><span class="label">Phone:</span> {visitor_phone}</div>
+            <div class="info-row"><span class="label">Email:</span> {visitor_email}</div>
+            <div class="info-row"><span class="label">Company:</span> {visitor_company}</div>
+        </div>
+        <div class="section">
+            <h2>Host Employee</h2>
+            <div class="info-row"><span class="label">Name:</span> {host_name}</div>
+            <div class="info-row"><span class="label">Email:</span> {host_email}</div>
+            <div class="info-row"><span class="label">Department:</span> {host_department}</div>
+        </div>
+        <div class="section">
+            <h2>Registered Assets</h2>
+            {assets_html}
+        </div>
+        <div class="footer">
+            VMS Security System
+        </div>
+    </div>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html)
+
+
+# ============================================================
+# 6. SECURITY VERIFICATION API
+# ============================================================
+
+@router.get(
+    "/security/{visit_id}",
+    response_model=SecurityVisitResponse
+)
+async def security_verify_visit(
+    visit_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Visit)
+        .options(
+            selectinload(Visit.visitor),
+            selectinload(Visit.host_employee),
+            selectinload(Visit.assets)
+        )
+        .where(
+            Visit.visit_id == visit_id
+        )
+    )
+
+    visit = result.scalar_one_or_none()
+
+    if visit is None:
+        return {
+            "visit_id": visit_id,
+            "status": "NOT_FOUND",
+            "purpose": "",
+            "visitor": {},
+            "host_employee": {},
+            "assets": [],
+        }
+
+    return {
+        "visit_id": visit.visit_id,
+        "status": visit.status,
+        "purpose": visit.purpose,
+        "visitor": {
+            "visitor_id": visit.visitor.visitor_id,
+            "first_name": visit.visitor.first_name,
+            "last_name": visit.visitor.last_name,
+            "phone_number": visit.visitor.phone_number,
+            "email": visit.visitor.email,
+            "company_name": visit.visitor.company_name,
+        },
+        "host_employee": {
+            "employee_id": visit.host_employee.employee_id,
+            "first_name": visit.host_employee.first_name,
+            "last_name": visit.host_employee.last_name,
+            "email": visit.host_employee.email,
+            "department": visit.host_employee.department,
+            "status": visit.host_employee.status,
+        },
+        "assets": [
+            {
+                "asset_id": asset.asset_id,
+                "asset_type": asset.asset_type,
+                "brand_model": asset.brand_model,
+                "serial_number": asset.serial_number,
+                "is_cleared_for_exit": asset.is_cleared_for_exit,
+            }
+            for asset in visit.assets
+        ],
+    }
+
+
+# ============================================================
+# 7. SECURITY VERIFICATION WEB PAGE
+# ============================================================
+
+@router.get(
+    "/security-page/{visit_id}",
+    response_class=HTMLResponse
+)
+async def security_verification_page(
+    visit_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Visit)
+        .options(
+            selectinload(Visit.visitor),
+            selectinload(Visit.host_employee),
+            selectinload(Visit.assets)
+        )
+        .where(
+            Visit.visit_id == visit_id
+        )
+    )
+
+    visit = result.scalar_one_or_none()
+
+    # --------------------------------------------------------
+    # VISIT NOT FOUND
+    # --------------------------------------------------------
+    if visit is None:
+        return HTMLResponse(
+            content="""<!DOCTYPE html>
+<html>
+<head>
+    <title>VMS - Verification Failed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f8;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        h1 { color: #d32f2f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Verification Failed</h1>
+        <p>Invalid or unknown Visit ID.</p>
+    </div>
+</body>
+</html>""",
+            status_code=404
+        )
+
+    # --------------------------------------------------------
+    # STATUS
+    # --------------------------------------------------------
+    if visit.status == "ACTIVE":
+        verification_title = "VISITOR VERIFIED"
+        verification_message = "This visitor has an active visit."
+        status_class = "verified"
+    else:
+        verification_title = "VISIT NOT ACTIVE"
+        verification_message = f"This visit currently has status: {visit.status}"
+        status_class = "rejected"
+
+    # --------------------------------------------------------
+    # ASSETS
+    # --------------------------------------------------------
+    assets_html = ""
+    for asset in visit.assets:
+        if asset.is_cleared_for_exit:
+            clearance_text = "Cleared for Exit"
+            clearance_class = "cleared"
+        else:
+            clearance_text = "Not Cleared for Exit"
+            clearance_class = "not-cleared"
+
+        assets_html += f"""
+        <div class="asset-card">
+            <div><strong>{escape(asset.asset_type)}</strong></div>
+            <p>Brand / Model: {escape(asset.brand_model or "N/A")}</p>
+            <p>Serial Number: {escape(asset.serial_number or "N/A")}</p>
+            <span class="{clearance_class}">{clearance_text}</span>
+        </div>
+        """
+
+    if not assets_html:
+        assets_html = "<p>No assets registered.</p>"
+
+    # --------------------------------------------------------
+    # HTML PAGE
+    # --------------------------------------------------------
+    html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>VMS - Security Verification</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * {{ box-sizing: border-box; }}
+        body {{
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, Helvetica, sans-serif;
+            background: #f4f6f8;
+            color: #222;
+        }}
+        .container {{
+            max-width: 650px;
+            margin: 20px auto;
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+        }}
+        .header {{ text-align: center; }}
+        .header h1 {{ margin-bottom: 5px; }}
+        .verification {{
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }}
+        .verified {{ background: #e8f5e9; color: #2e7d32; }}
+        .rejected {{ background: #ffebee; color: #c62828; }}
+        .verification h2 {{ margin-top: 0; }}
+        .section {{ margin-top: 25px; }}
+        .section h2 {{
+            border-bottom: 2px solid #eeeeee;
+            padding-bottom: 8px;
+            font-size: 20px;
+        }}
+        .info {{ margin: 10px 0; line-height: 1.5; }}
+        .label {{ font-weight: bold; color: #555; }}
+        .asset-card {{
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 12px;
+        }}
+        .asset-card p {{ margin: 8px 0; }}
+        .cleared {{
+            display: inline-block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+        }}
+        .not-cleared {{
+            display: inline-block;
+            background: #fff3e0;
+            color: #e65100;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-weight: bold;
+        }}
+        .footer {{
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 1px solid #eeeeee;
+            text-align: center;
+            color: #777;
+            font-size: 13px;
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VMS Security Verification</h1>
+            <p>Visitor Management System</p>
+        </div>
+        <div class="verification {status_class}">
+            <h2>{verification_title}</h2>
+            <p>{verification_message}</p>
+        </div>
+        <div class="section">
+            <h2>Visit Information</h2>
+            <div class="info"><span class="label">Visit ID:</span> {escape(str(visit.visit_id))}</div>
+            <div class="info"><span class="label">Purpose:</span> {escape(visit.purpose)}</div>
+            <div class="info"><span class="label">Status:</span> {escape(visit.status)}</div>
+        </div>
+        <div class="section">
+            <h2>Visitor</h2>
+            <div class="info"><span class="label">Name:</span> {escape(visit.visitor.first_name + " " + visit.visitor.last_name)}</div>
+            <div class="info"><span class="label">Phone:</span> {escape(visit.visitor.phone_number)}</div>
+            <div class="info"><span class="label">Company:</span> {escape(visit.visitor.company_name or "N/A")}</div>
+        </div>
+        <div class="section">
+            <h2>Host Employee</h2>
+            <div class="info"><span class="label">Name:</span> {escape(visit.host_employee.first_name + " " + visit.host_employee.last_name)}</div>
+            <div class="info"><span class="label">Department:</span> {escape(visit.host_employee.department or "N/A")}</div>
+        </div>
+        <div class="section">
+            <h2>Registered Assets</h2>
+            {assets_html}
+        </div>
+        <div class="footer">
+            VMS Security System
+        </div>
+    </div>
+</body>
+</html>"""
+
+    return HTMLResponse(content=html)
+
+
+# ============================================================
+# 8. SECURITY ENTRY DECISION
+# ============================================================
+
+@router.get(
+    "/entry-decision/{visit_id}"
+)
+async def security_entry_decision(
+    visit_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Visit).where(
+            Visit.visit_id == visit_id
+        )
+    )
+
+    visit = result.scalar_one_or_none()
+
+    if visit is None:
+        return {
+            "visit_id": str(visit_id),
+            "decision": "REJECT",
+            "reason": "Visit not found",
+        }
+
+    if visit.status != "ACTIVE":
+        return {
+            "visit_id": str(visit.visit_id),
+            "decision": "REJECT",
+            "reason": f"Visit status is {visit.status}",
+        }
+
+    return {
+        "visit_id": str(visit.visit_id),
+        "decision": "ALLOW",
+        "reason": "Visit is active",
+    }
+
+
+# ============================================================
+# 9. SECURITY CHECKOUT
+# ============================================================
+
+@router.post(
+    "/checkout/{visit_id}"
+)
+async def checkout_visit(
+    visit_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "SECURITY")),
+):
+    result = await db.execute(
+        select(Visit)
+        .options(
+            selectinload(Visit.assets)
+        )
+        .where(
+            Visit.visit_id == visit_id
+        )
+    )
+
+    visit = result.scalar_one_or_none()
+
+    if visit is None:
+        return {
+            "visit_id": str(visit_id),
+            "status": "NOT_FOUND",
+            "message": "Visit not found",
+        }
+
+    if visit.status != "ACTIVE":
+        return {
+            "visit_id": str(visit.visit_id),
+            "status": visit.status,
+            "message": "Visit is already checked out or inactive",
+        }
+
+    # Require security clearance for every registered asset.
+    uncleared_assets = [
+        {
+            "asset_id": str(asset.asset_id),
+            "asset_type": asset.asset_type,
+            "brand_model": asset.brand_model,
+            "serial_number": asset.serial_number,
+        }
+        for asset in visit.assets
+        if not asset.is_cleared_for_exit
+    ]
+
+    if uncleared_assets:
+        return {
+            "visit_id": str(visit.visit_id),
+            "status": "ASSETS_PENDING_CLEARANCE",
+            "message": (
+                "Checkout blocked. Security must clear "
+                "all registered assets before the visitor exits."
+            ),
+            "uncleared_assets": uncleared_assets,
+        }
+
+    checkout_time = datetime.utcnow()
+    visit.check_out_time = checkout_time
+    visit.status = "CHECKED_OUT"
+
+    performer = (
+        f"{current_user.first_name} {current_user.last_name} ({current_user.badge_number})"
+        if hasattr(current_user, "badge_number") and current_user.badge_number
+        else f"{current_user.first_name} {current_user.last_name}"
+    )
+
+    audit_log = AuditLog(
+        visit_id=visit.visit_id,
+        action="VISITOR_CHECKED_OUT",
+        description="Visitor checked out successfully and visit status updated to CHECKED_OUT.",
+        performed_by=performer,
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(visit)
+
+    return {
+        "visit_id": str(visit.visit_id),
+        "status": visit.status,
+        "check_out_time": visit.check_out_time,
+        "message": "Visitor checked out successfully",
+    }
+
+
+# ============================================================
+# 10. CHECKOUT HISTORY
+# ============================================================
+
+@router.get("/checkouts/history")
+async def get_checkout_history(
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    """
+    Retrieve recently checked out visits with full details on visitors,
+    hosts, and registered assets.
+    """
+    result = await db.execute(
+        select(Visit)
+        .options(
+            selectinload(Visit.visitor),
+            selectinload(Visit.host_employee),
+            selectinload(Visit.assets)
+        )
+        .where(Visit.status == "CHECKED_OUT")
+        .order_by(desc(Visit.check_out_time))
+        .limit(limit)
+    )
+
+    visits = result.scalars().all()
+
+    history = []
+    for visit in visits:
+        visitor = visit.visitor
+        host = visit.host_employee
+
+        history.append({
+            "visit_id": str(visit.visit_id),
+            "status": visit.status,
+            "purpose": visit.purpose,
+            "check_in_time": (
+                visit.check_in_time.isoformat()
+                if visit.check_in_time else None
+            ),
+            "check_out_time": (
+                visit.check_out_time.isoformat()
+                if visit.check_out_time else None
+            ),
+            "expected_out_time": (
+                visit.expected_out_time.isoformat()
+                if visit.expected_out_time else None
+            ),
+            "visitor": {
+                "visitor_id": str(visitor.visitor_id) if visitor else None,
+                "first_name": visitor.first_name if visitor else "",
+                "last_name": visitor.last_name if visitor else "",
+                "phone_number": visitor.phone_number if visitor else "",
+                "email": visitor.email if visitor else None,
+                "company_name": visitor.company_name if visitor else None,
+            } if visitor else None,
+            "host_employee": {
+                "employee_id": str(host.employee_id) if host else None,
+                "first_name": host.first_name if host else "",
+                "last_name": host.last_name if host else "",
+                "email": host.email if host else "",
+                "department": host.department if host else None,
+            } if host else None,
+            "assets": [
+                {
+                    "asset_id": str(asset.asset_id),
+                    "asset_type": asset.asset_type,
+                    "brand_model": asset.brand_model,
+                    "serial_number": asset.serial_number,
+                    "is_cleared_for_exit": asset.is_cleared_for_exit,
+                    "cleared_by": getattr(asset, "cleared_by", None),
+                    "cleared_at": (
+                        asset.cleared_at.isoformat()
+                        if getattr(asset, "cleared_at", None) else None
+                    ),
+                }
+                for asset in visit.assets
+            ],
+        })
+
+    return {
+        "total": len(history),
+        "checkouts": history,
+    }

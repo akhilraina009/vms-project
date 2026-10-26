@@ -1,0 +1,236 @@
+import base64
+import binascii
+import hashlib
+import re
+import secrets
+import uuid
+from datetime import datetime, timedelta
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.database import get_db
+from app.models.asset import Asset
+from app.models.employee import Employee
+from app.models.visit import Visit
+from app.models.visitor import Visitor
+from app.models.visitor_pass_token import VisitorPassToken
+from app.schemas.public_registration import (
+    PublicRegistrationCreate,
+)
+
+
+router = APIRouter(
+    prefix="/public-registration",
+    tags=["Public Visitor Registration"],
+)
+
+PHOTO_DIR = Path("uploads/visitor_photos")
+MAX_PHOTO_BYTES = 3 * 1024 * 1024
+PASS_TOKEN_LIFETIME_HOURS = 24
+
+
+def create_pass_token() -> tuple[str, str]:
+    """Return the raw QR token and its SHA-256 hash."""
+    raw_token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(raw_token.encode("utf-8")).hexdigest()
+    return raw_token, token_hash
+
+
+@router.get("/hosts")
+async def get_active_hosts(
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(
+            Employee.employee_id,
+            Employee.first_name,
+            Employee.last_name,
+            Employee.department,
+        )
+        .where(Employee.status == "ACTIVE")
+        .order_by(Employee.first_name, Employee.last_name)
+    )
+
+    employees = result.all()
+
+    return [
+        {
+            "employee_id": employee.employee_id,
+            "name": f"{employee.first_name} {employee.last_name}",
+            "department": employee.department,
+        }
+        for employee in employees
+    ]
+
+
+def save_visitor_photo(photo_data: str | None) -> str | None:
+    if not photo_data:
+        return None
+
+    match = re.fullmatch(
+        r"data:image/(jpeg|jpg|png);base64,([A-Za-z0-9+/=\r\n]+)",
+        photo_data,
+    )
+    if not match:
+        raise HTTPException(
+            status_code=422,
+            detail="Photo must be a valid JPEG or PNG data URL.",
+        )
+
+    image_type = match.group(1)
+    encoded = match.group(2)
+
+    try:
+        photo_bytes = base64.b64decode(encoded, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(
+            status_code=422,
+            detail="The photo data is invalid.",
+        )
+
+    if not photo_bytes or len(photo_bytes) > MAX_PHOTO_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail="Photo must be smaller than 3 MB.",
+        )
+
+    # Check file signatures instead of trusting the submitted MIME type.
+    if image_type in ("jpeg", "jpg"):
+        if not photo_bytes.startswith(b"\xff\xd8\xff"):
+            raise HTTPException(status_code=422, detail="Invalid JPEG image.")
+        extension = ".jpg"
+    else:
+        if not photo_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+            raise HTTPException(status_code=422, detail="Invalid PNG image.")
+        extension = ".png"
+
+    PHOTO_DIR.mkdir(parents=True, exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{extension}"
+    destination = PHOTO_DIR / filename
+    destination.write_bytes(photo_bytes)
+
+    # Store a relative path, not the image itself, in the database.
+    return str(destination).replace("\\", "/")
+
+
+@router.post("/register", status_code=201)
+async def register_public_visitor(
+    data: PublicRegistrationCreate,
+    db: AsyncSession = Depends(get_db),
+):
+    first_name = data.first_name.strip()
+    last_name = data.last_name.strip()
+    phone_number = data.phone_number.strip()
+    purpose = data.purpose.strip()
+
+    if not first_name or not last_name or not phone_number or not purpose:
+        raise HTTPException(
+            status_code=422,
+            detail="Name, phone number, and visit purpose are required.",
+        )
+
+    if data.expected_out_time is not None:
+        expected_out_time = data.expected_out_time
+        if expected_out_time.tzinfo is not None:
+            expected_out_time = expected_out_time.replace(tzinfo=None)
+    else:
+        expected_out_time = None
+
+    host_result = await db.execute(
+        select(Employee).where(
+            Employee.employee_id == data.host_employee_id,
+            Employee.status == "ACTIVE",
+        )
+    )
+    host = host_result.scalar_one_or_none()
+
+    if host is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Selected host is not active or does not exist.",
+        )
+
+    # Validate and save the photo before committing database records.
+    photo_path = save_visitor_photo(data.photo_data)
+
+    visitor = Visitor(
+        first_name=first_name,
+        last_name=last_name,
+        phone_number=phone_number,
+        email=str(data.email) if data.email else None,
+        company_name=(
+            data.company_name.strip() if data.company_name else None
+        ),
+        photo_url=photo_path,
+    )
+
+    try:
+        db.add(visitor)
+        await db.flush()
+
+        visit = Visit(
+            visitor_id=visitor.visitor_id,
+            host_employee_id=host.employee_id,
+            purpose=purpose,
+            expected_out_time=expected_out_time,
+            status="ACTIVE",
+        )
+        db.add(visit)
+        await db.flush()
+
+        for item in data.assets:
+            asset_type = item.asset_type.strip()
+            if not asset_type:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Asset type cannot be blank.",
+                )
+
+            db.add(
+                Asset(
+                    visit_id=visit.visit_id,
+                    asset_type=asset_type,
+                    brand_model=(
+                        item.brand_model.strip()
+                        if item.brand_model else None
+                    ),
+                    serial_number=(
+                        item.serial_number.strip()
+                        if item.serial_number else None
+                    ),
+                )
+            )
+
+        # Generate a visitor pass token and store only its hash.
+        qr_token, token_hash = create_pass_token()
+        pass_token_record = VisitorPassToken(
+            visit_id=visit.visit_id,
+            token_hash=token_hash,
+            expires_at=datetime.utcnow()
+            + timedelta(hours=PASS_TOKEN_LIFETIME_HOURS),
+            revoked=False,
+        )
+        db.add(pass_token_record)
+        await db.flush()
+
+        await db.commit()
+        await db.refresh(visitor)
+        await db.refresh(visit)
+
+        return {
+            "visitor_id": visitor.visitor_id,
+            "visit_id": str(visit.visit_id),
+            "visitor_name": f"{visitor.first_name} {visitor.last_name}",
+            "host_name": f"{host.first_name} {host.last_name}",
+            "purpose": visit.purpose,
+            "expected_out_time": visit.expected_out_time,
+            "status": visit.status,
+            "qr_token": qr_token,
+        }
+
+    except Exception:
+        await db.rollback()
+        raise

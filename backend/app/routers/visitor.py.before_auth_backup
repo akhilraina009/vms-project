@@ -1,0 +1,64 @@
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+
+from app.db.database import get_db
+from app.models.visitor import Visitor
+from app.schemas.visitor import VisitorCreate, VisitorResponse
+
+
+router = APIRouter(
+    prefix="/visitors",
+    tags=["Visitors"]
+)
+
+
+# ============================================================
+# 1. CREATE VISITOR
+# ============================================================
+
+@router.post(
+    "/",
+    response_model=VisitorResponse
+)
+async def create_visitor(
+    visitor_data: VisitorCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    visitor = Visitor(
+        first_name=visitor_data.first_name,
+        last_name=visitor_data.last_name,
+        phone_number=visitor_data.phone_number,
+        email=visitor_data.email,
+        company_name=visitor_data.company_name,
+        photo_url=visitor_data.photo_url,
+    )
+
+    db.add(visitor)
+
+    await db.commit()
+    await db.refresh(visitor)
+
+    return visitor
+
+
+# ============================================================
+# 2. GET ALL VISITORS
+# ============================================================
+
+@router.get(
+    "/",
+    response_model=list[VisitorResponse]
+)
+async def get_visitors(
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(Visitor).order_by(
+            Visitor.visitor_id.desc()
+        )
+    )
+
+    visitors = result.scalars().all()
+
+    return visitors

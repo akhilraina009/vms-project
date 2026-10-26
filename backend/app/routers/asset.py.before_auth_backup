@@ -1,0 +1,129 @@
+
+from datetime import datetime, timezone
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.database import get_db
+from app.models.asset import Asset
+from app.models.audit_log import AuditLog
+from app.models.security_user import SecurityUser
+from app.schemas.asset import AssetCreate, AssetResponse
+from app.services.auth_dependencies import get_current_user
+
+
+router = APIRouter(
+    prefix="/assets",
+    tags=["Assets"]
+)
+
+
+@router.post(
+    "/",
+    response_model=AssetResponse
+)
+async def create_asset(
+    asset_data: AssetCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    asset = Asset(
+        visit_id=asset_data.visit_id,
+        asset_type=asset_data.asset_type,
+        brand_model=asset_data.brand_model,
+        serial_number=asset_data.serial_number,
+    )
+
+    db.add(asset)
+
+    await db.commit()
+    await db.refresh(asset)
+
+    return asset
+
+
+@router.get(
+    "/",
+    response_model=list[AssetResponse]
+)
+async def get_assets(
+    visit_id: UUID | None = None,
+    db: AsyncSession = Depends(get_db)
+):
+    query = select(Asset)
+
+    if visit_id is not None:
+        query = query.where(Asset.visit_id == visit_id)
+
+    query = query.order_by(Asset.asset_type)
+
+    result = await db.execute(query)
+    assets = result.scalars().all()
+
+    return assets
+
+
+@router.patch("/{asset_id}/clear-for-exit")
+async def clear_asset_for_exit(
+    asset_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(get_current_user),
+):
+    result = await db.execute(
+        select(Asset).where(
+            Asset.asset_id == asset_id
+        )
+    )
+
+    asset = result.scalar_one_or_none()
+
+    if asset is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
+
+    # Create an audit record only for the first clearance.
+    if not asset.is_cleared_for_exit:
+        asset.is_cleared_for_exit = True
+
+        if asset.cleared_at is None:
+            asset.cleared_at = datetime.now(timezone.utc)
+
+        # Attribute clearance to the authenticated user.
+        asset.cleared_by = current_user.email
+
+        audit_log = AuditLog(
+            visit_id=asset.visit_id,
+            action="ASSET_CLEARED",
+            description=(
+                f"Asset cleared for exit. "
+                f"Asset ID: {asset.asset_id}; "
+                f"Type: {asset.asset_type}; "
+                f"Brand/Model: {asset.brand_model}; "
+                f"Serial Number: {asset.serial_number}"
+            ),
+            performed_by=current_user.email,
+        )
+
+        db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(asset)
+
+    return {
+        "asset_id": str(asset.asset_id),
+        "visit_id": str(asset.visit_id),
+        "asset_type": asset.asset_type,
+        "brand_model": asset.brand_model,
+        "serial_number": asset.serial_number,
+        "is_cleared_for_exit": asset.is_cleared_for_exit,
+        "cleared_by": asset.cleared_by,
+        "cleared_at": (
+            asset.cleared_at.isoformat()
+            if asset.cleared_at
+            else None
+        ),
+        "message": "Asset cleared for exit successfully"
+    }

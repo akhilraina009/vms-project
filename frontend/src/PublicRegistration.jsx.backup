@@ -1,0 +1,470 @@
+
+import { useEffect, useRef, useState } from "react";
+import {
+  UserRound,
+  Building2,
+  Camera,
+  RefreshCw,
+  ShieldCheck,
+  AlertCircle,
+} from "lucide-react";
+import "./PublicRegistration.css";
+
+const API_BASE_URL = "http://127.0.0.1:8000";
+
+export default function PublicRegistration() {
+  const [hosts, setHosts] = useState([]);
+  const [loadingHosts, setLoadingHosts] = useState(true);
+  const [error, setError] = useState("");
+  const [photo, setPhoto] = useState("");
+  const [cameraError, setCameraError] = useState("");
+  const [cameraActive, setCameraActive] = useState(false);
+
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+
+  const [form, setForm] = useState({
+    first_name: "",
+    last_name: "",
+    phone_number: "",
+    email: "",
+    company_name: "",
+    host_employee_id: "",
+    purpose: "",
+    expected_out_time: "",
+    assets: [],
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadHosts() {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/public-registration/hosts`
+        );
+
+        if (!response.ok) {
+          throw new Error("Unable to load hosts.");
+        }
+
+        const data = await response.json();
+
+        if (!cancelled) {
+          setHosts(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(
+            "We could not load the host list. Please try again shortly."
+          );
+        }
+      } finally {
+        if (!cancelled) setLoadingHosts(false);
+      }
+    }
+
+    loadHosts();
+
+    return () => {
+      cancelled = true;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []);
+
+  function updateField(event) {
+    const { name, value } = event.target;
+    setForm((previous) => ({ ...previous, [name]: value }));
+  }
+
+  async function startCamera() {
+    setCameraError("");
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError(
+        "Camera access requires a supported browser and a secure connection."
+      );
+      return;
+    }
+
+    try {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      setCameraActive(true);
+    } catch {
+      setCameraError(
+        "Camera access was denied or the camera is unavailable. Check browser permissions."
+      );
+    }
+  }
+
+  function capturePhoto() {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) {
+      setCameraError("Please wait until the camera preview is ready.");
+      return;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    setPhoto(canvas.toDataURL("image/jpeg", 0.85));
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    setCameraActive(false);
+  }
+
+  function addAsset() {
+    setForm((previous) => ({
+      ...previous,
+      assets: [
+        ...previous.assets,
+        { asset_type: "", brand_model: "", serial_number: "" },
+      ],
+    }));
+  }
+
+  function updateAsset(index, field, value) {
+    setForm((previous) => ({
+      ...previous,
+      assets: previous.assets.map((asset, i) =>
+        i === index ? { ...asset, [field]: value } : asset
+      ),
+    }));
+  }
+
+  function removeAsset(index) {
+    setForm((previous) => ({
+      ...previous,
+      assets: previous.assets.filter((_, i) => i !== index),
+    }));
+  }
+
+  function handleSubmit(event) {
+    event.preventDefault();
+
+    setError(
+      "The registration form is ready, but secure submission is not connected yet. We will connect it after the backend registration endpoint is implemented."
+    );
+  }
+
+  return (
+    <main className="public-registration">
+      <header className="public-header">
+        <div className="public-brand">
+          <span className="public-brand-icon">
+            <ShieldCheck size={26} />
+          </span>
+          <div>
+            <h1>Visitor Management</h1>
+            <p>Visitor Registration Portal</p>
+          </div>
+        </div>
+        <span className="public-secure-label">
+          <ShieldCheck size={16} /> Visitor Portal
+        </span>
+      </header>
+
+      <section className="public-intro">
+        <p className="public-eyebrow">WELCOME</p>
+        <h2>Register your visit</h2>
+        <p>
+          Please enter your details, select your host, and register any
+          assets you are bringing onto the premises.
+        </p>
+      </section>
+
+      {error && (
+        <div className="public-message" role="alert">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      <form className="public-form" onSubmit={handleSubmit}>
+        <section className="public-card">
+          <div className="public-section-heading">
+            <UserRound size={21} />
+            <div>
+              <h3>Personal information</h3>
+              <p>Enter your identification and contact details.</p>
+            </div>
+          </div>
+
+          <div className="public-grid">
+            <label>
+              First name *
+              <input
+                name="first_name"
+                value={form.first_name}
+                onChange={updateField}
+                autoComplete="given-name"
+                required
+              />
+            </label>
+
+            <label>
+              Last name *
+              <input
+                name="last_name"
+                value={form.last_name}
+                onChange={updateField}
+                autoComplete="family-name"
+                required
+              />
+            </label>
+
+            <label>
+              Phone number *
+              <input
+                name="phone_number"
+                type="tel"
+                value={form.phone_number}
+                onChange={updateField}
+                autoComplete="tel"
+                required
+              />
+            </label>
+
+            <label>
+              Email address
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={updateField}
+                autoComplete="email"
+              />
+            </label>
+
+            <label className="public-full-width">
+              Company or organisation
+              <input
+                name="company_name"
+                value={form.company_name}
+                onChange={updateField}
+                autoComplete="organization"
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="public-card">
+          <div className="public-section-heading">
+            <Camera size={21} />
+            <div>
+              <h3>Visitor photograph</h3>
+              <p>Capture a current photo for identification.</p>
+            </div>
+          </div>
+
+          <div className="public-camera">
+            {photo ? (
+              <img
+                className="public-photo-preview"
+                src={photo}
+                alt="Captured visitor"
+              />
+            ) : (
+              <div className="public-camera-placeholder">
+                <Camera size={34} />
+                <span>Your photo preview will appear here</span>
+              </div>
+            )}
+
+            <video
+              ref={videoRef}
+              className="public-video"
+              hidden={!cameraActive}
+              playsInline
+              muted
+            />
+          </div>
+
+          <div className="public-actions">
+            <button type="button" onClick={startCamera}>
+              <Camera size={17} /> {photo ? "Retake photo" : "Open camera"}
+            </button>
+
+            {cameraActive && (
+              <button type="button" onClick={capturePhoto}>
+                Capture photo
+              </button>
+            )}
+          </div>
+
+          {cameraError && (
+            <p className="public-inline-error">{cameraError}</p>
+          )}
+        </section>
+
+        <section className="public-card">
+          <div className="public-section-heading">
+            <Building2 size={21} />
+            <div>
+              <h3>Visit information</h3>
+              <p>Tell us who you are visiting and why.</p>
+            </div>
+          </div>
+
+          <div className="public-grid">
+            <label className="public-full-width">
+              Host employee *
+              <select
+                name="host_employee_id"
+                value={form.host_employee_id}
+                onChange={updateField}
+                required
+                disabled={loadingHosts}
+              >
+                <option value="">
+                  {loadingHosts ? "Loading hosts..." : "Select your host"}
+                </option>
+                {hosts.map((host) => (
+                  <option
+                    key={host.employee_id}
+                    value={host.employee_id}
+                  >
+                    {host.name}
+                    {host.department ? ` — ${host.department}` : ""}
+                  </option>
+                ))}
+              </select>
+              {!loadingHosts && hosts.length === 0 && (
+                <span className="public-hint">
+                  No active hosts are currently available.
+                </span>
+              )}
+            </label>
+
+            <label className="public-full-width">
+              Purpose of visit *
+              <textarea
+                name="purpose"
+                value={form.purpose}
+                onChange={updateField}
+                rows={3}
+                required
+                placeholder="e.g. Business meeting, interview, delivery"
+              />
+            </label>
+
+            <label className="public-full-width">
+              Expected departure
+              <input
+                type="datetime-local"
+                name="expected_out_time"
+                value={form.expected_out_time}
+                onChange={updateField}
+              />
+            </label>
+          </div>
+        </section>
+
+        <section className="public-card">
+          <div className="public-section-heading">
+            <ShieldCheck size={21} />
+            <div>
+              <h3>Assets you are carrying</h3>
+              <p>Register laptops, equipment, or other items.</p>
+            </div>
+          </div>
+
+          {form.assets.map((asset, index) => (
+            <div className="public-asset" key={index}>
+              <div className="public-grid">
+                <label>
+                  Asset type
+                  <input
+                    value={asset.asset_type}
+                    onChange={(event) =>
+                      updateAsset(index, "asset_type", event.target.value)
+                    }
+                    placeholder="Laptop"
+                  />
+                </label>
+
+                <label>
+                  Brand / model
+                  <input
+                    value={asset.brand_model}
+                    onChange={(event) =>
+                      updateAsset(index, "brand_model", event.target.value)
+                    }
+                    placeholder="Brand and model"
+                  />
+                </label>
+
+                <label className="public-full-width">
+                  Serial number
+                  <input
+                    value={asset.serial_number}
+                    onChange={(event) =>
+                      updateAsset(index, "serial_number", event.target.value)
+                    }
+                    placeholder="Device serial number"
+                  />
+                </label>
+              </div>
+
+              <button
+                type="button"
+                className="public-remove-button"
+                onClick={() => removeAsset(index)}
+              >
+                Remove asset
+              </button>
+            </div>
+          ))}
+
+          <button
+            type="button"
+            className="public-secondary-button"
+            onClick={addAsset}
+          >
+            + Add an asset
+          </button>
+        </section>
+
+        <p className="public-privacy-note">
+          Your information and photograph are intended for visit management
+          and security verification. Do not submit sensitive personal
+          information that is not requested.
+        </p>
+
+        <button className="public-submit" type="submit">
+          Review registration
+        </button>
+      </form>
+
+      <footer className="public-footer">
+        <ShieldCheck size={16} />
+        Visitor registration · Internal security verification
+      </footer>
+    </main>
+  );
+}
