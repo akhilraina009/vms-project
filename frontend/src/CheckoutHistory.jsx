@@ -2381,64 +2381,6 @@ export default function CheckoutHistory({
                       </div>
                     ) : (
                       <>
-                        {/* Visual Asset Cards Grid with Photos */}
-                        <div className="ch-asset-visual-grid">
-                          {mAssets.map((asset, idx) => {
-                            const assetPhoto = resolvePhotoUrl(asset.photo_url || asset.asset_photo_url);
-                            return (
-                              <div key={`entry-${asset.asset_id || idx}`} className="ch-asset-card-detailed in-entry">
-                                <div
-                                  className="ch-asset-card-photo-box"
-                                  onClick={() => {
-                                    if (assetPhoto) {
-                                      setAssetLightbox && setAssetLightbox({
-                                        url: assetPhoto,
-                                        title: `${asset.brand_model || asset.asset_type || "Declared Hardware"} (Admission Check-in Photo)`,
-                                        subtitle: `Serial Tag: ${asset.serial_number || "NO-S/N"} · Type: ${asset.asset_type || "Equipment"} · Declared at entry`
-                                      });
-                                    }
-                                  }}
-                                  style={{ cursor: assetPhoto ? "pointer" : "default" }}
-                                  title={assetPhoto ? "Click to inspect check-in photo in high-resolution" : "No photo captured"}
-                                >
-                                  {assetPhoto ? (
-                                    <>
-                                      <img src={assetPhoto} alt={asset.asset_type} className="ch-asset-card-img" />
-                                      <div className="ch-asset-thumb-overlay">
-                                        <Eye size={16} />
-                                      </div>
-                                    </>
-                                  ) : (
-                                    <div className="ch-asset-no-photo-badge">
-                                      <Camera size={16} />
-                                      <span>No Photo</span>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="ch-asset-card-content">
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
-                                    <strong className="ch-asset-card-title">{asset.asset_type || "Hardware Item"}</strong>
-                                    <span className="ch-badge-checkin">
-                                      <LogIn size={11} /> Check-In Admitted
-                                    </span>
-                                  </div>
-                                  <div className="ch-asset-card-model">{asset.brand_model || "Model unspecified"}</div>
-                                  <div style={{ marginTop: "4px" }}>
-                                    <span className="ch-asset-serial-pill">SN: {asset.serial_number || "NO-S/N"}</span>
-                                  </div>
-                                  <div style={{ marginTop: "6px", fontSize: "11px", color: "#64748b", borderTop: "1px dashed #e2e8f0", paddingTop: "5px" }}>
-                                    <span>📥 Declared at Admission · Checked in with visitor</span>
-                                    <div style={{ color: "#2563eb", fontWeight: 600, marginTop: "2px" }}>
-                                      {formatDateTime(selectedVisit.check_in_time)}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-
                         {/* Itemized Check-In Table */}
                         <div style={{ overflowX: "auto", marginTop: "10px" }}>
                           <table className="ch-table ch-inner-table">
@@ -2578,59 +2520,6 @@ export default function CheckoutHistory({
                         </div>
                       ) : (
                         <>
-                          <div className="ch-asset-visual-grid">
-                            {carriedAssets.map((asset, idx) => {
-                              const assetPhoto = resolvePhotoUrl(asset.photo_url || asset.asset_photo_url);
-                              return (
-                                <div key={`out-carried-${asset.asset_id || idx}`} className="ch-asset-card-detailed out-carried">
-                                  <div
-                                    className="ch-asset-card-photo-box"
-                                    onClick={() => {
-                                      if (assetPhoto) {
-                                        setAssetLightbox && setAssetLightbox({
-                                          url: assetPhoto,
-                                          title: `${asset.brand_model || asset.asset_type || "Declared Hardware"} (Exit Departure Photo)`,
-                                          subtitle: `Serial Tag: ${asset.serial_number || "NO-S/N"} · Carried out by technician`
-                                        });
-                                      }
-                                    }}
-                                    style={{ cursor: assetPhoto ? "pointer" : "default" }}
-                                    title={assetPhoto ? "Click to view departure inspection photo" : "No photo captured"}
-                                  >
-                                    {assetPhoto ? (
-                                      <>
-                                        <img src={assetPhoto} alt={asset.asset_type} className="ch-asset-card-img" />
-                                        <div className="ch-asset-thumb-overlay"><Eye size={16} /></div>
-                                      </>
-                                    ) : (
-                                      <div className="ch-asset-no-photo-badge">
-                                        <Camera size={16} />
-                                        <span>No Photo</span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="ch-asset-card-content">
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
-                                      <strong className="ch-asset-card-title">{asset.asset_type || "Hardware Item"}</strong>
-                                      <span className="ch-badge-carried">✓ Carried Out</span>
-                                    </div>
-                                    <div className="ch-asset-card-model">{asset.brand_model || "Model unspecified"}</div>
-                                    <div style={{ marginTop: "4px" }}>
-                                      <span className="ch-asset-serial-pill">SN: {asset.serial_number || "NO-S/N"}</span>
-                                    </div>
-                                    <div style={{ marginTop: "6px", fontSize: "11px", color: "#166534", borderTop: "1px dashed #bbf7d0", paddingTop: "5px" }}>
-                                      <div>Custody: Carried out by visitor upon exit departure</div>
-                                      <div style={{ color: "#475569", marginTop: "2px" }}>
-                                        Cleared by: {asset.cleared_by ? asset.cleared_by.replace(/^CARRIED_OUT:\s*/i, "") : "Security Officer"} · {formatDateTime(asset.cleared_at || selectedVisit.check_out_time)}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-
                           <div style={{ overflowX: "auto", marginTop: "8px" }}>
                             <table className="ch-table ch-inner-table ch-carried-table">
                               <thead>
@@ -2707,66 +2596,6 @@ export default function CheckoutHistory({
                         </div>
                       ) : (
                         <>
-                          <div className="ch-asset-visual-grid">
-                            {retainedAssets.map((asset, idx) => {
-                              const assetPhoto = resolvePhotoUrl(asset.photo_url || asset.asset_photo_url);
-                              const retentionNote = asset.cleared_by
-                                ? (asset.cleared_by.replace(/^RETAINED_ON_PREMISES:\s*/i, "").replace(/\s*\(.*?\)\s*$/, "") || "Installed in facility / kept in use")
-                                : "Installed in facility / kept in use";
-
-                              return (
-                                <div key={`out-retained-${asset.asset_id || idx}`} className="ch-asset-card-detailed out-retained">
-                                  <div
-                                    className="ch-asset-card-photo-box"
-                                    onClick={() => {
-                                      if (assetPhoto) {
-                                        setAssetLightbox && setAssetLightbox({
-                                          url: assetPhoto,
-                                          title: `${asset.brand_model || asset.asset_type || "Declared Hardware"} (Retained Asset Photo)`,
-                                          subtitle: `Location: ${retentionNote} · Serial: ${asset.serial_number || "NO-S/N"}`
-                                        });
-                                      }
-                                    }}
-                                    style={{ cursor: assetPhoto ? "pointer" : "default" }}
-                                    title={assetPhoto ? "Click to view retained asset photo" : "No photo captured"}
-                                  >
-                                    {assetPhoto ? (
-                                      <>
-                                        <img src={assetPhoto} alt={asset.asset_type} className="ch-asset-card-img" />
-                                        <div className="ch-asset-thumb-overlay"><Eye size={16} /></div>
-                                      </>
-                                    ) : (
-                                      <div className="ch-asset-no-photo-badge">
-                                        <Camera size={16} />
-                                        <span>No Photo</span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="ch-asset-card-content">
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "6px" }}>
-                                      <strong className="ch-asset-card-title">{asset.asset_type || "Hardware Item"}</strong>
-                                      <span className="ch-badge-retained">📦 Retained on Premises</span>
-                                    </div>
-                                    <div className="ch-asset-card-model">{asset.brand_model || "Model unspecified"}</div>
-                                    <div style={{ marginTop: "4px" }}>
-                                      <span className="ch-asset-serial-pill">SN: {asset.serial_number || "NO-S/N"}</span>
-                                    </div>
-
-                                    <div className="ch-retention-highlight-box">
-                                      <Package size={13} style={{ flexShrink: 0 }} />
-                                      <span>Custody / Note: <strong>{retentionNote}</strong></span>
-                                    </div>
-
-                                    <div style={{ marginTop: "4px", fontSize: "11px", color: "#64748b" }}>
-                                      Recorded by: {asset.cleared_by ? asset.cleared_by.replace(/^RETAINED_ON_PREMISES:\s*/i, "") : "Staff"} · {formatDateTime(asset.cleared_at || selectedVisit.check_out_time)}
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-
                           <div style={{ overflowX: "auto", marginTop: "8px" }}>
                             <table className="ch-table ch-inner-table ch-retained-table">
                               <thead>

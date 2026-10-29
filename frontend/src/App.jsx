@@ -9569,6 +9569,22 @@ const renderNotifications = () => {
               </button>
             </div>
           )}
+
+          <div className="sidebar-section" style={{ marginTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "12px" }}>
+            <p className="sidebar-label">SHOWCASE &amp; DEMO</p>
+            <a
+              href="/demo"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="sidebar-item"
+              style={{ color: "#00f0ff", textDecoration: "none" }}
+              title="Watch 4K Cinematic Demo &amp; Interactive Showcase"
+            >
+              <Ticket size={14} />
+              Demo Video &amp; Showcase
+              <ExternalLink size={12} style={{ marginLeft: "auto", opacity: 0.7 }} />
+            </a>
+          </div>
         </div>
 
         <div className="sidebar-bottom">
@@ -10199,6 +10215,10 @@ function AppContent() {
   const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
 
   if (
+    currentPath === "/demo" ||
+    currentPath === "/demo-video" ||
+    currentPath === "/promo" ||
+    currentPath === "/showcase" ||
     currentPath === "/profile/vms-os" ||
     currentPath === "/vms-os" ||
     currentPath === "/tour" ||

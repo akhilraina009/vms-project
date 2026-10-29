@@ -243,6 +243,19 @@ async def get_visitor_details(
     active_visit = next((v for v in visits if v.status == "ACTIVE"), None)
     target_visit = active_visit or (visits[0] if visits else None)
 
+    # Use target visit's assets if present; otherwise resolve from visitor's declared assets across visits
+    if target_visit and target_visit.assets:
+        source_assets = target_visit.assets
+    else:
+        source_assets = []
+        seen_keys = set()
+        for v in visits:
+            for a in (v.assets or []):
+                key = (a.asset_type, a.serial_number or a.brand_model)
+                if key not in seen_keys:
+                    seen_keys.add(key)
+                    source_assets.append(a)
+
     declared_assets = [
         {
             "asset_id": str(a.asset_id),
@@ -259,8 +272,8 @@ async def get_visitor_details(
             "cleared_at": a.cleared_at.isoformat() if a.cleared_at else None,
             "disposition": a.disposition,
         }
-        for a in (target_visit.assets or [])
-    ] if target_visit else []
+        for a in source_assets
+    ]
 
     visitor_profile = {
         "visitor_id": visitor.visitor_id,

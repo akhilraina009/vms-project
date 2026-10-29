@@ -2,8 +2,34 @@ import react from "@vitejs/plugin-react";
 import basicSsl from "@vitejs/plugin-basic-ssl";
 import { defineConfig } from "vite";
 
+const demoRedirectPlugin = () => ({
+  name: "demo-redirect-plugin",
+  configureServer(server) {
+    server.middlewares.use((req, res, next) => {
+      const url = req.url ? req.url.split("?")[0] : "";
+      if (
+        url === "/demo" ||
+        url === "/demo/" ||
+        url === "/demo-video" ||
+        url === "/showcase" ||
+        url === "/promo" ||
+        url === "/tour" ||
+        url === "/launch" ||
+        url === "/vms-os" ||
+        url === "/profile/vms-os" ||
+        url === "/profile/vms-os/"
+      ) {
+        res.writeHead(302, { Location: "/profile/vms-os/index.html" });
+        res.end();
+        return;
+      }
+      next();
+    });
+  },
+});
+
 export default defineConfig({
-  plugins: [react(), basicSsl()],
+  plugins: [react(), basicSsl(), demoRedirectPlugin()],
   server: {
     host: "0.0.0.0",
     https: true,

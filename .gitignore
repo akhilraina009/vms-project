@@ -48,6 +48,8 @@ docker-compose.override.yml
 *.backup*
 
 # Local project backups
+*.backup*
+scratch/
 backup-before-internet-*/
 frontend-backup-*/
 ui-backup-*/
