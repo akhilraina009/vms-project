@@ -95,6 +95,19 @@ const resolvePhotoUrl = (url) => {
   return clean;
 };
 
+const formatVisitorAddress = (parts) => {
+  if (!Array.isArray(parts)) return "No address on file";
+  const nonNull = parts.map((p) => (p || "").trim()).filter(Boolean);
+  if (nonNull.length === 0) return "No address on file";
+  const deduped = [];
+  for (const part of nonNull) {
+    if (deduped.length === 0 || deduped[deduped.length - 1].toLowerCase() !== part.toLowerCase()) {
+      deduped.push(part);
+    }
+  }
+  return deduped.join(", ");
+};
+
 function VMSApp() {
   /* =========================================================
      AUTHENTICATION (Tab-Isolated Session via authStorage)
@@ -4807,14 +4820,14 @@ const renderNotifications = () => {
                             <span className="vms-dossier-field-label">Full Registered Address</span>
                             <span className="vms-dossier-field-val">
                               <MapPin size={13} style={{ color: "#0284c7", flexShrink: 0 }} />
-                              {[
+                              {formatVisitorAddress([
                                 dossierData.visitor?.address_line1,
                                 dossierData.visitor?.address_line2,
                                 dossierData.visitor?.city,
                                 dossierData.visitor?.state,
                                 dossierData.visitor?.postal_code,
                                 dossierData.visitor?.country,
-                              ].filter(Boolean).join(", ") || "No address on file"}
+                              ])}
                             </span>
                           </div>
                         </div>

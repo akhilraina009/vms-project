@@ -70,6 +70,19 @@ const getInitials = (name) => {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
+const formatVisitorAddress = (parts) => {
+  if (!Array.isArray(parts)) return "On record";
+  const nonNull = parts.map((p) => (p || "").trim()).filter(Boolean);
+  if (nonNull.length === 0) return "On record";
+  const deduped = [];
+  for (const part of nonNull) {
+    if (deduped.length === 0 || deduped[deduped.length - 1].toLowerCase() !== part.toLowerCase()) {
+      deduped.push(part);
+    }
+  }
+  return deduped.join(", ");
+};
+
 const formatDateTime = (val) => {
   if (!val) return "—";
   try {
@@ -2282,11 +2295,14 @@ export default function CheckoutHistory({
                         <MapPin size={12} className="ch-dossier-meta-icon" />
                         Address:{" "}
                         <strong>
-                          {[
+                          {formatVisitorAddress([
                             selectedVisit.visitor?.address_line1,
+                            selectedVisit.visitor?.address_line2,
                             selectedVisit.visitor?.city,
                             selectedVisit.visitor?.state,
-                          ].filter(Boolean).join(", ") || "On record"}
+                            selectedVisit.visitor?.postal_code,
+                            selectedVisit.visitor?.country,
+                          ])}
                         </strong>
                       </div>
                     </div>
