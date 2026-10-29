@@ -35,25 +35,27 @@
 }
 
 html {
-
   min-width: 320px;
-
   min-height: 100%;
-
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
-
-
 body {
-
   margin: 0;
-
   min-width: 320px;
-
   min-height: 100vh;
-
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   background: #f4f7fb;
+}
 
+#root {
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 
