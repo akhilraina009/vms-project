@@ -27,12 +27,13 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
+import { authStorage } from "./utils/authStorage";
 
 const API_BASE_URL = "";
 const PHOTO_BASE_URL = "";
 
 async function apiFetch(url, options = {}) {
-  const token = localStorage.getItem("vms_token");
+  const token = authStorage.getVmsToken();
 
   const headers = new Headers(options.headers || {});
   if (token) {

@@ -74,6 +74,7 @@ import CheckoutHistory from "./CheckoutHistory";
 import "./CheckoutHistory.css";
 import "./App.css";
 import "./PremiumEnterprise.css";
+import { authStorage } from "./utils/authStorage";
 
 /* =========================================================
    BACKEND API
@@ -96,19 +97,13 @@ const resolvePhotoUrl = (url) => {
 
 function VMSApp() {
   /* =========================================================
-     AUTHENTICATION
+     AUTHENTICATION (Tab-Isolated Session via authStorage)
   ========================================================= */
   const [authToken, setAuthToken] = useState(
-    () => localStorage.getItem("vms_token") || null
+    () => authStorage.getVmsToken()
   );
   const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const savedUser = localStorage.getItem("vms_user");
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch (error) {
-      console.error("Unable to load saved user:", error);
-      return null;
-    }
+    return authStorage.getVmsUser();
   });
 
   const handleLoginSuccess = (accessToken, user, selectedRole) => {
@@ -117,8 +112,8 @@ function VMSApp() {
       ...user,
       role: effectiveRole,
     };
-    localStorage.setItem("vms_token", accessToken);
-    localStorage.setItem("vms_user", JSON.stringify(effectiveUser));
+    authStorage.setVmsToken(accessToken);
+    authStorage.setVmsUser(effectiveUser);
     setAuthToken(accessToken);
     setCurrentUser(effectiveUser);
     if (effectiveRole === "IT_COVERYOU" || effectiveRole === "IT") {
@@ -129,8 +124,7 @@ function VMSApp() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("vms_token");
-    localStorage.removeItem("vms_user");
+    authStorage.clearVmsAuth();
     setAuthToken(null);
     setCurrentUser(null);
     setCurrentPage("dashboard");
@@ -156,9 +150,8 @@ function VMSApp() {
   ========================================================= */
   const [currentPage, setCurrentPage] = useState(() => {
     try {
-      const savedUser = localStorage.getItem("vms_user");
-      if (savedUser) {
-        const u = JSON.parse(savedUser);
+      const u = authStorage.getVmsUser();
+      if (u) {
         const r = String(u?.role || "").toUpperCase();
         if (r === "IT_COVERYOU" || r === "IT") {
           return "it-assets";
@@ -4929,56 +4922,62 @@ const renderNotifications = () => {
                           </div>
                         </div>
                       </div>
-                    ) : (
-                      <div
-                        style={{
-                          background: dossierData.visits?.[0]?.status === "PENDING" ? "#fffbeb" : "#f1f5f9",
-                          borderRadius: "10px",
-                          padding: "14px 18px",
-                          border: `1.5px solid ${dossierData.visits?.[0]?.status === "PENDING" ? "#fde68a" : "#e2e8f0"}`,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: "10px",
-                          color: "#475569",
-                          fontSize: "13px",
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <ShieldCheck size={18} color={dossierData.visits?.[0]?.status === "PENDING" ? "#d97706" : "#64748b"} />
-                          <div>
-                            <strong style={{ color: dossierData.visits?.[0]?.status === "PENDING" ? "#92400e" : "#334155", display: "block" }}>
-                              {dossierData.visits?.[0]?.status === "PENDING"
-                                ? "Visit Scheduled / Pending Gate Check-In"
-                                : "Visitor is Currently Off-Campus"}
-                            </strong>
-                            <span style={{ fontSize: "12px", color: "#64748b" }}>
-                              {dossierData.visits?.[0]?.status === "PENDING"
-                                ? `Scheduled Purpose: ${dossierData.visits[0].purpose || "General Visit"}. Host: ${dossierData.visits[0].host_name || "Staff"}`
-                                : "No active visit in progress at this moment."}
-                            </span>
-                          </div>
-                        </div>
+                    ) : (() => {
+                      const latestVisit = dossierData.visits?.[0];
+                      const isUpcoming = !dossierData.active_visit && latestVisit && (latestVisit.status === "PENDING" || latestVisit.status === "APPROVED" || latestVisit.status === "PRE_APPROVED");
+                      const isApproved = isUpcoming && (latestVisit.status === "APPROVED" || latestVisit.status === "PRE_APPROVED");
 
-                        {dossierData.visits?.[0]?.status === "PENDING" && (
-                          <button
-                            type="button"
-                            className="btn-table-action"
-                            style={{ background: "#059669", color: "#ffffff", fontWeight: 700, padding: "8px 16px", borderRadius: "8px", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
-                            disabled={directCheckoutLoading === String(dossierData.visits[0].visit_id)}
-                            onClick={() =>
-                              handleDirectVisitorCheckIn(
-                                dossierData.visits[0].visit_id,
-                                `${dossierData.visitor?.first_name} ${dossierData.visitor?.last_name}`
-                              )
-                            }
-                          >
-                            <CheckCircle2 size={14} />
-                            <span>{directCheckoutLoading === String(dossierData.visits[0].visit_id) ? "Checking In..." : "Check In Visitor Now"}</span>
-                          </button>
-                        )}
-                      </div>
-                    )}
+                      return (
+                        <div
+                          style={{
+                            background: isUpcoming ? (isApproved ? "#eff6ff" : "#fffbeb") : "#f1f5f9",
+                            borderRadius: "10px",
+                            padding: "14px 18px",
+                            border: `1.5px solid ${isUpcoming ? (isApproved ? "#bfdbfe" : "#fde68a") : "#e2e8f0"}`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            gap: "10px",
+                            color: "#475569",
+                            fontSize: "13px",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <ShieldCheck size={18} color={isUpcoming ? (isApproved ? "#2563eb" : "#d97706") : "#64748b"} />
+                            <div>
+                              <strong style={{ color: isUpcoming ? (isApproved ? "#1d4ed8" : "#92400e") : "#334155", display: "block" }}>
+                                {isUpcoming
+                                  ? (isApproved ? "Pre-Approved Visit Scheduled · Awaiting Gate Check-In" : "Visit Scheduled / Pending Gate Check-In")
+                                  : "Visitor is Currently Off-Campus"}
+                              </strong>
+                              <span style={{ fontSize: "12px", color: "#64748b" }}>
+                                {isUpcoming
+                                  ? `Scheduled Purpose: ${latestVisit.purpose || "General Visit"}. Host: ${latestVisit.host_name || "Staff"}`
+                                  : "No active visit in progress at this moment."}
+                              </span>
+                            </div>
+                          </div>
+
+                          {isUpcoming && latestVisit?.visit_id && (
+                            <button
+                              type="button"
+                              className="btn-table-action"
+                              style={{ background: "#059669", color: "#ffffff", fontWeight: 700, padding: "8px 16px", borderRadius: "8px", border: "none", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                              disabled={directCheckoutLoading === String(latestVisit.visit_id)}
+                              onClick={() =>
+                                handleDirectVisitorCheckIn(
+                                  latestVisit.visit_id,
+                                  `${dossierData.visitor?.first_name} ${dossierData.visitor?.last_name}`
+                                )
+                              }
+                            >
+                              <CheckCircle2 size={14} />
+                              <span>{directCheckoutLoading === String(latestVisit.visit_id) ? "Checking In..." : "Check In Visitor Now"}</span>
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {/* Declared Hardware & Assets */}
                     <div className="vms-dossier-section">
@@ -5021,26 +5020,37 @@ const renderNotifications = () => {
                       {(() => {
                         const declaredAssets = dossierData.assets || [];
                         if (declaredAssets.length === 0) return null;
+                        const latestVisit = dossierData.visits?.[0];
+                        const isUpcoming = !dossierData.active_visit && latestVisit && (latestVisit.status === "PENDING" || latestVisit.status === "APPROVED" || latestVisit.status === "PRE_APPROVED");
                         const carriedCount = declaredAssets.filter((a) => (!a.cleared_by || !a.cleared_by.includes("RETAINED")) && (a.is_cleared_for_exit || a.disposition === "CARRIED_OUT")).length;
                         const retainedCount = declaredAssets.filter((a) => (a.cleared_by && a.cleared_by.includes("RETAINED")) || a.disposition === "RETAINED_ON_PREMISES").length;
-                        const pendingCount = declaredAssets.length - carriedCount - retainedCount;
+                        const isInside = Boolean(dossierData.active_visit);
+                        const pendingCount = isInside ? (declaredAssets.length - carriedCount - retainedCount) : 0;
 
                         return (
                           <div style={{ margin: "0 0 14px", padding: "10px 14px", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", fontSize: "12px" }}>
                             <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
                               <span style={{ fontWeight: 700, color: "#0f172a" }}>
-                                Registered at Check-In: <strong style={{ color: "#2563eb" }}>{declaredAssets.length}</strong>
+                                {isUpcoming ? "Registered for Admission:" : "Registered at Check-In:"} <strong style={{ color: "#2563eb" }}>{declaredAssets.length}</strong>
                               </span>
-                              <span style={{ color: "#166534", fontWeight: 600 }}>
-                                🚶 Carrying Out: <strong>{carriedCount}</strong>
-                              </span>
-                              <span style={{ color: "#1d4ed8", fontWeight: 600 }}>
-                                📦 Retained on Premises: <strong>{retainedCount}</strong>
-                              </span>
-                              {pendingCount > 0 && (
-                                <span style={{ color: "#b45309", fontWeight: 600 }}>
-                                  ⏳ Pending Clearance: <strong>{pendingCount}</strong>
+                              {isUpcoming ? (
+                                <span style={{ color: "#2563eb", fontWeight: 600, display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                  ⏳ Awaiting Gate Arrival & Physical Inspection
                                 </span>
+                              ) : (
+                                <>
+                                  <span style={{ color: "#166534", fontWeight: 600 }}>
+                                    🚶 Carrying Out: <strong>{carriedCount}</strong>
+                                  </span>
+                                  <span style={{ color: "#1d4ed8", fontWeight: 600 }}>
+                                    📦 Retained on Premises: <strong>{retainedCount}</strong>
+                                  </span>
+                                  {pendingCount > 0 && (
+                                    <span style={{ color: "#b45309", fontWeight: 600 }}>
+                                      ⏳ Pending Clearance: <strong>{pendingCount}</strong>
+                                    </span>
+                                  )}
+                                </>
                               )}
                             </div>
 
@@ -5255,6 +5265,8 @@ const renderNotifications = () => {
                         <div className="vms-asset-cards-grid">
                           {dossierData.assets.map((asset) => {
                             const assetPhoto = resolvePhotoUrl(asset.photo_url);
+                            const latestVisit = dossierData.visits?.[0];
+                            const isUpcoming = !dossierData.active_visit && latestVisit && (latestVisit.status === "PENDING" || latestVisit.status === "APPROVED" || latestVisit.status === "PRE_APPROVED");
                             const isRetained = (asset.cleared_by && asset.cleared_by.includes("RETAINED")) || asset.disposition === "RETAINED_ON_PREMISES";
                             const isCarried = (!asset.cleared_by || !asset.cleared_by.includes("RETAINED")) && (asset.is_cleared_for_exit || asset.disposition === "CARRIED_OUT");
                             const currentDisp = isRetained ? "RETAINED_ON_PREMISES" : (isCarried ? "CARRIED_OUT" : "PENDING");
@@ -5392,9 +5404,26 @@ const renderNotifications = () => {
                                       )}
                                     </div>
                                   ) : (
-                                    /* Historical View Status */
+                                    /* Historical / Scheduled View Status */
                                     <div style={{ marginTop: "8px" }}>
-                                      {isRetained ? (
+                                      {isUpcoming ? (
+                                        <span
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "4px",
+                                            fontSize: "11px",
+                                            fontWeight: 600,
+                                            color: "#2563eb",
+                                            background: "#eff6ff",
+                                            border: "1px solid #bfdbfe",
+                                            borderRadius: "4px",
+                                            padding: "3px 8px",
+                                          }}
+                                        >
+                                          <Clock size={12} /> Pre-Declared for Admission
+                                        </span>
+                                      ) : isRetained ? (
                                         <span
                                           style={{
                                             display: "inline-flex",
@@ -5412,13 +5441,9 @@ const renderNotifications = () => {
                                           <Package size={12} />
                                           Retained on Premises {asset.cleared_by ? `(${asset.cleared_by.replace(/^RETAINED_ON_PREMISES:\s*/i, "")})` : ""}
                                         </span>
-                                      ) : asset.is_cleared_for_exit ? (
-                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                          <CheckCircle2 size={12} /> ✓ Cleared for Exit
-                                        </span>
                                       ) : (
-                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#d97706", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                                          <Clock size={12} /> ⚠ Exit Clearance Req.
+                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", display: "inline-flex", alignItems: "center", gap: "4px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "4px", padding: "3px 8px" }}>
+                                          <CheckCircle2 size={12} /> ✓ Cleared at Departure
                                         </span>
                                       )}
                                     </div>
@@ -10073,27 +10098,21 @@ const renderNotifications = () => {
 
 function GuardStandalonePortal() {
   const [authToken, setAuthToken] = useState(
-    () => localStorage.getItem("guard_token") || null
+    () => authStorage.getGuardToken()
   );
   const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const savedUser = localStorage.getItem("guard_user");
-      return savedUser ? JSON.parse(savedUser) : null;
-    } catch {
-      return null;
-    }
+    return authStorage.getGuardUser();
   });
 
   const handleLoginSuccess = (accessToken, user) => {
-    localStorage.setItem("guard_token", accessToken);
-    localStorage.setItem("guard_user", JSON.stringify(user));
+    authStorage.setGuardToken(accessToken);
+    authStorage.setGuardUser(user);
     setAuthToken(accessToken);
     setCurrentUser(user);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("guard_token");
-    localStorage.removeItem("guard_user");
+    authStorage.clearGuardAuth();
     setAuthToken(null);
     setCurrentUser(null);
   };

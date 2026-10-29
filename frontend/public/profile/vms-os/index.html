@@ -1070,6 +1070,10 @@ html.still [data-rv]{opacity:1!important;transform:none!important;filter:none!im
         <div class="cta">
           <a class="btn coral" href="#top" id="go-tour">Keep scrolling - see everything
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+          <button type="button" class="btn vid-play-btn" id="btn-watch-launch">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Watch Launch Teaser
+          </button>
           <a class="btn ghost" href="#top" id="go-check">Day-one checklist</a>
         </div>
       </div>
@@ -1092,7 +1096,12 @@ html.still [data-rv]{opacity:1!important;transform:none!important;filter:none!im
       <div class="launch-card" style="--d:.74"><small>Launch</small><b>1 Nov</b><span>Sunday, 1 November 2026</span></div>
     </aside>
     <div class="u-dev">
-      <div class="u-lap" aria-hidden="true"><div class="lid"><img src="img/guard_dashboard_view.png" alt="Guard Dashboard"></div><div class="u-base"></div></div>
+      <div class="u-lap" aria-hidden="true">
+        <div class="lid">
+          <video src="video/vms-launch.mp4" playsinline autoplay muted loop poster="img/guard_dashboard_view.png" style="width:100%;height:100%;object-fit:cover;border-radius:4px;display:block;"></video>
+        </div>
+        <div class="u-base"></div>
+      </div>
       <div class="uf uf1" aria-hidden="true"><div><i class="g"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l4 4 10-10"/></svg></i><span>Gate In: 09:21 AM<small>Host notified on Slack</small></span></div></div>
       <div class="uf uf2" aria-hidden="true"><div><i class="c"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></i><span>Custody Verified<small>Zero exit leakage</small></span></div></div>
       <div class="uf uf3" aria-hidden="true"><div><i class="b"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16M14 6l6 6-6 6"/></svg></i><span>IT Asset Cleared<small>ThinkPad P16 · SN: PF3K9820</small></span></div></div>
@@ -1607,16 +1616,47 @@ html.still [data-rv]{opacity:1!important;transform:none!important;filter:none!im
         }
       }
 
+      var launchBuffer = null;
+      var bufferSource = null;
+      var isBufferLoading = false;
+
+      function loadLaunchMix() {
+        if (launchBuffer || isBufferLoading || !ctx) return;
+        isBufferLoading = true;
+        fetch('audio/launch-music.mp3')
+          .then(function (r) { return r.arrayBuffer(); })
+          .then(function (ab) { return ctx.decodeAudioData(ab); })
+          .then(function (buf) {
+            launchBuffer = buf;
+            isBufferLoading = false;
+            if (isRunning && !bufferSource) playLaunchBuffer();
+          })
+          .catch(function (e) {
+            isBufferLoading = false;
+          });
+      }
+
+      function playLaunchBuffer() {
+        if (!launchBuffer || !ctx || bufferSource || !isRunning) return;
+        bufferSource = ctx.createBufferSource();
+        bufferSource.buffer = launchBuffer;
+        bufferSource.loop = true;
+        bufferSource.connect(masterFilter);
+        bufferSource.start(0);
+      }
+
       function start() {
         if (isRunning || !ensure()) return;
         initGraph();
         isRunning = true;
+        loadLaunchMix();
         currentStep = 0;
         nextNoteTime = ctx.currentTime + 0.05;
         musicGain.gain.cancelScheduledValues(ctx.currentTime);
         musicGain.gain.setValueAtTime(0.0001, ctx.currentTime);
-        musicGain.gain.exponentialRampToValueAtTime(0.095, ctx.currentTime + 1.6);
+        musicGain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 1.6);
         timerId = setInterval(scheduler, 35);
+        if (launchBuffer && !bufferSource) playLaunchBuffer();
       }
 
       function stop() {
@@ -1624,9 +1664,13 @@ html.still [data-rv]{opacity:1!important;transform:none!important;filter:none!im
         isRunning = false;
         clearInterval(timerId);
         timerId = null;
+        if (bufferSource) {
+          try { bufferSource.stop(); } catch (e) {}
+          bufferSource = null;
+        }
         musicGain.gain.cancelScheduledValues(ctx.currentTime);
         musicGain.gain.setValueAtTime(musicGain.gain.value, ctx.currentTime);
-        musicGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.2);
+        musicGain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 1.0);
       }
 
       function setScrollProgress(p) {
@@ -1745,6 +1789,43 @@ html.still [data-rv]{opacity:1!important;transform:none!important;filter:none!im
         ticking = false;
       }
     }
+  })();
+
+  
+  /* ---------- Launch Teaser Modal Controller ---------- */
+  (function () {
+    var btnWatch = document.getElementById('btn-watch-launch');
+    var modal = document.getElementById('launch-vid-modal');
+    var btnClose = document.getElementById('launch-vid-close');
+    var vid = document.getElementById('modal-launch-video');
+
+    function openModal() {
+      if (!modal || !vid) return;
+      modal.classList.add('open');
+      document.body.classList.add('locked');
+      vid.currentTime = 0;
+      vid.play();
+      S.music(false); // Pause background music while watching video
+    }
+
+    function closeModal() {
+      if (!modal || !vid) return;
+      modal.classList.remove('open');
+      document.body.classList.remove('locked');
+      vid.pause();
+      S.music(true); // Resume launch mix
+    }
+
+    if (btnWatch) btnWatch.addEventListener('click', openModal);
+    if (btnClose) btnClose.addEventListener('click', closeModal);
+    if (modal) {
+      modal.addEventListener('click', function (e) {
+        if (e.target === modal) closeModal();
+      });
+    }
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal && modal.classList.contains('open')) closeModal();
+    });
   })();
 
   /* ---------- countdown to 1 Nov 2026, 00:00 IST (hero + the wait) ---------- */
@@ -2504,5 +2585,16 @@ html.still [data-rv]{opacity:1!important;transform:none!important;filter:none!im
   });
 })();
 </script>
+
+
+<!-- Launch Video Fullscreen Modal -->
+<div class="launch-vid-modal" id="launch-vid-modal" role="dialog" aria-modal="true" aria-label="VMS Enterprise Launch Video">
+  <div class="launch-vid-frame">
+    <button type="button" class="launch-vid-close" id="launch-vid-close" aria-label="Close Launch Video">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <video id="modal-launch-video" src="video/vms-launch.mp4" playsinline controls preload="auto"></video>
+  </div>
+</div>
 
 </body></html>

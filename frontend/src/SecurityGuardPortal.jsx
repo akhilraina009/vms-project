@@ -42,6 +42,7 @@ import { Html5QrcodeScanner } from "html5-qrcode";
 import "./App.css";
 import "./PremiumEnterprise.css";
 import "./SecurityGuardPortal.css";
+import { authStorage } from "./utils/authStorage";
 
 const API_BASE_URL = "";
 const PHOTO_BASE_URL = "";
@@ -76,7 +77,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark")); // 'checkin' | 'active' | 'approved-queue' | 'kiosk'
   const [authToken, setAuthTokenState] = useState(
-    () => propToken || localStorage.getItem("guard_token") || localStorage.getItem("vms_token") || ""
+    () => propToken || authStorage.getGuardToken() || authStorage.getVmsToken() || ""
   );
 
   useEffect(() => {
@@ -86,7 +87,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
   }, [propToken, authToken]);
 
   const getGuardToken = useCallback(() => {
-    return propToken || localStorage.getItem("guard_token") || localStorage.getItem("vms_token") || "";
+    return propToken || authStorage.getGuardToken() || authStorage.getVmsToken() || "";
   }, [propToken]);
 
   const refreshGuardToken = useCallback(async () => {
@@ -99,7 +100,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
       if (res.ok) {
         const data = await res.json();
         if (data?.access_token) {
-          localStorage.setItem("guard_token", data.access_token);
+          authStorage.setGuardToken(data.access_token);
           setAuthTokenState(data.access_token);
           return data.access_token;
         }

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import "./CreateVisit.css";
+import { authStorage } from "./utils/authStorage";
 
 const API_BASE_URL = "";
 const QR_BACKEND_URL = "http://192.168.20.182:8000";
@@ -20,7 +21,7 @@ const QR_BACKEND_URL = "http://192.168.20.182:8000";
 // Read the latest token for every request so this component uses the same
 // login session as App.jsx, including after login/logout without remounting.
 const authenticatedFetch = (url, options = {}) => {
-  const token = localStorage.getItem("vms_token");
+  const token = authStorage.getVmsToken();
   const headers = new Headers(options.headers || {});
 
   if (token) {

@@ -43,12 +43,13 @@ import {
   Upload,
 } from "lucide-react";
 import QRCode from "qrcode";
+import { authStorage } from "./utils/authStorage";
 
 const API_BASE_URL = "";
 const PHOTO_BASE_URL = "";
 
 async function apiFetch(url, options = {}) {
-  const token = localStorage.getItem("vms_token") || localStorage.getItem("guard_token") || "";
+  const token = authStorage.getAnyToken();
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);

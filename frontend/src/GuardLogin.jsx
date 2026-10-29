@@ -11,6 +11,7 @@ import {
   Moon,
 } from "lucide-react";
 import "./Login.css";
+import { authStorage } from "./utils/authStorage";
 
 const API_BASE_URL = "";
 
@@ -81,7 +82,7 @@ export default function GuardLogin({ onLogin }) {
         throw new Error("Access restricted to Security Personnel (GUARD) or ADMIN.");
       }
 
-      localStorage.setItem("guard_token", data.access_token);
+      authStorage.setGuardToken(data.access_token);
       onLogin(data.access_token, user);
     } catch (err) {
       setError(
