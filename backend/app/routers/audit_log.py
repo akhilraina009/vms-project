@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -37,9 +36,9 @@ async def get_audit_logs(
             "description": log.description,
             "performed_by": log.performed_by,
             "created_at": (
-                log.created_at.isoformat()
-                if log.created_at
-                else None
+                (log.created_at.isoformat() + "Z")
+                if log.created_at and not str(log.created_at.isoformat()).endswith("Z")
+                else (log.created_at.isoformat() if log.created_at else None)
             ),
         }
         for log in logs

@@ -486,11 +486,9 @@ export default function ITVisitForm({ hosts = [] }) {
 
     try {
       const formattedPurpose = [
-        `[IT_VISIT] ${form.service_category}`,
-        `Area: ${form.facility_area}`,
-        form.ticket_number ? `Ticket: ${form.ticket_number.trim()}` : null,
+        `[IT_VISIT]`,
         form.technician_id ? `ID: ${form.technician_id.trim()}` : null,
-        form.scope_of_work ? `- ${form.scope_of_work.trim()}` : null,
+        form.scope_of_work ? form.scope_of_work.trim() : "IT Technical Maintenance",
       ]
         .filter(Boolean)
         .join(" | ");
@@ -513,10 +511,8 @@ export default function ITVisitForm({ hosts = [] }) {
         assetsPayload = [
           {
             asset_type: "IT Access Permit / Badge",
-            brand_model: form.service_category.slice(0, 100),
-            serial_number: form.ticket_number
-              ? form.ticket_number.trim()
-              : "IT-SERVICE-PASS",
+            brand_model: "IT Department Access",
+            serial_number: "IT-SERVICE-PASS",
             photo_data: null,
           },
         ];
@@ -581,7 +577,7 @@ export default function ITVisitForm({ hosts = [] }) {
       <header className="public-header">
         <div className="public-brand">
           <span className="public-brand-icon">
-            <ShieldCheck size={26} />
+            <img src="/vms-logo.png" alt="VMS Logo" />
           </span>
 
           <div>
@@ -859,47 +855,7 @@ export default function ITVisitForm({ hosts = [] }) {
               </select>
             </label>
 
-            <label className="public-full-width">
-              Service category / Nature of visit *
-              <select
-                name="service_category"
-                value={form.service_category}
-                onChange={updateField}
-                required
-              >
-                {IT_SERVICE_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
 
-            <label>
-              Ticket or Work order number
-              <input
-                name="ticket_number"
-                value={form.ticket_number}
-                onChange={updateField}
-                placeholder="e.g. CR-10492 or INC-8821"
-              />
-            </label>
-
-            <label>
-              Target facility area *
-              <select
-                name="facility_area"
-                value={form.facility_area}
-                onChange={updateField}
-                required
-              >
-                {IT_FACILITY_AREAS.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
-            </label>
 
             <label className="public-full-width">
               Detailed purpose of visit *

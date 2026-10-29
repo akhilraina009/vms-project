@@ -89,7 +89,7 @@ def require_roles(*allowed_roles: str):
     ) -> SecurityUser:
         user_role = current_user.role.strip().upper()
 
-        if user_role not in normalized_roles:
+        if user_role != "ADMIN" and user_role not in normalized_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="You do not have permission to perform this action",

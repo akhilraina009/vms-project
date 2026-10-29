@@ -1,4 +1,4 @@
-﻿# Environment variables and secrets
+# Environment variables and secrets
 .env
 .env.*
 !.env.example
@@ -44,7 +44,8 @@ docker-compose.override.yml
 # Database backups and dumps
 *.dump
 *.sql
-*.bak
+*.bak*
+*.backup*
 
 # Local project backups
 backup-before-internet-*/

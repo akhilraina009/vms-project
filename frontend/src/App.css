@@ -6785,7 +6785,7 @@ textarea:focus-visible {
   .topbar,
   .no-print,
   .checkout-screen-action-bar,
-  .page-card:not(.checkout-history-details),
+  .page-card:not(.checkout-history-details):not(.checkout-receipt-wrapper):not(:has(#checkout-receipt)):not(:has(.printable-pass-sheet)),
   .vms-lightbox-overlay,
   button,
   input {
@@ -9848,6 +9848,29 @@ button.refresh-button svg,
 .vms-btn-pass-link:hover {
   background: #f8fafc;
 }
+.vms-btn-it-pass {
+  background: #f0fdf4;
+  color: #166534;
+  border: 1.5px solid #86efac;
+  border-radius: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(22, 101, 52, 0.08);
+  transition: all 0.15s ease;
+}
+
+.vms-btn-it-pass:hover {
+  background: #dcfce7;
+  border-color: #4ade80;
+  color: #14532d;
+  box-shadow: 0 2px 6px rgba(22, 101, 52, 0.15);
+}
+
 
 /* Assets Section */
 .vms-dossier-section {

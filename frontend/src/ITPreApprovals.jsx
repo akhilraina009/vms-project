@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import "./PremiumEnterprise.css";
+import "./App.css";
 import {
   Laptop,
   CheckCircle2,
@@ -23,6 +25,7 @@ import {
   AlertTriangle,
   HardDrive,
   ExternalLink,
+  CalendarClock,
 } from "lucide-react";
 
 const API_BASE_URL = "";
@@ -34,6 +37,9 @@ async function apiFetch(url, options = {}) {
   const headers = new Headers(options.headers || {});
   if (token) {
     headers.set("Authorization", `Bearer ${token}`);
+  }
+  if (options.body && typeof options.body === "string" && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
   }
 
   return fetch(url, {
@@ -76,40 +82,46 @@ function getStatusStyle(status) {
   const normalized = String(status || "").trim().toUpperCase();
   const styles = {
     PENDING: {
-      background: "#fffbeb",
-      color: "#b45309",
-      border: "1px solid #fde68a",
-      label: "Pending IT Review",
+      background: "rgba(217, 119, 6, 0.18)",
+      color: "#fbbf24",
+      border: "1px solid rgba(217, 119, 6, 0.4)",
+      label: normalized === "PENDING" ? (true ? "Pending IT Review" : "Pending Review") : normalized,
     },
     WAITING: {
-      background: "#fff7ed",
-      color: "#c2410c",
-      border: "1px solid #fed7aa",
-      label: "IT Host Busy (Waiting)",
+      background: "rgba(234, 88, 12, 0.18)",
+      color: "#fb923c",
+      border: "1px solid rgba(234, 88, 12, 0.4)",
+      label: true ? "IT Host Busy (Waiting)" : "Host Busy (Waiting)",
     },
     APPROVED: {
-      background: "#ecfdf5",
-      color: "#047857",
-      border: "1px solid #a7f3d0",
-      label: "IT Clearance Approved",
+      background: "rgba(16, 185, 129, 0.18)",
+      color: "#34d399",
+      border: "1px solid rgba(16, 185, 129, 0.4)",
+      label: true ? "IT Clearance Approved" : "Entry Approved",
     },
     REJECTED: {
-      background: "#fef2f2",
-      color: "#b91c1c",
-      border: "1px solid #fecaca",
-      label: "Clearance Denied",
+      background: "rgba(239, 68, 68, 0.18)",
+      color: "#f87171",
+      border: "1px solid rgba(239, 68, 68, 0.4)",
+      label: true ? "Clearance Denied" : "Host Declined",
     },
     CHECKED_IN: {
-      background: "#eef2ff",
-      color: "#4338ca",
-      border: "1px solid #c7d2fe",
-      label: "Checked In (On Site)",
+      background: "rgba(99, 102, 241, 0.18)",
+      color: "#818cf8",
+      border: "1px solid rgba(99, 102, 241, 0.4)",
+      label: "Checked In",
+    },
+    RESCHEDULED: {
+      background: "rgba(2, 132, 199, 0.18)",
+      color: "#38bdf8",
+      border: "1px solid rgba(2, 132, 199, 0.4)",
+      label: "Rescheduled",
     },
   };
   return styles[normalized] || {
-    background: "#f1f5f9",
-    color: "#475569",
-    border: "1px solid #e2e8f0",
+    background: "rgba(100, 116, 139, 0.18)",
+    color: "#cbd5e1",
+    border: "1px solid rgba(100, 116, 139, 0.35)",
     label: normalized || "Unknown",
   };
 }
@@ -126,6 +138,85 @@ export default function ITPreApprovals({ onBack, onNotification }) {
   // Detailed Modal State
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
+
+  // Host Absent / Reschedule Modal State
+  const [rescheduleTarget, setRescheduleTarget] = useState(null);
+  const [rescheduleDate, setRescheduleDate] = useState("");
+  const [rescheduleReason, setRescheduleReason] = useState("IT Host absent today. Rescheduled to next date.");
+  const [rescheduleSubmitting, setRescheduleSubmitting] = useState(false);
+
+  const getTomorrowISOString = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(10, 0, 0, 0);
+    const tzOffset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - tzOffset).toISOString().slice(0, 16);
+  };
+
+  const openRescheduleModal = (approval) => {
+    setRescheduleTarget(approval);
+    setRescheduleDate(getTomorrowISOString());
+    setRescheduleReason("IT Host absent today. Rescheduled to next date.");
+    setError("");
+  };
+
+  const handleRescheduleSubmit = async (e) => {
+    e.preventDefault();
+    if (!rescheduleTarget || !rescheduleDate) return;
+    try {
+      setRescheduleSubmitting(true);
+      setError("");
+      const approvalId = rescheduleTarget.pre_approval_id;
+      const response = await apiFetch(
+        `${API_BASE_URL}/pre-approvals/${approvalId}/reschedule`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            new_date_time: new Date(rescheduleDate).toISOString(),
+            reason: rescheduleReason || "IT Host absent today. Rescheduled to next date.",
+          }),
+        }
+      );
+      const result = await readResponse(response, "Rescheduling IT visit");
+      setApprovals((previous) =>
+        previous.map((item) =>
+          item.pre_approval_id === approvalId
+            ? { ...item, status: "RESCHEDULED", expected_in_time: result.expected_in_time }
+            : item
+        )
+      );
+      if (selectedApproval && selectedApproval.pre_approval_id === approvalId) {
+        setSelectedApproval((prev) => ({
+          ...prev,
+          status: "RESCHEDULED",
+          expected_in_time: result.expected_in_time,
+        }));
+      }
+      const techName = getTechnicianName(rescheduleTarget);
+      const formattedDate = new Date(rescheduleDate).toLocaleDateString([], {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      setSuccess(`IT Technical visit for ${techName} rescheduled to ${formattedDate} due to IT Host absence.`);
+      onNotification?.({
+        title: "IT Visit Rescheduled (Host Absent)",
+        message: `${techName}'s IT technical visit was rescheduled to ${formattedDate} because IT host is absent.`,
+        type: "it-visitor",
+        time: "Just now",
+      });
+      setRescheduleTarget(null);
+    } catch (err) {
+      setError(err.message || "Failed to reschedule IT visit.");
+    } finally {
+      setRescheduleSubmitting(false);
+    }
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -190,6 +281,10 @@ export default function ITPreApprovals({ onBack, onNotification }) {
 
   const rejectedCount = approvals.filter(
     (item) => String(item.status || "").trim().toUpperCase() === "REJECTED"
+  ).length;
+
+  const rescheduledCount = approvals.filter(
+    (item) => String(item.status || "").trim().toUpperCase() === "RESCHEDULED"
   ).length;
 
   const visibleApprovals = approvals.filter((item) => {
@@ -352,14 +447,13 @@ export default function ITPreApprovals({ onBack, onNotification }) {
           onClick={() => setSelectedApproval(null)}
         >
           <div
+            className="vms-dialog-card preapproval-modal-card it-preapproval-modal"
             style={{
-              background: "#ffffff",
               borderRadius: "18px",
               maxWidth: "780px",
               width: "100%",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
               overflow: "hidden",
-              border: "1px solid #cbd5e1",
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -404,18 +498,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
             {/* Modal Body */}
             <div style={{ padding: "24px", maxHeight: "72vh", overflowY: "auto" }}>
               {/* Profile Card */}
-              <div
-                style={{
-                  display: "flex",
-                  gap: "18px",
-                  padding: "16px",
-                  background: "#f8fafc",
-                  borderRadius: "14px",
-                  border: "1px solid #e2e8f0",
-                  marginBottom: "20px",
-                  alignItems: "center",
-                }}
-              >
+              <div className="preapproval-modal-profile-card">
                 <div
                   style={{
                     width: "80px",
@@ -455,7 +538,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
 
                 <div style={{ flex: 1 }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px" }}>
-                    <h4 style={{ margin: "0 0 4px", fontSize: "17px", color: "#0f172a" }}>
+                    <h4 style={{ margin: "0 0 4px", fontSize: "17px", fontWeight: 700 }}>
                       {getTechnicianName(selectedApproval)}
                     </h4>
                     <span
@@ -471,10 +554,10 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                       {getStatusStyle(selectedApproval.status).label}
                     </span>
                   </div>
-                  <p style={{ margin: "0 0 6px", color: "#4f46e5", fontSize: "13px", fontWeight: 600 }}>
+                  <p style={{ margin: "0 0 6px", fontSize: "13px", fontWeight: 600 }}>
                     {selectedApproval.visitor?.company_name || "External IT Vendor / Contractor"}
                   </p>
-                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "12px", color: "#64748b" }}>
+                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "12px", color: "#94a3b8" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                       <Phone size={13} /> {selectedApproval.visitor?.phone_number || "No phone"}
                     </span>
@@ -497,35 +580,35 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                 }}
               >
                 {/* IT Host */}
-                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px" }}>
+                <div className="preapproval-tile-card" style={{ borderRadius: "10px", padding: "14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", fontSize: "12px", marginBottom: "4px" }}>
                     <Server size={14} color="#4f46e5" />
                     <strong>IT Host Engineer</strong>
                   </div>
-                  <strong style={{ fontSize: "14px", color: "#0f172a" }}>{getITHostName(selectedApproval)}</strong>
+                  <strong style={{ fontSize: "14px" }}>{getITHostName(selectedApproval)}</strong>
                   <div style={{ fontSize: "12px", color: "#4f46e5", marginTop: "2px", fontWeight: 600 }}>
                     IT Department · {selectedApproval.host_employee?.email || ""}
                   </div>
                 </div>
 
                 {/* Scope & Purpose */}
-                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px" }}>
+                <div className="preapproval-tile-card" style={{ borderRadius: "10px", padding: "14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", fontSize: "12px", marginBottom: "4px" }}>
                     <FileCode size={14} color="#059669" />
                     <strong>Work Authorization &amp; Scope</strong>
                   </div>
-                  <p style={{ margin: 0, fontSize: "13px", color: "#1e293b", fontWeight: 500 }}>
+                  <p style={{ margin: 0, fontSize: "13px", fontWeight: 500 }}>
                     {getCleanPurpose(selectedApproval.purpose)}
                   </p>
                 </div>
 
                 {/* Scheduled Times */}
-                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px" }}>
+                <div className="preapproval-tile-card" style={{ borderRadius: "10px", padding: "14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", fontSize: "12px", marginBottom: "4px" }}>
                     <Clock size={14} color="#d97706" />
                     <strong>Clearance Window</strong>
                   </div>
-                  <div style={{ fontSize: "12.5px", color: "#0f172a" }}>
+                  <div style={{ fontSize: "12.5px" }}>
                     Arrival: <strong>{formatDateTime(selectedApproval.expected_in_time)}</strong>
                   </div>
                   {selectedApproval.expected_out_time && (
@@ -536,12 +619,12 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                 </div>
 
                 {/* Vendor Address */}
-                <div style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "10px", padding: "14px" }}>
+                <div className="preapproval-tile-card" style={{ borderRadius: "10px", padding: "14px" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", color: "#64748b", fontSize: "12px", marginBottom: "4px" }}>
                     <MapPin size={14} color="#ef4444" />
                     <strong>Technician Base Address</strong>
                   </div>
-                  <p style={{ margin: 0, fontSize: "12.5px", color: "#334155" }}>
+                  <p style={{ margin: 0, fontSize: "12.5px" }}>
                     {[
                       selectedApproval.visitor?.address_line1,
                       selectedApproval.visitor?.city,
@@ -557,12 +640,11 @@ export default function ITPreApprovals({ onBack, onNotification }) {
 
               {/* Declared Hardware & Assets Section */}
               <div
+                className="it-declared-hardware-box"
                 style={{
-                  border: "1px solid #c7d2fe",
                   borderRadius: "12px",
                   padding: "16px",
                   marginBottom: "20px",
-                  background: "#f5f3ff",
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
@@ -582,15 +664,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                     {selectedApproval.assets.map((asset, idx) => (
                       <div
                         key={asset.asset_id || idx}
-                        style={{
-                          background: "#ffffff",
-                          border: "1px solid #e0e7ff",
-                          borderRadius: "8px",
-                          padding: "12px",
-                          display: "flex",
-                          gap: "10px",
-                          alignItems: "center",
-                        }}
+                        className="preapproval-asset-item-card"
                       >
                         {asset.photo_url && (
                           <img
@@ -611,14 +685,14 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                           />
                         )}
                         <div>
-                          <strong style={{ fontSize: "13px", color: "#0f172a", display: "block" }}>
+                          <strong style={{ fontSize: "13px", display: "block" }}>
                             {asset.asset_type}
                           </strong>
-                          <span style={{ fontSize: "12px", color: "#4338ca" }}>
+                          <span style={{ fontSize: "12px" }}>
                             {asset.brand_model || "Technical Asset"}
                           </span>
                           {asset.serial_number && (
-                            <div style={{ fontSize: "11px", color: "#1e1b4b", marginTop: "3px", fontFamily: "monospace", fontWeight: 700 }}>
+                            <div style={{ fontSize: "11px", marginTop: "3px", fontFamily: "monospace", fontWeight: 700 }}>
                               S/N: {asset.serial_number}
                             </div>
                           )}
@@ -635,57 +709,33 @@ export default function ITPreApprovals({ onBack, onNotification }) {
 
               {/* Status Banner */}
               <div
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: "10px",
-                  background:
-                    selectedApproval.status === "APPROVED"
-                      ? "#ecfdf5"
-                      : selectedApproval.status === "WAITING"
-                      ? "#fff7ed"
-                      : selectedApproval.status === "REJECTED"
-                      ? "#fef2f2"
-                      : "#fffbeb",
-                  border: `1px solid ${
-                    selectedApproval.status === "APPROVED"
-                      ? "#a7f3d0"
-                      : selectedApproval.status === "WAITING"
-                      ? "#fed7aa"
-                      : selectedApproval.status === "REJECTED"
-                      ? "#fecaca"
-                      : "#fde68a"
-                  }`,
-                  fontSize: "13px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                }}
+                className={`preapproval-status-banner banner-${String(selectedApproval.status || "pending").toLowerCase()}`}
               >
                 {selectedApproval.status === "APPROVED" ? (
                   <>
-                    <CheckCircle2 size={18} color="#059669" />
-                    <span style={{ color: "#065f46" }}>
+                    <CheckCircle2 size={18} />
+                    <span>
                       <strong>IT Clearance Approved:</strong> Authorized for gate check-in. Security guard can now scan and admit the technician.
                     </span>
                   </>
                 ) : selectedApproval.status === "WAITING" ? (
                   <>
-                    <Clock size={18} color="#ea580c" />
-                    <span style={{ color: "#9a3412" }}>
+                    <Clock size={18} />
+                    <span>
                       <strong>IT Host Busy (Waiting in Lobby):</strong> Host is currently occupied in data center or meeting. Approve when ready.
                     </span>
                   </>
                 ) : selectedApproval.status === "REJECTED" ? (
                   <>
-                    <XCircle size={18} color="#dc2626" />
-                    <span style={{ color: "#991b1b" }}>
+                    <XCircle size={18} />
+                    <span>
                       <strong>IT Access Denied:</strong> Contractor entry rejected. Security will deny access at gate.
                     </span>
                   </>
                 ) : (
                   <>
-                    <Hourglass size={18} color="#d97706" />
-                    <span style={{ color: "#92400e" }}>
+                    <Hourglass size={18} />
+                    <span>
                       <strong>Awaiting IT Admin Approval:</strong> Review technician credentials and declared hardware before approving gate entry.
                     </span>
                   </>
@@ -696,9 +746,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
             {/* Modal Actions */}
             <div
               style={{
-                background: "#f8fafc",
-                padding: "16px 24px",
-                borderTop: "1px solid #e2e8f0",
+                background: "#0b1120", padding: "16px 24px", borderTop: "1px solid #1e293b",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
@@ -730,7 +778,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                 )}
 
                 {/* 2. ASK TO WAIT (IT HOST BUSY) */}
-                {selectedApproval.status === "PENDING" && (
+                {(selectedApproval.status === "PENDING" || selectedApproval.status === "RESCHEDULED") && (
                   <button
                     type="button"
                     className="primary-button"
@@ -744,12 +792,26 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                   </button>
                 )}
 
+                {/* 2.5 RESCHEDULE BUTTON (HOST ABSENT) */}
+                {selectedApproval.status !== "APPROVED" && selectedApproval.status !== "CHECKED_IN" && selectedApproval.status !== "REJECTED" && (
+                  <button
+                    type="button"
+                    className="secondary-action-btn"
+                    style={{ background: "rgba(2, 132, 199, 0.15)", border: "1px solid rgba(2, 132, 199, 0.4)", color: "#38bdf8", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "8px", padding: "8px 14px", cursor: "pointer" }}
+                    onClick={() => openRescheduleModal(selectedApproval)}
+                    title="Host is absent. Reschedule visit to tomorrow or custom date/time."
+                  >
+                    <CalendarClock size={15} />
+                    Host Absent (Reschedule)
+                  </button>
+                )}
+
                 {/* 3. REJECT BUTTON */}
                 {selectedApproval.status !== "REJECTED" && selectedApproval.status !== "CHECKED_IN" && (
                   <button
                     type="button"
                     className="back-button"
-                    style={{ color: "#dc2626", borderColor: "#fecaca" }}
+                    style={{ color: "#f87171", borderColor: "rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.1)" }}
                     disabled={actionLoading === selectedApproval.pre_approval_id}
                     onClick={() => handleDecision(selectedApproval, "reject")}
                   >
@@ -820,7 +882,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
       </div>
 
       {/* Stats Counter Bar */}
-      <section className="stats-grid stats-grid-5">
+      <section className="stats-grid stats-grid-6">
         <div
           className={`stat-card clickable ${statusFilter === "all" ? "active-filter filter-blue" : ""}`}
           onClick={() => setStatusFilter("all")}
@@ -889,6 +951,24 @@ export default function ITPreApprovals({ onBack, onNotification }) {
             <strong style={{ color: "#059669" }}>{approvedCount}</strong>
             <span className="stat-interactive-hint">
               {statusFilter === "APPROVED" ? "● Active View" : "Cleared for entry"}
+            </span>
+          </div>
+        </div>
+
+        <div
+          className={`stat-card clickable ${statusFilter === "RESCHEDULED" ? "active-filter filter-blue" : ""}`}
+          onClick={() => setStatusFilter(statusFilter === "RESCHEDULED" ? "all" : "RESCHEDULED")}
+          role="button"
+          tabIndex={0}
+        >
+          <div className="stat-icon blue" style={{ background: "#f0f9ff", color: "#0284c7" }}>
+            <CalendarClock size={18} />
+          </div>
+          <div className="stat-content">
+            <span>Host Absent (Rescheduled)</span>
+            <strong style={{ color: "#0284c7" }}>{rescheduledCount}</strong>
+            <span className="stat-interactive-hint">
+              {statusFilter === "RESCHEDULED" ? "● Active View" : "Rescheduled"}
             </span>
           </div>
         </div>
@@ -1112,8 +1192,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                           {/* Cross-Check Button */}
                           <button
                             type="button"
-                            className="back-button"
-                            style={{ padding: "6px 10px", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}
+                            className="it-action-btn verify"
                             onClick={() => setSelectedApproval(approval)}
                             title="Cross-check IT technician details, ticket, and hardware"
                           >
@@ -1125,29 +1204,38 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                             <>
                               <button
                                 type="button"
-                                className="primary-button"
-                                style={{ background: "#059669", padding: "6px 11px", fontSize: "12px" }}
+                                className="it-action-btn approve"
                                 disabled={isActionLoading}
                                 onClick={() => handleDecision(approval, "approve")}
+                                title="Approve IT clearance for gate check-in"
                               >
                                 Approve
                               </button>
                               <button
                                 type="button"
-                                className="back-button"
-                                style={{ color: "#d97706", borderColor: "#fde68a", padding: "6px 9px", fontSize: "12px" }}
+                                className="it-action-btn wait"
                                 disabled={isActionLoading}
                                 onClick={() => handleDecision(approval, "wait")}
-                                title="Host is in server room/meeting. Ask visitor to wait in lobby."
+                                title="Host is occupied. Request technician to wait in reception lobby."
                               >
                                 Host Busy
                               </button>
                               <button
                                 type="button"
-                                className="back-button"
-                                style={{ color: "#dc2626", borderColor: "#fecaca", padding: "6px 9px", fontSize: "12px" }}
+                                className="it-action-btn reschedule"
+                                disabled={isActionLoading}
+                                onClick={() => openRescheduleModal(approval)}
+                                title="IT Host is absent. Reschedule visit to tomorrow or next date/time."
+                              >
+                                <CalendarClock size={12} />
+                                Host Absent
+                              </button>
+                              <button
+                                type="button"
+                                className="it-action-btn reject"
                                 disabled={isActionLoading}
                                 onClick={() => handleDecision(approval, "reject")}
+                                title="Deny IT entrance"
                               >
                                 Reject
                               </button>
@@ -1158,19 +1246,71 @@ export default function ITPreApprovals({ onBack, onNotification }) {
                             <>
                               <button
                                 type="button"
-                                className="primary-button"
-                                style={{ background: "#059669", padding: "6px 11px", fontSize: "12px" }}
+                                className="it-action-btn approve"
                                 disabled={isActionLoading}
                                 onClick={() => handleDecision(approval, "approve")}
+                                title="Host is now available. Approve IT clearance."
                               >
                                 Approve Now
                               </button>
                               <button
                                 type="button"
-                                className="back-button"
-                                style={{ color: "#dc2626", borderColor: "#fecaca", padding: "6px 9px", fontSize: "12px" }}
+                                className="it-action-btn reschedule"
+                                disabled={isActionLoading}
+                                onClick={() => openRescheduleModal(approval)}
+                                title="IT Host is absent. Reschedule technical visit to tomorrow or custom date/time."
+                              >
+                                <CalendarClock size={12} />
+                                Host Absent
+                              </button>
+                              <button
+                                type="button"
+                                className="it-action-btn reject"
                                 disabled={isActionLoading}
                                 onClick={() => handleDecision(approval, "reject")}
+                                title="Deny IT entrance"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+
+                          {currentStatus === "RESCHEDULED" && (
+                            <>
+                              <button
+                                type="button"
+                                className="it-action-btn approve"
+                                disabled={isActionLoading}
+                                onClick={() => handleDecision(approval, "approve")}
+                                title="Approve IT clearance"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                className="it-action-btn wait"
+                                disabled={isActionLoading}
+                                onClick={() => handleDecision(approval, "wait")}
+                                title="Host is busy. Ask to wait."
+                              >
+                                Host Busy
+                              </button>
+                              <button
+                                type="button"
+                                className="it-action-btn reschedule"
+                                disabled={isActionLoading}
+                                onClick={() => openRescheduleModal(approval)}
+                                title="Reschedule visit date/time again"
+                              >
+                                <CalendarClock size={12} />
+                                Reschedule
+                              </button>
+                              <button
+                                type="button"
+                                className="it-action-btn reject"
+                                disabled={isActionLoading}
+                                onClick={() => handleDecision(approval, "reject")}
+                                title="Deny IT entrance"
                               >
                                 Reject
                               </button>
@@ -1204,6 +1344,115 @@ export default function ITPreApprovals({ onBack, onNotification }) {
           </div>
         )}
       </section>
+
+      {/* Host Absent / Reschedule Modal */}
+      {rescheduleTarget && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15, 23, 42, 0.7)",
+            backdropFilter: "blur(4px)",
+            zIndex: 99999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "20px",
+          }}
+          onClick={() => setRescheduleTarget(null)}
+        >
+          <div
+            className="vms-dialog-card reschedule-modal-card" style={{ width: "100%", maxWidth: "520px", padding: "24px 26px", borderRadius: "16px", boxShadow: "0 20px 40px rgba(0, 0, 0, 0.7)", background: "#0f172a", border: "1px solid #1e293b",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "16px", borderBottom: "1px solid #1e293b", paddingBottom: "12px" }}>
+              <div>
+                <span style={{ fontSize: "11px", fontWeight: 700, color: "#0284c7", background: "#f0f9ff", border: "1px solid #bae6fd", padding: "2px 8px", borderRadius: "4px" }}>
+                  IT HOST ABSENT · RESCHEDULE VISIT
+                </span>
+                <h3 style={{ margin: "6px 0 2px", fontSize: "18px", fontWeight: 800, color: "#ffffff" }}>
+                  Reschedule IT Technical Visit for {getTechnicianName(rescheduleTarget)}
+                </h3>
+                <p style={{ margin: 0, fontSize: "12.5px", color: "#64748b" }}>
+                  IT Host <strong>{getITHostName(rescheduleTarget)}</strong> is absent. Reschedule visit to tomorrow or next date.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRescheduleTarget(null)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#94a3b8" }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleRescheduleSubmit}>
+              {error && (
+                <div style={{ background: "#fef2f2", border: "1.5px solid #fecaca", color: "#b91c1c", padding: "10px 14px", borderRadius: "8px", fontSize: "12.5px", marginBottom: "14px", display: "flex", alignItems: "center", gap: "8px" }}>
+                  <AlertTriangle size={16} />
+                  <span>{error}</span>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+                <button
+                  type="button"
+                  className="secondary-action-btn"
+                  style={{ flex: 1, padding: "8px 12px", fontSize: "12px", background: "rgba(2, 132, 199, 0.15)", borderColor: "rgba(2, 132, 199, 0.4)", color: "#38bdf8", fontWeight: 700, cursor: "pointer" }}
+                  onClick={() => setRescheduleDate(getTomorrowISOString())}
+                >
+                  📅 Set to Tomorrow (10:00 AM)
+                </button>
+              </div>
+
+              <div className="form-field" style={{ marginBottom: "14px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#cbd5e1", display: "block", marginBottom: "4px" }}>
+                  Next Scheduled Date &amp; Time <span style={{ color: "#ef4444" }}>*</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={rescheduleDate}
+                  onChange={(e) => setRescheduleDate(e.target.value)}
+                  required
+                  style={{ width: "100%", padding: "9px 12px", background: "#111827", border: "1px solid #1e293b", color: "#ffffff", borderRadius: "8px", fontSize: "13px", colorScheme: "dark" }}
+                />
+              </div>
+
+              <div className="form-field" style={{ marginBottom: "20px" }}>
+                <label style={{ fontSize: "12px", fontWeight: 600, color: "#cbd5e1", display: "block", marginBottom: "4px" }}>
+                  Absence / Reschedule Note
+                </label>
+                <input
+                  type="text"
+                  value={rescheduleReason}
+                  onChange={(e) => setRescheduleReason(e.target.value)}
+                  placeholder="e.g. IT Host is absent today. Rescheduled."
+                  style={{ width: "100%", padding: "9px 12px", background: "#111827", border: "1px solid #1e293b", color: "#ffffff", borderRadius: "8px", fontSize: "13px" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="back-button"
+                  onClick={() => setRescheduleTarget(null)}
+                  disabled={rescheduleSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="primary-button"
+                  style={{ background: "#0284c7" }}
+                  disabled={rescheduleSubmitting || !rescheduleDate}
+                >
+                  {rescheduleSubmitting ? "Updating Schedule..." : "Confirm Reschedule"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }

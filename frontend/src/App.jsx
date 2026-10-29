@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Component, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ShieldCheck,
   Users,
@@ -45,9 +45,19 @@ import {
   Mail,
   User,
   Menu,
+  Settings,
+  Sun,
+  Moon,
+  Package,
+  Edit3,
+  Ticket,
+  Upload,
+  Download,
+  MoreVertical,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { Html5QrcodeScanner } from "html5-qrcode";
+import AssetPhotoPicker from "./AssetPhotoPicker";
 
 import CreateVisit from "./CreateVisit";
 import PreApprovals from "./PreApprovals";
@@ -60,13 +70,15 @@ import ITPreApprovals from "./ITPreApprovals";
 import ITVisitors from "./ITVisitors";
 import SecurityGuardPortal from "./SecurityGuardPortal";
 import GuardLogin from "./GuardLogin";
+import CheckoutHistory from "./CheckoutHistory";
+import "./CheckoutHistory.css";
 import "./App.css";
 import "./PremiumEnterprise.css";
 
 /* =========================================================
    BACKEND API
 ========================================================= */
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "";
 
 const resolvePhotoUrl = (url) => {
   if (!url) return null;
@@ -99,11 +111,21 @@ function VMSApp() {
     }
   });
 
-  const handleLoginSuccess = (accessToken, user) => {
+  const handleLoginSuccess = (accessToken, user, selectedRole) => {
+    const effectiveRole = selectedRole || user?.role || "ADMIN";
+    const effectiveUser = {
+      ...user,
+      role: effectiveRole,
+    };
     localStorage.setItem("vms_token", accessToken);
-    localStorage.setItem("vms_user", JSON.stringify(user));
+    localStorage.setItem("vms_user", JSON.stringify(effectiveUser));
     setAuthToken(accessToken);
-    setCurrentUser(user);
+    setCurrentUser(effectiveUser);
+    if (effectiveRole === "IT_COVERYOU" || effectiveRole === "IT") {
+      setCurrentPage("it-assets");
+    } else {
+      setCurrentPage("dashboard");
+    }
   };
 
   const handleLogout = () => {
@@ -119,11 +141,53 @@ function VMSApp() {
   });
 
   /* =========================================================
+     ROLE-BASED ACCESS CONTROL (RBAC)
+     - ADMIN: Full access (Security, Management, IT Department)
+     - MANAGEMENT: Access to Security & Management
+     - IT_COVERYOU: Access ONLY to IT Department
+  ========================================================= */
+  const activeRole = String(currentUser?.role || "ADMIN").toUpperCase();
+  const hasSecurityAccess = activeRole === "ADMIN" || activeRole === "MANAGEMENT";
+  const hasManagementAccess = activeRole === "ADMIN" || activeRole === "MANAGEMENT";
+  const hasITAccess = activeRole === "ADMIN" || activeRole === "IT_COVERYOU" || activeRole === "IT";
+
+  /* =========================================================
      NAVIGATION & FILTER STATE
   ========================================================= */
-  const [currentPage, setCurrentPage] = useState("dashboard");
+  const [currentPage, setCurrentPage] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem("vms_user");
+      if (savedUser) {
+        const u = JSON.parse(savedUser);
+        const r = String(u?.role || "").toUpperCase();
+        if (r === "IT_COVERYOU" || r === "IT") {
+          return "it-assets";
+        }
+      }
+    } catch {
+      // fallback
+    }
+    return "dashboard";
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [preApprovalTodayOnly, setPreApprovalTodayOnly] = useState(false);
+
+  /* Enforce role route protection */
+  useEffect(() => {
+    if (!currentUser) return;
+    const role = String(currentUser.role || "ADMIN").toUpperCase();
+    const itPages = ["it-assets", "log-recovery", "it-pre-approvals", "it-visitors", "it-notifications", "it-checkout-history"];
+
+    if (role === "IT_COVERYOU" || role === "IT") {
+      if (!itPages.includes(currentPage)) {
+        setCurrentPage("it-assets");
+      }
+    } else if (role === "MANAGEMENT") {
+      if (itPages.includes(currentPage)) {
+        setCurrentPage("dashboard");
+      }
+    }
+  }, [currentUser, currentPage]);
 
   /* Automatically collapse mobile navigation drawer when changing pages */
   useEffect(() => {
@@ -132,8 +196,26 @@ function VMSApp() {
 
   /* Lightbox for inspecting visitor or hardware asset photos */
   const [assetLightbox, setAssetLightbox] = useState(null);
+  /* Account & System Settings Modal */
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   /* Digital Visitor Pass QR Code Data URL */
   const [passQrCode, setPassQrCode] = useState("");
+
+  /* Light & Dark Theme State */
+  const [theme, setTheme] = useState(() => {
+    return localStorage.getItem("vms_theme") || localStorage.getItem("vms-theme") || "dark";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("vms_theme", theme);
+    localStorage.setItem("vms-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   /* =========================================================
      NOTIFICATIONS & IT VISIT NOTIFICATIONS
@@ -234,7 +316,13 @@ function VMSApp() {
       const readIds = new Set(preferences.readIds.map(String));
 
       const mappedNotifications = logs
-        .filter((log) => !hiddenIds.has(String(log.audit_id)))
+        .filter((log) => {
+          const act = String(log.action || "").toUpperCase();
+          if (act.includes("REQUEST_RAISED") || act.includes("RESCHEDULED")) {
+            return true;
+          }
+          return !hiddenIds.has(String(log.audit_id));
+        })
         .map((log) => {
           const action = String(log.action || "").toUpperCase();
           const desc = String(log.description || "");
@@ -259,12 +347,18 @@ function VMSApp() {
           } else if (action.includes("VISITOR_REQUEST_RAISED")) {
             title = isITLog ? "New IT Visitor Request Raised" : "New Visitor Request Raised";
             type = isITLog ? "it-visitor" : "visitor";
-          } else if (action.includes("VISIT_REQUEST_ON_HOLD")) {
+          } else if (action.includes("VISIT_REQUEST_ON_HOLD") || action.includes("HOLD") || action.includes("WAIT")) {
             title = isITLog ? "IT Visitor Put on Hold (Host Busy)" : "Visitor Put on Hold (Host Busy)";
             type = "warning";
-          } else if (action.includes("PRE_APPROVAL_APPROVED")) {
+          } else if (action.includes("RESCHEDULED") || action.includes("VISIT_RESCHEDULED")) {
+            title = isITLog ? "IT Visit Rescheduled (Host Absent)" : "Visit Rescheduled (Host Absent)";
+            type = "warning";
+          } else if (action.includes("PRE_APPROVAL_APPROVED") || action.includes("APPROVED")) {
             title = isITLog ? "IT Pre-Approval Approved" : "Pre-Approval Approved";
             type = "success";
+          } else if (action.includes("PRE_APPROVAL_REJECTED") || action.includes("REJECT") || action.includes("DENY")) {
+            title = isITLog ? "IT Entry Rejected" : "Entry Rejected";
+            type = "warning";
           } else if (action.includes("IT_VISITOR_REGISTERED")) {
             title = "IT Visitor Registered";
             type = "it-visitor";
@@ -319,9 +413,21 @@ function VMSApp() {
 
       setNotifications((previous) => {
         const backendIds = new Set(mappedNotifications.map((n) => String(n.id)));
+        const prevIds = new Set(previous.map((n) => String(n.id)));
         const localOnly = previous.filter(
           (n) => typeof n.id === "string" && !backendIds.has(String(n.id))
         );
+
+        if (previous.length > 0) {
+          const freshUnread = mappedNotifications.filter(
+            (n) => !prevIds.has(String(n.id)) && !n.read
+          );
+          if (freshUnread.length > 0) {
+            playNotificationChime();
+            const newest = freshUnread[0];
+            showLiveToast(newest.title, newest.message, newest.type);
+          }
+        }
         return [...localOnly, ...mappedNotifications];
       });
     } catch (error) {
@@ -338,7 +444,7 @@ function VMSApp() {
     fetchAuditNotifications();
     const interval = setInterval(() => {
       fetchAuditNotifications();
-    }, 8000);
+    }, 4000);
 
     return () => clearInterval(interval);
   }, [authToken, fetchAuditNotifications]);
@@ -450,6 +556,14 @@ function VMSApp() {
     }
   };
 
+  const [liveToast, setLiveToast] = useState(null);
+  const showLiveToast = useCallback((title, message, type = "info") => {
+    setLiveToast({ title, message, type, id: Date.now() });
+    setTimeout(() => {
+      setLiveToast((prev) => (prev?.title === title ? null : prev));
+    }, 6000);
+  }, []);
+
   const addNotification = (notification) => {
     const newNotification = {
       id: `local-${Date.now()}-${Math.random()}`,
@@ -460,6 +574,7 @@ function VMSApp() {
       read: false,
     };
     playNotificationChime();
+    showLiveToast(notification.title, notification.message, notification.type || "info");
     setNotifications((previous) => [newNotification, ...previous]);
   };
 
@@ -521,6 +636,17 @@ function VMSApp() {
   const [directCheckoutLoading, setDirectCheckoutLoading] = useState("");
   const [dossierPhotoUploading, setDossierPhotoUploading] = useState(false);
   const dossierPhotoInputRef = useRef(null);
+  const [isAddingDossierAsset, setIsAddingDossierAsset] = useState(false);
+  const [editingDossierAsset, setEditingDossierAsset] = useState(null);
+  const [dossierAssetOpLoading, setDossierAssetOpLoading] = useState(false);
+  const [dossierNewAssetForm, setDossierNewAssetForm] = useState({
+    asset_type: "Laptop",
+    brand_model: "",
+    serial_number: "",
+    photo_data: "",
+    disposition: "CARRIED_OUT",
+    retention_note: "",
+  });
   const [visitorCreateLoading, setVisitorCreateLoading] = useState(false);
   const [newVisitor, setNewVisitor] = useState({
     first_name: "",
@@ -569,6 +695,62 @@ function VMSApp() {
   const [showITPortalModal, setShowITPortalModal] = useState(false);
   const [itPortalQrData, setItPortalQrData] = useState("");
   const [copiedITUrl, setCopiedITUrl] = useState(false);
+  const [selectedAssetIds, setSelectedAssetIds] = useState([]);
+
+  const toggleSelectAsset = (id) => {
+    setSelectedAssetIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllAssets = (list) => {
+    if (!list || list.length === 0) return;
+    if (selectedAssetIds.length === list.length) {
+      setSelectedAssetIds([]);
+    } else {
+      setSelectedAssetIds(list.map((a) => a.asset_id));
+    }
+  };
+
+  const getAvatarColorStyle = (name) => {
+    const palette = [
+      { bg: "rgba(168, 85, 247, 0.22)", color: "#d8b4fe", border: "1px solid rgba(168, 85, 247, 0.4)" }, // Lavender / Purple
+      { bg: "rgba(16, 185, 129, 0.22)", color: "#6ee7b7", border: "1px solid rgba(16, 185, 129, 0.4)" }, // Mint Green
+      { bg: "rgba(56, 189, 248, 0.22)", color: "#7dd3fc", border: "1px solid rgba(56, 189, 248, 0.4)" }, // Sky Blue
+      { bg: "rgba(245, 158, 11, 0.22)", color: "#fcd34d", border: "1px solid rgba(245, 158, 11, 0.4)" }, // Warm Amber
+    ];
+    let hash = 0;
+    const str = String(name || "Carrier");
+    for (let i = 0; i < str.length; i++) {
+      hash = (hash + str.charCodeAt(i)) % palette.length;
+    }
+    return palette[hash];
+  };
+
+  const handleExportHardwareCSV = (list) => {
+    const dataList = list && list.length > 0 ? list : itAssets;
+    if (!dataList || dataList.length === 0) return;
+    const headers = ["Asset ID", "Brand & Model", "Type", "Serial Tag", "Company", "Carrier", "Phone", "Host", "Status"];
+    const rows = dataList.map((a) => [
+      a.asset_id,
+      `"${(a.brand_model || "").replace(/"/g, '""')}"`,
+      `"${(a.asset_type || "").replace(/"/g, '""')}"`,
+      `"${(a.serial_number || "").replace(/"/g, '""')}"`,
+      `"${(a.carrier_visitor?.company || "").replace(/"/g, '""')}"`,
+      `"${(a.carrier_visitor?.name || "").replace(/"/g, '""')}"`,
+      `"${(a.carrier_visitor?.phone || "").replace(/"/g, '""')}"`,
+      `"${(a.receiver_host?.name || "").replace(/"/g, '""')}"`,
+      `"${a.is_cleared_for_exit ? "EXIT_CLEARED" : (a.custody_status || "IN_CUSTODY")}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `hardware_custody_tracker_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const [newRecoveryForm, setNewRecoveryForm] = useState({
     carrier_type: "new",
@@ -636,7 +818,7 @@ function VMSApp() {
       setCheckoutHistoryError("");
 
       const response = await fetch(
-        `${API_BASE_URL}/visits/checkouts/history?limit=100`,
+        `${API_BASE_URL}/visits/checkouts/history?limit=1000`,
         {
           headers: authHeaders(),
         }
@@ -697,6 +879,158 @@ function VMSApp() {
     setSelectedVisitorDossier(null);
     setDossierData(null);
     setDossierError("");
+    setIsAddingDossierAsset(false);
+    setEditingDossierAsset(null);
+    setDossierNewAssetForm({
+      asset_type: "Laptop",
+      brand_model: "",
+      serial_number: "",
+      photo_data: "",
+      disposition: "CARRIED_OUT",
+      retention_note: "",
+    });
+  };
+
+  const handleUpdateDossierAssetDisposition = async (assetId, disposition, retentionNote = "") => {
+    if (!assetId) return;
+    try {
+      setDossierAssetOpLoading(true);
+      const res = await fetch(`${API_BASE_URL}/assets/${assetId}`, {
+        method: "PUT",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          disposition,
+          retention_note: retentionNote || (disposition === "RETAINED_ON_PREMISES" ? "Installed in facility / kept in use" : ""),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to update asset disposition");
+      }
+      if (selectedVisitorDossier) {
+        const vId = typeof selectedVisitorDossier === "object" ? selectedVisitorDossier.visitor_id : selectedVisitorDossier;
+        await openVisitorDossier(vId);
+      }
+    } catch (err) {
+      console.error("Dossier asset disposition error:", err);
+      alert(err.message || "Failed to update asset disposition.");
+    } finally {
+      setDossierAssetOpLoading(false);
+    }
+  };
+
+  const handleCreateDossierAsset = async (visitId) => {
+    if (!visitId) return;
+    if (!dossierNewAssetForm.asset_type.trim()) {
+      alert("Please enter or select an asset type.");
+      return;
+    }
+    try {
+      setDossierAssetOpLoading(true);
+      const isCleared = dossierNewAssetForm.disposition === "CARRIED_OUT" || dossierNewAssetForm.disposition === "RETAINED_ON_PREMISES";
+      const res = await fetch(`${API_BASE_URL}/assets/`, {
+        method: "POST",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          visit_id: visitId,
+          asset_type: dossierNewAssetForm.asset_type.trim(),
+          brand_model: dossierNewAssetForm.brand_model.trim() || null,
+          serial_number: dossierNewAssetForm.serial_number.trim() || null,
+          photo_data: dossierNewAssetForm.photo_data || null,
+          is_cleared_for_exit: isCleared,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to register new asset");
+      }
+      const created = await res.json();
+      if (dossierNewAssetForm.disposition === "RETAINED_ON_PREMISES") {
+        await fetch(`${API_BASE_URL}/assets/${created.asset_id}`, {
+          method: "PUT",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({
+            disposition: "RETAINED_ON_PREMISES",
+            retention_note: dossierNewAssetForm.retention_note.trim() || "Installed in facility / kept in use",
+          }),
+        });
+      }
+      setIsAddingDossierAsset(false);
+      setDossierNewAssetForm({
+        asset_type: "Laptop",
+        brand_model: "",
+        serial_number: "",
+        photo_data: "",
+        disposition: "CARRIED_OUT",
+        retention_note: "",
+      });
+      if (selectedVisitorDossier) {
+        const vId = typeof selectedVisitorDossier === "object" ? selectedVisitorDossier.visitor_id : selectedVisitorDossier;
+        await openVisitorDossier(vId);
+      }
+    } catch (err) {
+      console.error("Create dossier asset error:", err);
+      alert(err.message || "Failed to add asset.");
+    } finally {
+      setDossierAssetOpLoading(false);
+    }
+  };
+
+  const handleDeleteDossierAsset = async (assetId, assetName) => {
+    if (!window.confirm(`Are you sure you want to remove "${assetName || "this asset"}" from the visit registry?`)) return;
+    try {
+      setDossierAssetOpLoading(true);
+      const res = await fetch(`${API_BASE_URL}/assets/${assetId}`, {
+        method: "DELETE",
+        headers: authHeaders(),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to delete asset");
+      }
+      if (selectedVisitorDossier) {
+        const vId = typeof selectedVisitorDossier === "object" ? selectedVisitorDossier.visitor_id : selectedVisitorDossier;
+        await openVisitorDossier(vId);
+      }
+    } catch (err) {
+      console.error("Delete dossier asset error:", err);
+      alert(err.message || "Failed to delete asset.");
+    } finally {
+      setDossierAssetOpLoading(false);
+    }
+  };
+
+  const handleSaveDossierAssetEdit = async (assetId) => {
+    if (!editingDossierAsset) return;
+    try {
+      setDossierAssetOpLoading(true);
+      const res = await fetch(`${API_BASE_URL}/assets/${assetId}`, {
+        method: "PUT",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          asset_type: editingDossierAsset.asset_type,
+          brand_model: editingDossierAsset.brand_model,
+          serial_number: editingDossierAsset.serial_number,
+          photo_data: editingDossierAsset.photo_data || null,
+          disposition: editingDossierAsset.disposition,
+          retention_note: editingDossierAsset.retention_note,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || "Failed to update asset");
+      }
+      setEditingDossierAsset(null);
+      if (selectedVisitorDossier) {
+        const vId = typeof selectedVisitorDossier === "object" ? selectedVisitorDossier.visitor_id : selectedVisitorDossier;
+        await openVisitorDossier(vId);
+      }
+    } catch (err) {
+      console.error("Save dossier asset edit error:", err);
+      alert(err.message || "Failed to save asset changes.");
+    } finally {
+      setDossierAssetOpLoading(false);
+    }
   };
 
   const handleDirectVisitorCheckout = async (visitId, visitorName, forceClear = false) => {
@@ -1783,6 +2117,9 @@ function VMSApp() {
 
   const visitors = dashboardData?.visitors || [];
   const filteredVisitors = visitors.filter((item) => {
+    // Strictly exclude IT visits from general management dashboard
+    if (item.purpose && String(item.purpose).toUpperCase().includes("[IT_VISIT]")) return false;
+
     if (dashboardVisitorFilter === "inside" && item.status !== "ACTIVE") return false;
     if (dashboardVisitorFilter === "checked_out" && item.status !== "CHECKED_OUT") return false;
 
@@ -1825,6 +2162,15 @@ function VMSApp() {
     if (!Array.isArray(visitorList)) return [];
 
     return visitorList.filter((item) => {
+      // Never show IT technical visitors in General / Management Visitors directory
+      const latestPurpose = String(item.latest_visit?.purpose || item.purpose || "");
+      const anyItPurpose = (item.visits || []).some((vt) =>
+        String(vt.purpose || "").toUpperCase().includes("[IT_VISIT]")
+      );
+      if (latestPurpose.toUpperCase().includes("[IT_VISIT]") || anyItPurpose) {
+        return false;
+      }
+
       const vId = Number(item.visitor_id);
 
       // 1. Filter by category
@@ -2001,23 +2347,31 @@ function VMSApp() {
   /* =========================================================
      PAGE RENDERERS
   ========================================================= */
-  const renderNotifications = () => {
-    const unreadCount = generalUnreadCount;
-    const gateCount = generalNotifications.filter(
+const renderNotifications = () => {
+    // Management & General notifications strictly exclude IT notifications
+    const targetNotifications = generalNotifications;
+    const unreadCount = targetNotifications.filter((n) => !n.read).length;
+    const gateCount = targetNotifications.filter(
       (n) =>
         (n.title || "").toLowerCase().includes("gate") ||
         (n.title || "").toLowerCase().includes("entry") ||
         (n.title || "").toLowerCase().includes("verified") ||
         (n.title || "").toLowerCase().includes("clear")
     ).length;
-    const requestCount = generalNotifications.filter(
+    const requestCount = targetNotifications.filter(
       (n) =>
         (n.title || "").toLowerCase().includes("request") ||
         (n.title || "").toLowerCase().includes("register") ||
         (n.title || "").toLowerCase().includes("pre-approval")
     ).length;
+    const rescheduleCount = targetNotifications.filter(
+      (n) =>
+        (n.action || "").toUpperCase().includes("RESCHEDULED") ||
+        (n.title || "").toLowerCase().includes("rescheduled") ||
+        (n.message || "").toLowerCase().includes("rescheduled")
+    ).length;
 
-    const filtered = generalNotifications.filter((n) => {
+    const filtered = targetNotifications.filter((n) => {
       // Tab filter
       if (notificationFilter === "unread" && n.read) return false;
       if (
@@ -2033,6 +2387,13 @@ function VMSApp() {
         !(n.title || "").toLowerCase().includes("request") &&
         !(n.title || "").toLowerCase().includes("register") &&
         !(n.title || "").toLowerCase().includes("pre-approval")
+      )
+        return false;
+      if (
+        notificationFilter === "rescheduled" &&
+        !(n.action || "").toUpperCase().includes("RESCHEDULED") &&
+        !(n.title || "").toLowerCase().includes("rescheduled") &&
+        !(n.message || "").toLowerCase().includes("rescheduled")
       )
         return false;
 
@@ -2107,6 +2468,49 @@ function VMSApp() {
           </div>
         </div>
 
+        {/* KPI Metrics Grid */}
+        <section className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon blue">
+              <Bell size={20} />
+            </div>
+            <div className="stat-content">
+              <strong>{targetNotifications.length}</strong>
+              <span>Total Activity Logs</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon amber">
+              <BellRing size={20} />
+            </div>
+            <div className="stat-content">
+              <strong>{unreadCount}</strong>
+              <span>Unread Telemetry</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon green">
+              <ShieldCheck size={20} />
+            </div>
+            <div className="stat-content">
+              <strong>{gateCount}</strong>
+              <span>Gate Access Clearances</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon purple">
+              <Users size={20} />
+            </div>
+            <div className="stat-content">
+              <strong>{requestCount}</strong>
+              <span>Registration Requests</span>
+            </div>
+          </div>
+        </section>
+
         {/* Notifications Main Panel */}
         <section className="table-card notif-main-card">
           <div className="notif-toolbar">
@@ -2116,7 +2520,7 @@ function VMSApp() {
                 className={`notif-filter-tab ${notificationFilter === "all" ? "active" : ""}`}
                 onClick={() => setNotificationFilter("all")}
               >
-                All Activities ({generalNotifications.length})
+                All Activities ({targetNotifications.length})
               </button>
               <button
                 type="button"
@@ -2144,6 +2548,16 @@ function VMSApp() {
                 >
                   <Users size={12} />
                   Visitor Requests ({requestCount})
+                </button>
+              )}
+              {rescheduleCount > 0 && (
+                <button
+                  type="button"
+                  className={`notif-filter-tab ${notificationFilter === "rescheduled" ? "active" : ""}`}
+                  onClick={() => setNotificationFilter("rescheduled")}
+                >
+                  <CalendarClock size={12} />
+                  Rescheduled ({rescheduleCount})
                 </button>
               )}
             </div>
@@ -2187,19 +2601,37 @@ function VMSApp() {
                   ? "Try a different search keyword or reset the filter."
                   : "General visitor check-ins, entry approvals, and security passes will appear here in real-time."}
               </p>
-              {(notificationFilter !== "all" || notifSearchQuery) && (
-                <button
-                  type="button"
-                  className="primary-button notif-reset-btn"
-                  onClick={() => {
-                    setNotificationFilter("all");
-                    setNotifSearchQuery("");
-                  }}
-                >
-                  <RefreshCw size={13} />
-                  <span>Show All Activities</span>
-                </button>
-              )}
+              <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap", marginTop: "10px" }}>
+                {(notificationFilter !== "all" || notifSearchQuery) && (
+                  <button
+                    type="button"
+                    className="primary-button notif-reset-btn"
+                    onClick={() => {
+                      setNotificationFilter("all");
+                      setNotifSearchQuery("");
+                    }}
+                  >
+                    <RefreshCw size={13} />
+                    <span>Show All Activities</span>
+                  </button>
+                )}
+                {readNotificationPreferences().hiddenIds?.length > 0 && (
+                  <button
+                    type="button"
+                    className="secondary-action-btn"
+                    style={{ padding: "8px 16px", fontSize: "12px", borderRadius: "8px", background: "#f0fdf4", borderColor: "#bbf7d0", color: "#166534", fontWeight: 700 }}
+                    onClick={() => {
+                      const prefs = readNotificationPreferences();
+                      prefs.hiddenIds = [];
+                      saveNotificationPreferences(prefs);
+                      fetchAuditNotifications();
+                    }}
+                  >
+                    <RefreshCw size={13} />
+                    <span>Restore Cleared Activity History</span>
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div className="notif-list-wrap">
@@ -2266,6 +2698,37 @@ function VMSApp() {
                       </div>
 
                       <p className="notif-message-text">{notification.message}</p>
+                      {(notification.action?.includes("REQUEST_RAISED") ||
+                        notification.action?.includes("RESCHEDULED") ||
+                        (notification.message || "").toLowerCase().includes("awaiting") ||
+                        (notification.message || "").toLowerCase().includes("pre-approval")) && (
+                        <div style={{ marginTop: "6px" }}>
+                          <button
+                            type="button"
+                            className="secondary-action-btn"
+                            style={{
+                              padding: "3px 10px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              color: "#0284c7",
+                              borderColor: "#bae6fd",
+                              background: "#f0f9ff",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markNotificationAsRead(notification.id);
+                              openPreApprovals(false);
+                            }}
+                          >
+                            Review in Pre-Approvals →
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="notif-item-actions" onClick={(e) => e.stopPropagation()}>
@@ -2369,18 +2832,8 @@ function VMSApp() {
 
           <div className="notif-header-controls">
             {unreadCount > 0 ? (
-              <div
-                className="notif-unread-indicator-badge"
-                style={{
-                  background: "#faf5ff",
-                  borderColor: "#d8b4fe",
-                  color: "#6b21a8",
-                }}
-              >
-                <span
-                  className="unread-pulse-dot"
-                  style={{ background: "#7c3aed" }}
-                ></span>
+              <div className="notif-unread-indicator-badge notif-it-unread-indicator">
+                <span className="unread-pulse-dot"></span>
                 <span>
                   <strong>{unreadCount}</strong> Unread IT Notification{unreadCount > 1 ? "s" : ""}
                 </span>
@@ -2417,6 +2870,49 @@ function VMSApp() {
             )}
           </div>
         </div>
+
+        {/* KPI Metrics Grid */}
+        <section className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon purple">
+              <Server size={20} />
+            </div>
+            <div className="stat-content">
+              <strong>{itNotifications.length}</strong>
+              <span>Total IT Telemetry</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon amber">
+              <BellRing size={20} />
+            </div>
+            <div className="stat-content">
+              <strong>{unreadCount}</strong>
+              <span>Unread Alerts</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon blue">
+              <Laptop size={20} />
+            </div>
+            <div className="stat-content">
+              <strong>{assetCount}</strong>
+              <span>Hardware Custody Events</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon green">
+              <ShieldCheck size={20} />
+            </div>
+            <div className="stat-content">
+              <strong>{gateCount}</strong>
+              <span>Gate & Server Clearances</span>
+            </div>
+          </div>
+        </section>
 
         {/* IT Notifications Main Panel */}
         <section className="table-card notif-main-card">
@@ -2569,6 +3065,37 @@ function VMSApp() {
                       </div>
 
                       <p className="notif-message-text">{notification.message}</p>
+                      {(notification.action?.includes("REQUEST_RAISED") ||
+                        notification.action?.includes("RESCHEDULED") ||
+                        (notification.message || "").toLowerCase().includes("awaiting") ||
+                        (notification.message || "").toLowerCase().includes("pre-approval")) && (
+                        <div style={{ marginTop: "6px" }}>
+                          <button
+                            type="button"
+                            className="secondary-action-btn"
+                            style={{
+                              padding: "3px 10px",
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              color: "#7c3aed",
+                              borderColor: "#ddd6fe",
+                              background: "#f5f3ff",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markNotificationAsRead(notification.id);
+                              setCurrentPage("it-pre-approvals");
+                            }}
+                          >
+                            Review in IT Pre-Approvals →
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     <div className="notif-item-actions" onClick={(e) => e.stopPropagation()}>
@@ -2637,6 +3164,14 @@ function VMSApp() {
             >
               <ExternalLink size={15} />
               <span>Gate Terminal</span>
+            </button>
+            <button
+              type="button"
+              className="it-theme-toggle-btn"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
             </button>
             <button
               className="it-refresh-btn"
@@ -2893,7 +3428,7 @@ function VMSApp() {
                         </span>
                       </td>
                       <td>
-                        <strong style={{ color: "#0f172a" }}>{item.host_name || "—"}</strong>
+                        <strong className="visitor-host-name">{item.host_name || "—"}</strong>
                       </td>
                       <td>
                         <div className="it-company-tag">
@@ -2901,7 +3436,7 @@ function VMSApp() {
                           <span>{item.company_name || "Independent"}</span>
                         </div>
                       </td>
-                      <td style={{ color: "#475569", fontWeight: 500 }}>{formatTime(item.check_in_time)}</td>
+                      <td className="visitor-check-in-time">{formatTime(item.check_in_time)}</td>
                       <td>
                         <span
                           className={`status-pill ${
@@ -2914,20 +3449,7 @@ function VMSApp() {
                       </td>
                       <td>
                         <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            background:
-                              item.decision === "ALLOW" ? "#ecfdf5" : "#fef2f2",
-                            color:
-                              item.decision === "ALLOW" ? "#059669" : "#dc2626",
-                            border: `1px solid ${item.decision === "ALLOW" ? "#a7f3d0" : "#fecaca"}`,
-                          }}
+                          className={`decision-pill ${item.decision === "ALLOW" ? "allow" : "deny"}`}
                         >
                           {item.decision}
                         </span>
@@ -2957,7 +3479,7 @@ function VMSApp() {
         </section>
 
         <section className="quick-section">
-          <div>
+          <div className="quick-section-header">
             <h2>Quick Actions</h2>
             <p>Common security operations</p>
           </div>
@@ -3038,6 +3560,49 @@ function VMSApp() {
         </div>
 
         {!visit && (
+          <>
+            <section className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon green">
+                  <ShieldCheck size={20} />
+                </div>
+                <div className="stat-content">
+                  <strong>Online</strong>
+                  <span>Scanner Terminal Status</span>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon blue">
+                  <UserCheck size={20} />
+                </div>
+                <div className="stat-content">
+                  <strong>{dashboardData?.statistics?.currently_inside || 0}</strong>
+                  <span>Active Visitors On Premises</span>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon purple">
+                  <LogOut size={20} />
+                </div>
+                <div className="stat-content">
+                  <strong>{dashboardData?.statistics?.checked_out || 0}</strong>
+                  <span>Cleared Departures Today</span>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon amber">
+                  <QrCode size={20} />
+                </div>
+                <div className="stat-content">
+                  <strong>Lane 01</strong>
+                  <span>Security Optical Gate</span>
+                </div>
+              </div>
+            </section>
+
           <div className="scanner-hub-grid">
             {/* Primary Optical Scanner Card */}
             <section className="verification-card scanner-main-card">
@@ -3120,6 +3685,7 @@ function VMSApp() {
               </div>
             </section>
           </div>
+          </>
         )}
 
         {loading && (
@@ -4042,6 +4608,18 @@ function VMSApp() {
                               <Eye size={13} />
                               <span>Details</span>
                             </button>
+                            {isInside && activeVisit && (
+                              <button
+                                type="button"
+                                className="btn-table-action"
+                                style={{ background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" }}
+                                onClick={() => window.open(`/visitor-pass/${encodeURIComponent(activeVisit.visit_id)}`, "_blank")}
+                                title="Open official digital visitor pass"
+                              >
+                                <Ticket size={13} />
+                                <span>Pass</span>
+                              </button>
+                            )}
                             {isInside && (
                               <button
                                 type="button"
@@ -4267,15 +4845,28 @@ function VMSApp() {
                           <div className="vms-active-visit-actions">
                             <button
                               type="button"
+                              className="vms-btn-it-pass"
+                              onClick={() => {
+                                const passUrl = `/visitor-pass/${encodeURIComponent(dossierData.active_visit.visit_id)}`;
+                                window.open(passUrl, "_blank");
+                              }}
+                              title="Open official digital visitor pass"
+                            >
+                              <Ticket size={13} />
+                              <span>Visitor Pass</span>
+                            </button>
+
+                            <button
+                              type="button"
                               className="vms-btn-pass-link"
                               onClick={() => {
-                                const passIdentifier = dossierData.active_visit.pass_token || dossierData.active_visit.visit_id;
-                                window.open(`/pass/${passIdentifier}`, "_blank");
+                                const scanUrl = `/guard?scan=${encodeURIComponent(dossierData.active_visit.visit_id)}`;
+                                window.open(scanUrl, "_blank");
                               }}
-                              title="Open public pass with QR code"
+                              title="Open Security Gate Scanner / Guard Clearance Portal"
                             >
-                              <ExternalLink size={13} />
-                              <span>View Gate Pass</span>
+                              <ShieldCheck size={13} />
+                              <span>Gate Pass</span>
                             </button>
 
                             <button
@@ -4392,47 +4983,446 @@ function VMSApp() {
                     {/* Declared Hardware & Assets */}
                     <div className="vms-dossier-section">
                       <div className="vms-dossier-section-header">
-                        <h4 className="vms-dossier-section-title">
-                          <Laptop size={16} style={{ color: "#0284c7" }} />
-                          <span>Declared Hardware &amp; Assets ({dossierData.assets?.length || 0})</span>
-                        </h4>
-                        <span style={{ fontSize: "12px", color: "#64748b" }}>
-                          Physical equipment declared upon campus admission
-                        </span>
+                        <div>
+                          <h4 className="vms-dossier-section-title">
+                            <Laptop size={16} style={{ color: "#0284c7" }} />
+                            <span>Declared Hardware &amp; Assets ({(dossierData.assets || []).length})</span>
+                          </h4>
+                          <span style={{ fontSize: "12px", color: "#64748b" }}>
+                            Physical equipment declared upon admission · In-visit reconciliation &amp; gate clearance
+                          </span>
+                        </div>
+
+                        {dossierData.active_visit && (
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingDossierAsset((prev) => !prev)}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "6px",
+                              padding: "6px 12px",
+                              background: isAddingDossierAsset ? "#fee2e2" : "#f0fdf4",
+                              color: isAddingDossierAsset ? "#991b1b" : "#166534",
+                              border: `1.5px solid ${isAddingDossierAsset ? "#fca5a5" : "#86efac"}`,
+                              borderRadius: "6px",
+                              fontSize: "12px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {isAddingDossierAsset ? <X size={13} /> : <Plus size={13} />}
+                            <span>{isAddingDossierAsset ? "Cancel Adding" : "Register Additional Asset"}</span>
+                          </button>
+                        )}
                       </div>
+
+                      {/* Summary Bar for Hardware Reconciliation */}
+                      {(() => {
+                        const declaredAssets = dossierData.assets || [];
+                        if (declaredAssets.length === 0) return null;
+                        const carriedCount = declaredAssets.filter((a) => (!a.cleared_by || !a.cleared_by.includes("RETAINED")) && (a.is_cleared_for_exit || a.disposition === "CARRIED_OUT")).length;
+                        const retainedCount = declaredAssets.filter((a) => (a.cleared_by && a.cleared_by.includes("RETAINED")) || a.disposition === "RETAINED_ON_PREMISES").length;
+                        const pendingCount = declaredAssets.length - carriedCount - retainedCount;
+
+                        return (
+                          <div style={{ margin: "0 0 14px", padding: "10px 14px", background: "#f8fafc", borderRadius: "10px", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", fontSize: "12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}>
+                              <span style={{ fontWeight: 700, color: "#0f172a" }}>
+                                Registered at Check-In: <strong style={{ color: "#2563eb" }}>{declaredAssets.length}</strong>
+                              </span>
+                              <span style={{ color: "#166534", fontWeight: 600 }}>
+                                🚶 Carrying Out: <strong>{carriedCount}</strong>
+                              </span>
+                              <span style={{ color: "#1d4ed8", fontWeight: 600 }}>
+                                📦 Retained on Premises: <strong>{retainedCount}</strong>
+                              </span>
+                              {pendingCount > 0 && (
+                                <span style={{ color: "#b45309", fontWeight: 600 }}>
+                                  ⏳ Pending Clearance: <strong>{pendingCount}</strong>
+                                </span>
+                              )}
+                            </div>
+
+                            {dossierData.active_visit && (
+                              <span style={{ fontSize: "11px", color: "#64748b", fontStyle: "italic" }}>
+                                Update asset disposition before checkout to ensure exact checkout audit history.
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Add Asset Form Modal / Box */}
+                      {isAddingDossierAsset && dossierData.active_visit && (
+                        <div style={{ margin: "0 0 16px", padding: "16px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "10px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+                            <strong style={{ fontSize: "13px", color: "#166534", display: "flex", alignItems: "center", gap: "6px" }}>
+                              <Plus size={14} /> Register Additional Hardware During Active Visit
+                            </strong>
+                            <button type="button" onClick={() => setIsAddingDossierAsset(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+                              <X size={15} />
+                            </button>
+                          </div>
+
+                          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "12px" }}>
+                            <div>
+                              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Asset Type *</label>
+                              <select
+                                value={dossierNewAssetForm.asset_type}
+                                onChange={(e) => setDossierNewAssetForm({ ...dossierNewAssetForm, asset_type: e.target.value })}
+                                style={{ width: "100%", padding: "7px 10px", fontSize: "12.5px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                              >
+                                <option value="Laptop">Laptop / Portable Computer</option>
+                                <option value="Mobile / Tablet">Mobile Phone / Tablet</option>
+                                <option value="Storage Drive">Storage Drive / External Media</option>
+                                <option value="Camera / Recording">Camera / Recording Equipment</option>
+                                <option value="Tool / Equipment">Tool / Test Equipment</option>
+                                <option value="Network Gear">Network Gear / SFP Transceivers</option>
+                                <option value="Hardware Device">Other Hardware Device</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Brand &amp; Model</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. MacBook Pro M3, Dell Latitude"
+                                value={dossierNewAssetForm.brand_model}
+                                onChange={(e) => setDossierNewAssetForm({ ...dossierNewAssetForm, brand_model: e.target.value })}
+                                style={{ width: "100%", padding: "7px 10px", fontSize: "12.5px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Serial Number</label>
+                              <input
+                                type="text"
+                                placeholder="e.g. SN-882910"
+                                value={dossierNewAssetForm.serial_number}
+                                onChange={(e) => setDossierNewAssetForm({ ...dossierNewAssetForm, serial_number: e.target.value })}
+                                style={{ width: "100%", padding: "7px 10px", fontSize: "12.5px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                              />
+                            </div>
+
+                            <div>
+                              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Expected Departure</label>
+                              <select
+                                value={dossierNewAssetForm.disposition}
+                                onChange={(e) => setDossierNewAssetForm({ ...dossierNewAssetForm, disposition: e.target.value })}
+                                style={{ width: "100%", padding: "7px 10px", fontSize: "12.5px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                              >
+                                <option value="CARRIED_OUT">🚶 Carrying Out at Exit (Clearance Approved)</option>
+                                <option value="RETAINED_ON_PREMISES">📦 Retaining on Campus / Handed Over</option>
+                                <option value="PENDING">⏳ Pending Inspection at Gate</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {dossierNewAssetForm.disposition === "RETAINED_ON_PREMISES" && (
+                            <div style={{ marginTop: "10px" }}>
+                              <label style={{ display: "block", fontSize: "11px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>
+                                Location Retained / Person Receiving Item
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g. Kept with Host Officer, Left in Conference Room B"
+                                value={dossierNewAssetForm.retention_note}
+                                onChange={(e) => setDossierNewAssetForm({ ...dossierNewAssetForm, retention_note: e.target.value })}
+                                style={{ width: "100%", padding: "7px 10px", fontSize: "12.5px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                              />
+                            </div>
+                          )}
+
+                          <AssetPhotoPicker
+                            photoData={dossierNewAssetForm.photo_data}
+                            photoUrl={dossierNewAssetForm.photo_url}
+                            onPhotoChange={(dataUrl) => setDossierNewAssetForm((prev) => ({ ...prev, photo_data: dataUrl }))}
+                            label="Hardware Asset Photograph (Camera / File Upload)"
+                            resolveFn={resolvePhotoUrl}
+                          />
+
+                          <div style={{ marginTop: "12px", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                            <button
+                              type="button"
+                              onClick={() => setIsAddingDossierAsset(false)}
+                              style={{ padding: "6px 12px", fontSize: "12px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer", fontWeight: 600 }}
+                            >
+                              Cancel
+                            </button>
+                            <button
+                              type="button"
+                              disabled={dossierAssetOpLoading}
+                              onClick={() => handleCreateDossierAsset(dossierData.active_visit.visit_id)}
+                              style={{ padding: "6px 16px", fontSize: "12px", background: "#16a34a", color: "#ffffff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 700 }}
+                            >
+                              {dossierAssetOpLoading ? "Saving..." : "Add Asset to Visit"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Edit Asset Modal */}
+                      {editingDossierAsset && (
+                        <div className="vms-lightbox-overlay" onClick={() => setEditingDossierAsset(null)}>
+                          <div className="ch-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "520px", background: "#ffffff", borderRadius: "12px", overflow: "hidden", boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.2)" }}>
+                            <div className="ch-modal-header" style={{ padding: "14px 18px", borderBottom: "1px solid #e2e8f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <h4 style={{ margin: 0, fontSize: "15px", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px", fontWeight: 700 }}>
+                                <Edit3 size={16} color="#2563eb" /> Edit Declared Hardware Asset
+                              </h4>
+                              <button type="button" onClick={() => setEditingDossierAsset(null)} style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b" }}>
+                                <X size={16} />
+                              </button>
+                            </div>
+                            <div style={{ padding: "16px 20px" }}>
+                              <div style={{ marginBottom: "12px" }}>
+                                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Asset Type</label>
+                                <input
+                                  type="text"
+                                  value={editingDossierAsset.asset_type || ""}
+                                  onChange={(e) => setEditingDossierAsset({ ...editingDossierAsset, asset_type: e.target.value })}
+                                  style={{ width: "100%", padding: "8px 10px", fontSize: "13px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                />
+                              </div>
+                              <div style={{ marginBottom: "12px" }}>
+                                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Brand &amp; Model</label>
+                                <input
+                                  type="text"
+                                  value={editingDossierAsset.brand_model || ""}
+                                  onChange={(e) => setEditingDossierAsset({ ...editingDossierAsset, brand_model: e.target.value })}
+                                  style={{ width: "100%", padding: "8px 10px", fontSize: "13px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                />
+                              </div>
+                              <div style={{ marginBottom: "12px" }}>
+                                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Serial Number</label>
+                                <input
+                                  type="text"
+                                  value={editingDossierAsset.serial_number || ""}
+                                  onChange={(e) => setEditingDossierAsset({ ...editingDossierAsset, serial_number: e.target.value })}
+                                  style={{ width: "100%", padding: "8px 10px", fontSize: "13px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                />
+                              </div>
+                              <div style={{ marginBottom: "12px" }}>
+                                <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Departure Disposition</label>
+                                <select
+                                  value={editingDossierAsset.disposition || (editingDossierAsset.cleared_by && editingDossierAsset.cleared_by.includes("RETAINED") ? "RETAINED_ON_PREMISES" : (editingDossierAsset.is_cleared_for_exit ? "CARRIED_OUT" : "PENDING"))}
+                                  onChange={(e) => setEditingDossierAsset({ ...editingDossierAsset, disposition: e.target.value })}
+                                  style={{ width: "100%", padding: "8px 10px", fontSize: "13px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                >
+                                  <option value="CARRIED_OUT">🚶 Carrying Out at Exit (Cleared)</option>
+                                  <option value="RETAINED_ON_PREMISES">📦 Retained in Facility / In-Use on Premises</option>
+                                  <option value="PENDING">⏳ Pending Exit Inspection</option>
+                                </select>
+                              </div>
+                              {editingDossierAsset.disposition === "RETAINED_ON_PREMISES" && (
+                                <div style={{ marginBottom: "12px" }}>
+                                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: "#374151", marginBottom: "4px" }}>Location / Handover Notes</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Left with host officer, kept in conference room"
+                                    value={editingDossierAsset.retention_note || ""}
+                                    onChange={(e) => setEditingDossierAsset({ ...editingDossierAsset, retention_note: e.target.value })}
+                                    style={{ width: "100%", padding: "8px 10px", fontSize: "13px", borderRadius: "6px", border: "1px solid #cbd5e1" }}
+                                  />
+                                </div>
+                              )}
+
+                              <AssetPhotoPicker
+                                photoData={editingDossierAsset.photo_data}
+                                photoUrl={editingDossierAsset.photo_url}
+                                onPhotoChange={(dataUrl) => setEditingDossierAsset((prev) => ({ ...prev, photo_data: dataUrl }))}
+                                label="Update Hardware Photograph (Camera / File Upload)"
+                                resolveFn={resolvePhotoUrl}
+                              />
+
+                              <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "16px" }}>
+                                <button type="button" onClick={() => setEditingDossierAsset(null)} style={{ padding: "7px 14px", fontSize: "12px", background: "#f8fafc", border: "1px solid #cbd5e1", borderRadius: "6px", cursor: "pointer", fontWeight: 600 }}>Cancel</button>
+                                <button
+                                  type="button"
+                                  disabled={dossierAssetOpLoading}
+                                  onClick={() => handleSaveDossierAssetEdit(editingDossierAsset.asset_id)}
+                                  style={{ padding: "7px 18px", fontSize: "12px", background: "#0284c7", color: "#ffffff", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: 700 }}
+                                >
+                                  {dossierAssetOpLoading ? "Saving..." : "Save Asset Changes"}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {dossierData.assets && dossierData.assets.length > 0 ? (
                         <div className="vms-asset-cards-grid">
                           {dossierData.assets.map((asset) => {
                             const assetPhoto = resolvePhotoUrl(asset.photo_url);
+                            const isRetained = (asset.cleared_by && asset.cleared_by.includes("RETAINED")) || asset.disposition === "RETAINED_ON_PREMISES";
+                            const isCarried = (!asset.cleared_by || !asset.cleared_by.includes("RETAINED")) && (asset.is_cleared_for_exit || asset.disposition === "CARRIED_OUT");
+                            const currentDisp = isRetained ? "RETAINED_ON_PREMISES" : (isCarried ? "CARRIED_OUT" : "PENDING");
+                            const isInside = !!dossierData.active_visit;
+
                             return (
-                              <div key={asset.asset_id} className="vms-asset-card">
-                                <div className="vms-asset-img-box">
-                                  {assetPhoto ? (
-                                    <img
-                                      src={assetPhoto}
-                                      alt={asset.asset_type}
-                                      onError={(e) => {
-                                        e.currentTarget.style.display = "none";
+                              <div key={asset.asset_id} className="vms-asset-card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+                                <div>
+                                  <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
+                                    <div
+                                      className="vms-asset-img-box"
+                                      style={{ cursor: assetPhoto ? "pointer" : "default" }}
+                                      onClick={() => {
+                                        if (assetPhoto) {
+                                          setAssetLightbox({
+                                            url: assetPhoto,
+                                            title: `${asset.brand_model || asset.asset_type || "Declared Hardware"} (Hardware Photo)`,
+                                          });
+                                        }
                                       }}
-                                    />
-                                  ) : (
-                                    <Laptop size={24} style={{ color: "#94a3b8" }} />
-                                  )}
-                                </div>
-                                <div className="vms-asset-meta">
-                                  <span className="vms-asset-type">{asset.asset_type || "Hardware Asset"}</span>
-                                  {asset.brand_model && (
-                                    <span style={{ fontSize: "12px", color: "#64748b" }}>{asset.brand_model}</span>
-                                  )}
-                                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
-                                    <span className="vms-asset-sn">S/N: {asset.serial_number || "NO-S/N"}</span>
-                                    {asset.is_cleared_for_exit ? (
-                                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a" }}>✓ Cleared</span>
-                                    ) : (
-                                      <span style={{ fontSize: "11px", fontWeight: 700, color: "#d97706" }}>⚠ Exit Clearance Req.</span>
-                                    )}
+                                      title={assetPhoto ? "Click to enlarge hardware photo" : ""}
+                                    >
+                                      {assetPhoto ? (
+                                        <img
+                                          src={assetPhoto}
+                                          alt={asset.asset_type}
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = "none";
+                                          }}
+                                        />
+                                      ) : (
+                                        <Laptop size={24} style={{ color: "#94a3b8" }} />
+                                      )}
+                                    </div>
+                                    <div className="vms-asset-meta" style={{ flex: 1 }}>
+                                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                        <span className="vms-asset-type">{asset.asset_type || "Hardware Asset"}</span>
+                                        {isInside && (
+                                          <div style={{ display: "flex", gap: "4px" }}>
+                                            <button
+                                              type="button"
+                                              title="Edit asset details"
+                                              onClick={() => setEditingDossierAsset({
+                                                ...asset,
+                                                disposition: currentDisp,
+                                                retention_note: asset.cleared_by && asset.cleared_by.includes("RETAINED_ON_PREMISES:") ? asset.cleared_by.replace(/^RETAINED_ON_PREMISES:\s*/i, "").replace(/\s*\(.*?\)\s*$/, "") : ""
+                                              })}
+                                              style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: "2px" }}
+                                            >
+                                              <Edit3 size={13} />
+                                            </button>
+                                            <button
+                                              type="button"
+                                              title="Remove asset from visit"
+                                              onClick={() => handleDeleteDossierAsset(asset.asset_id, asset.brand_model || asset.asset_type)}
+                                              style={{ background: "none", border: "none", cursor: "pointer", color: "#ef4444", padding: "2px" }}
+                                            >
+                                              <Trash2 size={13} />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {asset.brand_model && (
+                                        <span style={{ fontSize: "12px", color: "#64748b" }}>{asset.brand_model}</span>
+                                      )}
+                                      <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px" }}>
+                                        <span className="vms-asset-sn">S/N: {asset.serial_number || "NO-S/N"}</span>
+                                      </div>
+                                    </div>
                                   </div>
+
+                                  {/* In-Visit Quick Disposition Selector (If Inside) */}
+                                  {isInside ? (
+                                    <div style={{ marginTop: "12px", paddingTop: "10px", borderTop: "1px solid #f1f5f9" }}>
+                                      <div style={{ fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", marginBottom: "6px" }}>
+                                        Exit Departure Status:
+                                      </div>
+                                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                                        <button
+                                          type="button"
+                                          onClick={() => handleUpdateDossierAssetDisposition(asset.asset_id, "CARRIED_OUT")}
+                                          disabled={dossierAssetOpLoading}
+                                          style={{
+                                            padding: "6px 8px",
+                                            borderRadius: "6px",
+                                            border: isCarried ? "1.5px solid #16a34a" : "1px solid #cbd5e1",
+                                            background: isCarried ? "#f0fdf4" : "#ffffff",
+                                            color: isCarried ? "#15803d" : "#475569",
+                                            fontSize: "11px",
+                                            fontWeight: isCarried ? 700 : 500,
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: "4px"
+                                          }}
+                                        >
+                                          <CheckCircle2 size={12} color={isCarried ? "#16a34a" : "#94a3b8"} />
+                                          Carrying Out
+                                        </button>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const note = prompt("Enter retention note or location (e.g. Installed in Room 102, Handed to Host):", "Retained on campus / kept in use");
+                                            if (note !== null) {
+                                              handleUpdateDossierAssetDisposition(asset.asset_id, "RETAINED_ON_PREMISES", note);
+                                            }
+                                          }}
+                                          disabled={dossierAssetOpLoading}
+                                          style={{
+                                            padding: "6px 8px",
+                                            borderRadius: "6px",
+                                            border: isRetained ? "1.5px solid #2563eb" : "1px solid #cbd5e1",
+                                            background: isRetained ? "#eff6ff" : "#ffffff",
+                                            color: isRetained ? "#1d4ed8" : "#475569",
+                                            fontSize: "11px",
+                                            fontWeight: isRetained ? 700 : 500,
+                                            cursor: "pointer",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: "4px"
+                                          }}
+                                        >
+                                          <Package size={12} color={isRetained ? "#2563eb" : "#94a3b8"} />
+                                          Retain in Facility
+                                        </button>
+                                      </div>
+
+                                      {isRetained && (
+                                        <div style={{ marginTop: "6px", fontSize: "11px", color: "#1d4ed8", background: "#eff6ff", padding: "4px 8px", borderRadius: "4px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                          <span>📦 {asset.cleared_by ? asset.cleared_by.replace(/^RETAINED_ON_PREMISES:\s*/i, "").replace(/\s*\(.*?\)\s*$/, "") : "Retained on premises"}</span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    /* Historical View Status */
+                                    <div style={{ marginTop: "8px" }}>
+                                      {isRetained ? (
+                                        <span
+                                          style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "4px",
+                                            fontSize: "11px",
+                                            fontWeight: 600,
+                                            color: "#1d4ed8",
+                                            background: "#eff6ff",
+                                            border: "1px solid #bfdbfe",
+                                            borderRadius: "4px",
+                                            padding: "3px 8px",
+                                          }}
+                                        >
+                                          <Package size={12} />
+                                          Retained on Premises {asset.cleared_by ? `(${asset.cleared_by.replace(/^RETAINED_ON_PREMISES:\s*/i, "")})` : ""}
+                                        </span>
+                                      ) : asset.is_cleared_for_exit ? (
+                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#16a34a", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                          <CheckCircle2 size={12} /> ✓ Cleared for Exit
+                                        </span>
+                                      ) : (
+                                        <span style={{ fontSize: "11px", fontWeight: 700, color: "#d97706", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                          <Clock size={12} /> ⚠ Exit Clearance Req.
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );
@@ -4464,6 +5454,7 @@ function VMSApp() {
                                 <th>Purpose</th>
                                 <th>Check-Out</th>
                                 <th>Status</th>
+                                <th style={{ textAlign: "center" }}>Pass</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -4492,6 +5483,18 @@ function VMSApp() {
                                     <span className={`status-pill ${h.status === "ACTIVE" ? "active" : "checked"}`}>
                                       {h.status}
                                     </span>
+                                  </td>
+                                  <td style={{ textAlign: "center" }}>
+                                    <button
+                                      type="button"
+                                      className="vms-btn-pass-link"
+                                      style={{ padding: "4px 8px", fontSize: "11px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+                                      onClick={() => window.open(`/visitor-pass/${encodeURIComponent(h.visit_id)}`, "_blank")}
+                                      title="Open official digital visitor pass"
+                                    >
+                                      <Ticket size={11} />
+                                      <span>Pass</span>
+                                    </button>
                                   </td>
                                 </tr>
                               ))}
@@ -4556,9 +5559,285 @@ function VMSApp() {
     );
   };
 
+  function renderCheckoutReceipt() {
+    if (!checkoutReceipt) return null;
+
+    const formatReceiptDate = (value) => {
+      if (!value) return "Not recorded";
+      const date = new Date(value);
+      return Number.isNaN(date.getTime())
+        ? "Not recorded"
+        : date.toLocaleString();
+    };
+
+    const isIT = (checkoutReceipt.purpose || "").includes("[IT_VISIT]");
+
+    return (
+      <section
+        className="page-card checkout-receipt-wrapper"
+        style={{ marginTop: "20px" }}
+      >
+        <div
+          id="checkout-receipt"
+          className="checkout-receipt-card"
+          style={{
+            background: "#ffffff",
+            color: "#0f172a",
+            border: "2px solid #0f172a",
+            borderRadius: "14px",
+            padding: "24px 28px",
+            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+          }}
+        >
+          {/* Executive Certificate Header */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: "16px",
+              flexWrap: "wrap",
+              borderBottom: "2.5px solid #2563eb",
+              paddingBottom: "16px",
+              marginBottom: "20px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div
+                style={{
+                  width: "44px",
+                  height: "44px",
+                  borderRadius: "10px",
+                  background: "#0f172a",
+                  color: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 900,
+                  fontSize: "18px",
+                  letterSpacing: "-0.5px",
+                  border: "1.5px solid #2563eb",
+                }}
+              >
+                VMS
+              </div>
+              <div>
+                <h2 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#0f172a", letterSpacing: "-0.3px" }}>
+                  Visitor Departure &amp; Hardware Custody Certificate
+                </h2>
+                <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Enterprise Physical &amp; Digital Access Clearance · Official Gate Departure Document
+                </p>
+              </div>
+            </div>
+
+            <div style={{ textAlign: "right" }}>
+              <span style={{ display: "block", fontSize: "10.5px", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Receipt Reference
+              </span>
+              <strong style={{ fontSize: "14px", color: "#2563eb", fontFamily: "monospace" }}>
+                {checkoutReceipt.receiptNumber || checkoutReceipt.visitId}
+              </strong>
+              <div style={{ marginTop: "4px" }}>
+                <span
+                  style={{
+                    display: "inline-block",
+                    padding: "2px 8px",
+                    borderRadius: "4px",
+                    fontSize: "10px",
+                    fontWeight: 800,
+                    background: "#f0fdf4",
+                    color: "#166534",
+                    border: "1px solid #86efac",
+                  }}
+                >
+                  ✓ DEPARTURE RECORDED
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 1: Visitor Credentials & Address */}
+          <div style={{ marginBottom: "18px" }}>
+            <h4 style={{ margin: "0 0 10px", fontSize: "11px", fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px" }}>
+              1. Visitor Credentials &amp; Registered Address
+            </h4>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "10px" }}>
+              <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <small style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", display: "block", fontWeight: 700 }}>Visitor Name</small>
+                <p style={{ margin: "2px 0 0", fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>{checkoutReceipt.visitorName}</p>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <small style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", display: "block", fontWeight: 700 }}>Organization / Firm</small>
+                <p style={{ margin: "2px 0 0", fontSize: "13px", fontWeight: 700, color: "#0f172a" }}>{checkoutReceipt.companyName || "Independent"}</p>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <small style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", display: "block", fontWeight: 700 }}>Physical Address</small>
+                <p style={{ margin: "2px 0 0", fontSize: "12px", fontWeight: 600, color: "#334155" }}>
+                  {[checkoutReceipt.addressLine1, checkoutReceipt.addressLine2, checkoutReceipt.city, checkoutReceipt.state, checkoutReceipt.postalCode, checkoutReceipt.country].filter(Boolean).join(", ") || "Recorded in VMS Registry"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Visit Timeline & Host Context */}
+          <div style={{ marginBottom: "18px" }}>
+            <h4 style={{ margin: "0 0 10px", fontSize: "11px", fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px" }}>
+              2. Host Authorization &amp; Gate Timeline
+            </h4>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "10px" }}>
+              <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <small style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", display: "block", fontWeight: 700 }}>Host Official</small>
+                <p style={{ margin: "2px 0 0", fontSize: "12.5px", fontWeight: 700, color: "#0f172a" }}>{checkoutReceipt.hostName}</p>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <small style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", display: "block", fontWeight: 700 }}>Visit Purpose</small>
+                <p style={{ margin: "2px 0 0", fontSize: "12.5px", fontWeight: 600, color: "#334155" }}>{checkoutReceipt.purpose}</p>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <small style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", display: "block", fontWeight: 700 }}>Admission (Check-in)</small>
+                <p style={{ margin: "2px 0 0", fontSize: "12px", fontWeight: 700, color: "#0f172a" }}>{formatReceiptDate(checkoutReceipt.checkInTime)}</p>
+              </div>
+              <div style={{ background: "#f8fafc", padding: "8px 12px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+                <small style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", display: "block", fontWeight: 700 }}>Departure (Checkout)</small>
+                <p style={{ margin: "2px 0 0", fontSize: "12px", fontWeight: 700, color: "#166534" }}>{formatReceiptDate(checkoutReceipt.checkoutTime)}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Registered Hardware Clearance Ledger */}
+          <div style={{ marginBottom: "20px" }}>
+            <h4 style={{ margin: "0 0 10px", fontSize: "11px", fontWeight: 800, color: "#475569", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e2e8f0", paddingBottom: "4px" }}>
+              3. Declared Asset &amp; Equipment Clearance Ledger
+            </h4>
+
+            {checkoutReceipt.assets.length === 0 ? (
+              <p style={{ fontSize: "12px", color: "#64748b", margin: "4px 0", fontStyle: "italic" }}>
+                No hardware equipment or electronic assets were declared for this visit.
+              </p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11.5px" }}>
+                  <thead>
+                    <tr style={{ background: "#0f172a", color: "#ffffff", textAlign: "left" }}>
+                      <th style={{ padding: "8px 10px", fontWeight: 700, fontSize: "10px", textTransform: "uppercase" }}>Asset Category</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 700, fontSize: "10px", textTransform: "uppercase" }}>Brand &amp; Model</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 700, fontSize: "10px", textTransform: "uppercase" }}>Serial Number</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 700, fontSize: "10px", textTransform: "uppercase" }}>Clearance Disposition</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 700, fontSize: "10px", textTransform: "uppercase" }}>Inspecting Officer</th>
+                      <th style={{ padding: "8px 10px", fontWeight: 700, fontSize: "10px", textTransform: "uppercase" }}>Timestamp</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {checkoutReceipt.assets.map((asset, index) => {
+                      const isRetained = (asset.clearedBy && asset.clearedBy.includes("RETAINED")) || asset.disposition === "RETAINED_ON_PREMISES";
+                      return (
+                        <tr key={`${asset.serialNumber}-${index}`} style={{ background: index % 2 === 0 ? "#ffffff" : "#f8fafc" }}>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", fontWeight: 600 }}>{asset.assetType}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>{asset.brandModel || "—"}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", fontFamily: "monospace", fontWeight: 700 }}>{asset.serialNumber}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>
+                            {isRetained ? (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "2px 7px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe" }}>
+                                📦 Retained in Facility
+                              </span>
+                            ) : asset.cleared ? (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "2px 7px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, background: "#f0fdf4", color: "#166534", border: "1px solid #bbf7d0" }}>
+                                ✓ Cleared for Exit
+                              </span>
+                            ) : (
+                              <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", padding: "2px 7px", borderRadius: "4px", fontSize: "10px", fontWeight: 700, background: "#fef2f2", color: "#991b1b", border: "1px solid #fecaca" }}>
+                                ⚠ Pending Exit Inspection
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>{asset.clearedBy || "Security Desk"}</td>
+                          <td style={{ padding: "8px 10px", borderBottom: "1px solid #e2e8f0", color: "#475569" }}>{formatReceiptDate(asset.clearedAt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Section 4: Security Sign-Offs */}
+          <div
+            className="receipt-signatures-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: "16px",
+              marginTop: "20px",
+              paddingTop: "16px",
+              borderTop: "1.5px dashed #cbd5e1",
+            }}
+          >
+            <div style={{ textAlign: "center" }}>
+              <div style={{ width: "100%", height: "1px", borderBottom: "1px solid #0f172a", marginBottom: "6px" }}></div>
+              <span style={{ fontSize: "10px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                Visitor / Carrier Signature
+              </span>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ width: "100%", height: "1px", borderBottom: "1px solid #0f172a", marginBottom: "6px" }}></div>
+              <span style={{ fontSize: "10px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                Host Employee / IT Custodian
+              </span>
+            </div>
+            <div style={{ textAlign: "center" }}>
+              <div style={{ width: "100%", height: "1px", borderBottom: "1px solid #0f172a", marginBottom: "6px" }}></div>
+              <span style={{ fontSize: "10px", fontWeight: 700, color: "#475569", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+                Security Gate Clearance Stamp
+              </span>
+            </div>
+          </div>
+
+          <p style={{ marginTop: "16px", marginBottom: 0, color: "#64748b", fontSize: "10.5px", textAlign: "center" }}>
+            This official departure certificate was issued by the Enterprise Visitor Management System. All building exits and equipment handovers are permanently audit-logged.
+          </p>
+        </div>
+
+        {/* Screen-Only Action Buttons */}
+        <div
+          className="no-print"
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginTop: "16px",
+          }}
+        >
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => window.print()}
+            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+          >
+            <Printer size={15} />
+            <span>Print / Save as PDF</span>
+          </button>
+
+          <button
+            type="button"
+            className="back-button"
+            onClick={() => setCheckoutReceipt(null)}
+          >
+            Close Receipt
+          </button>
+        </div>
+      </section>
+    );
+  };
+
+
   const renderCheckout = () => {
     const rawActiveVisitors = (dashboardData?.visitors || []).filter(
-      (item) => item.status === "ACTIVE"
+      (item) =>
+        item.status === "ACTIVE" &&
+        !Boolean(item.purpose && String(item.purpose).toUpperCase().includes("[IT_VISIT]"))
     );
 
     const activeVisitors = rawActiveVisitors.filter((item) => {
@@ -4604,6 +5883,49 @@ function VMSApp() {
 
         {!visit ? (
           <>
+            {/* KPI Metric Cards Grid */}
+            <section className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon blue">
+                  <UserCheck size={20} />
+                </div>
+                <div className="stat-content">
+                  <strong>{activeVisitors.length}</strong>
+                  <span>Active On Premises</span>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon green">
+                  <Clock size={20} />
+                </div>
+                <div className="stat-content">
+                  <strong>{dashboardData?.statistics?.checked_out || 0}</strong>
+                  <span>Checked Out Today</span>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon purple">
+                  <Users size={20} />
+                </div>
+                <div className="stat-content">
+                  <strong>{dashboardData?.statistics?.total_visitors || activeVisitors.length}</strong>
+                  <span>Total Today's Visits</span>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon amber">
+                  <Laptop size={20} />
+                </div>
+                <div className="stat-content">
+                  <strong>{rawActiveVisitors.filter((v) => v.has_assets || (v.assets && v.assets.length > 0)).length}</strong>
+                  <span>Hardware Pending Exit</span>
+                </div>
+              </div>
+            </section>
+
             {/* Quick QR Departure Callout */}
             <div className="checkout-quick-bar">
               <div className="checkout-quick-icon">
@@ -4929,7 +6251,7 @@ function VMSApp() {
                     </p>
                   </div>
                   <span className={`checkout-assets-count ${visitAssets.some((asset) => !asset.is_cleared_for_exit) ? "has-pending" : "all-cleared"}`}>
-                    {assetsLoading ? "Loading assets…" : `${visitAssets.length} Declared Asset${visitAssets.length === 1 ? "" : "s"}`}
+                    {assetsLoading ? "Loading assets…" : `${visitAssets.filter((a) => !((a.cleared_by && a.cleared_by.includes("RETAINED")) || a.disposition === "RETAINED_ON_PREMISES")).length} Returning · ${visitAssets.filter((a) => (a.cleared_by && a.cleared_by.includes("RETAINED")) || a.disposition === "RETAINED_ON_PREMISES").length} Retained`}
                   </span>
                 </div>
 
@@ -5020,9 +6342,19 @@ function VMSApp() {
                                 )}
                               </td>
                               <td>
-                                <span className={`checkout-clearance-badge ${asset.is_cleared_for_exit ? "is-cleared" : "is-pending"}`}>
-                                  {asset.is_cleared_for_exit ? "✓ Exit Cleared" : "⚠️ Inspection Required"}
-                                </span>
+                                {((asset.cleared_by && asset.cleared_by.includes("RETAINED")) || asset.disposition === "RETAINED_ON_PREMISES") ? (
+                                  <span className="checkout-clearance-badge is-cleared" style={{ background: "#eff6ff", color: "#1d4ed8", borderColor: "#bfdbfe" }}>
+                                    📦 Retained in Facility (Stays on Campus)
+                                  </span>
+                                ) : asset.is_cleared_for_exit ? (
+                                  <span className="checkout-clearance-badge is-cleared">
+                                    ✓ Return (Cleared for Exit)
+                                  </span>
+                                ) : (
+                                  <span className="checkout-clearance-badge is-pending">
+                                    ⚠️ Inspection Required
+                                  </span>
+                                )}
                               </td>
                               <td>
                                 <div style={{ fontSize: "11.5px", color: "#334155", fontWeight: 600 }}>
@@ -5386,6 +6718,22 @@ function VMSApp() {
                   <span className="vms-pass-meta-sub">
                     {visitAssets.length} asset{visitAssets.length === 1 ? "" : "s"}
                   </span>
+                </div>
+              </div>
+
+              {/* Official Sign-Off for PDF / Printed Badge */}
+              <div className="pass-print-footer">
+                <div className="pass-signature-box">
+                  <div className="sig-line"></div>
+                  <span>Visitor Signature</span>
+                </div>
+                <div className="pass-signature-box">
+                  <div className="sig-line"></div>
+                  <span>Host Authorization</span>
+                </div>
+                <div className="pass-signature-box">
+                  <div className="sig-line"></div>
+                  <span>Security Gate Stamp</span>
                 </div>
               </div>
 
@@ -5755,710 +7103,20 @@ function VMSApp() {
   };
 
   const renderCheckoutHistory = () => {
-    const query = checkoutHistorySearch.trim().toLowerCase();
-
-    // Strictly general visitor checkouts (exclude IT technical visits)
-    const generalHistory = checkoutHistory.filter(
-      (item) => !(item.purpose && item.purpose.includes("[IT_VISIT]"))
+    const generalOnlyHistory = (checkoutHistory || []).filter(
+      (item) => !Boolean(item.purpose && String(item.purpose).toUpperCase().includes("[IT_VISIT]"))
     );
-
-    const filteredHistory = generalHistory.filter((item) => {
-      const visitor = item.visitor || {};
-      const host = item.host_employee || {};
-
-      const visitorName =
-        `${visitor.first_name || ""} ${visitor.last_name || ""}`.trim();
-
-      const hostName =
-        `${host.first_name || ""} ${host.last_name || ""}`.trim();
-
-      const searchableFields = [
-        visitorName,
-        visitor.company_name,
-        visitor.phone_number,
-        visitor.email,
-        visitor.address_line1,
-        visitor.address_line2,
-        visitor.city,
-        visitor.state,
-        visitor.postal_code,
-        visitor.country,
-        hostName,
-        host.department,
-        item.visit_id,
-        item.purpose,
-        ...(item.assets || []).flatMap((asset) => [
-          asset.asset_type,
-          asset.brand_model,
-          asset.serial_number,
-        ]),
-      ];
-
-      return searchableFields.some((value) =>
-        String(value || "").toLowerCase().includes(query)
-      );
-    });
-
-    const formatDate = (value) => {
-      if (!value) return "Not recorded";
-      const date = new Date(value);
-      return Number.isNaN(date.getTime())
-        ? "Not recorded"
-        : date.toLocaleString();
-    };
-
     return (
-      <>
-        <div className="topbar">
-          <div>
-            <h2>Checkout History</h2>
-            <p>Search previous visits and review complete checkout records.</p>
-          </div>
-          <button
-            className="back-button"
-            onClick={openDashboard}
-          >
-            <ArrowLeft size={14} />
-            Back
-          </button>
-        </div>
-
-        <section className="page-card no-print">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              gap: "12px",
-              flexWrap: "wrap",
-              marginBottom: "18px",
-            }}
-          >
-            <div>
-              <h3 style={{ margin: "0 0 5px" }}>
-                Previous Checkouts
-              </h3>
-              <p style={{ margin: 0, color: "#667085" }}>
-                {filteredHistory.length} record(s) found
-              </p>
-            </div>
-
-            <button
-              className="refresh-button"
-              onClick={fetchCheckoutHistory}
-              disabled={checkoutHistoryLoading}
-              title="Refresh checkout history"
-            >
-              <RefreshCw
-                size={14}
-                className={checkoutHistoryLoading ? "spin" : ""}
-              />
-              Refresh
-            </button>
-          </div>
-
-          <div className="search-field" style={{ width: "100%", maxWidth: "100%", height: "40px", marginBottom: "18px" }}>
-            <Search size={15} />
-            <input
-              type="text"
-              value={checkoutHistorySearch}
-              onChange={(event) =>
-                setCheckoutHistorySearch(event.target.value)
-              }
-              placeholder="Search visitor, company, visit ID, host or asset serial..."
-            />
-            {checkoutHistorySearch && (
-              <button
-                type="button"
-                style={{ background: "transparent", border: 0, cursor: "pointer", color: "#94a3b8" }}
-                onClick={() => setCheckoutHistorySearch("")}
-                title="Clear search"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-
-          {checkoutHistoryLoading ? (
-            <p>Loading checkout history...</p>
-          ) : checkoutHistoryError ? (
-            <p style={{ color: "#b42318" }}>
-              {checkoutHistoryError}
-            </p>
-          ) : filteredHistory.length === 0 ? (
-            <p>No checkout records match your search.</p>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "left",
-                }}
-              >
-                <thead>
-                  <tr style={{ background: "#f8fafc" }}>
-                    {[
-                      "Visitor",
-                      "Company",
-                      "Host",
-                      "Check-in",
-                      "Checkout",
-                      "Assets",
-                      "Details",
-                    ].map((heading) => (
-                      <th
-                        key={heading}
-                        style={{
-                          padding: "12px 14px",
-                          borderBottom: "1px solid #e2e8f0",
-                          color: "#475569",
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.05em",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {heading}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {filteredHistory.map((item) => {
-                    const historyVisitor = item.visitor || {};
-                    const directoryVisitor = visitorList.find(
-                      (entry) => String(entry.visitor_id) === String(historyVisitor.visitor_id || item.visitor_id)
-                    ) || {};
-                    const visitor = {
-                      ...directoryVisitor,
-                      ...historyVisitor,
-                      photo_url: historyVisitor.photo_url || directoryVisitor.photo_url || item.photo_url || item.visitor_photo_url || "",
-                      address_line1: historyVisitor.address_line1 || directoryVisitor.address_line1 || "",
-                      address_line2: historyVisitor.address_line2 || directoryVisitor.address_line2 || "",
-                      city: historyVisitor.city || directoryVisitor.city || "",
-                      state: historyVisitor.state || directoryVisitor.state || "",
-                      postal_code: historyVisitor.postal_code || directoryVisitor.postal_code || "",
-                      country: historyVisitor.country || directoryVisitor.country || "",
-                    };
-                    const host = item.host_employee || {};
-                    const rowVisitorPhoto = resolvePhotoUrl(visitor.photo_url);
-                    const visitorFullName = `${visitor.first_name || ""} ${visitor.last_name || ""}`.trim() || "Visitor";
-                    const hasAssetPhotos = (item.assets || []).some((a) => a.photo_url);
-
-                    return (
-                      <tr key={item.visit_id}>
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <div
-                              className="checkout-visitor-photo-wrap"
-                              style={{
-                                width: "42px",
-                                height: "42px",
-                                minWidth: "42px",
-                                borderRadius: "8px",
-                                margin: 0,
-                                cursor: rowVisitorPhoto ? "pointer" : "default"
-                              }}
-                              onClick={(e) => {
-                                if (rowVisitorPhoto) {
-                                  e.stopPropagation();
-                                  setAssetLightbox({
-                                    url: rowVisitorPhoto,
-                                    title: `${visitorFullName} (Visitor Photo)`,
-                                    subtitle: `Visitor ID #${visitor.visitor_id || item.visitor_id || "—"} · ${visitor.company_name || "Visitor"}`
-                                  });
-                                }
-                              }}
-                              title={rowVisitorPhoto ? "Click to zoom visitor photo" : "No photo registered"}
-                            >
-                              {rowVisitorPhoto ? (
-                                <img
-                                  src={rowVisitorPhoto}
-                                  alt={visitorFullName}
-                                  className="checkout-visitor-photo"
-                                  onError={(event) => {
-                                    event.currentTarget.style.display = "none";
-                                    const fallback = event.currentTarget.parentElement?.querySelector(".checkout-visitor-photo-fallback");
-                                    if (fallback) fallback.style.display = "grid";
-                                  }}
-                                />
-                              ) : null}
-                              <span className="checkout-visitor-photo-fallback" style={{ fontSize: "14px" }}>
-                                {getInitials(visitorFullName)}
-                              </span>
-                              {rowVisitorPhoto && (
-                                <div className="checkout-visitor-photo-zoom-hint" style={{ width: "16px", height: "16px" }}>
-                                  <Eye size={9} />
-                                </div>
-                              )}
-                            </div>
-                            <div>
-                              <strong style={{ color: "#0f172a", fontSize: "13.5px", display: "block" }}>
-                                {visitorFullName}
-                              </strong>
-                              <div style={{ fontSize: "12px", color: "#64748b" }}>
-                                {visitor.phone_number || "No phone"}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9", color: "#334155" }}>
-                          {visitor.company_name || "Not specified"}
-                        </td>
-
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9", color: "#334155" }}>
-                          {`${host.first_name || ""} ${host.last_name || ""}`.trim() || "Not recorded"}
-                        </td>
-
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9", color: "#334155", whiteSpace: "nowrap" }}>
-                          {formatDate(item.check_in_time)}
-                        </td>
-
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9", color: "#334155", whiteSpace: "nowrap" }}>
-                          {formatDate(item.check_out_time)}
-                        </td>
-
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9", color: "#334155" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span style={{
-                              display: "inline-block",
-                              padding: "2px 8px",
-                              borderRadius: "6px",
-                              background: (item.assets || []).length > 0 ? "#eef2ff" : "#f8fafc",
-                              color: (item.assets || []).length > 0 ? "#4338ca" : "#94a3b8",
-                              border: "1px solid #c7d2fe",
-                              fontWeight: 700,
-                              fontSize: "12px"
-                            }}>
-                              {(item.assets || []).length}
-                            </span>
-                            {hasAssetPhotos && (
-                              <span title="Hardware photos attached" style={{ display: "inline-flex", color: "#4f46e5" }}>
-                                <Camera size={13} />
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9" }}>
-                          <button
-                            type="button"
-                            className="back-button"
-                            onClick={() => setSelectedHistoryVisit(item)}
-                          >
-                            View Details
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {selectedHistoryVisit && (() => {
-          const historyVisitor = selectedHistoryVisit.visitor || {};
-          const directoryVisitor = visitorList.find(
-            (item) => String(item.visitor_id) === String(historyVisitor.visitor_id || selectedHistoryVisit.visitor_id)
-          ) || {};
-          const selectedVisitor = {
-            ...directoryVisitor,
-            ...historyVisitor,
-            photo_url: historyVisitor.photo_url || directoryVisitor.photo_url || selectedHistoryVisit.photo_url || selectedHistoryVisit.visitor_photo_url || "",
-          };
-          const visitorFullName = `${selectedVisitor.first_name || ""} ${selectedVisitor.last_name || ""}`.trim() || "Visitor";
-          const visitorPhoto = resolvePhotoUrl(selectedVisitor.photo_url);
-
-          return (
-            <section
-              ref={historyDetailsRef}
-              className="page-card checkout-history-details"
-              style={{ marginTop: "20px", scrollMarginTop: "24px" }}
-            >
-              {/* Action Bar (Screen Only) */}
-              <div className="checkout-screen-action-bar no-print">
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "19px", fontWeight: 750, color: "#0f172a" }}>
-                    Official Checkout &amp; Security Clearance Record
-                  </h3>
-                  <p style={{ margin: "4px 0 0", fontSize: "13px", color: "#64748b" }}>
-                    Visit ID: <code style={{ color: "#334155", background: "#f1f5f9", padding: "2px 7px", borderRadius: "4px", fontWeight: 600 }}>{selectedHistoryVisit.visit_id}</code>
-                  </p>
-                </div>
-                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                  <button
-                    type="button"
-                    className="back-button"
-                    onClick={() => setSelectedHistoryVisit(null)}
-                  >
-                    Close Details
-                  </button>
-                  <button
-                    type="button"
-                    className="back-button"
-                    style={{ background: "#2563eb", color: "#ffffff", borderColor: "#1d4ed8" }}
-                    onClick={() => window.print()}
-                  >
-                    <Printer size={15} />
-                    Print / Save as PDF
-                  </button>
-                </div>
-              </div>
-
-              {/* Document Container: Works seamlessly on screen and in print */}
-              <div className="checkout-cert-sheet">
-                {/* Executive Letterhead / Header */}
-                <header className="checkout-cert-header">
-                  <div className="checkout-cert-brand">
-                    <div className="checkout-cert-logo">
-                      <ShieldCheck size={28} color="#1e3a8a" />
-                    </div>
-                    <div>
-                      <h2 className="checkout-cert-title">VISITOR MANAGEMENT SYSTEM</h2>
-                      <div className="checkout-cert-subtitle">Official Checkout &amp; Asset Security Clearance Certificate</div>
-                    </div>
-                  </div>
-
-                  <div className="checkout-cert-meta">
-                    <div className="checkout-cert-meta-item">
-                      <span className="meta-label">VISIT REFERENCE</span>
-                      <span className="meta-val monospace">{selectedHistoryVisit.visit_id}</span>
-                    </div>
-                    <div className="checkout-cert-meta-item">
-                      <span className="meta-label">CLEARANCE STATUS</span>
-                      <div className="checkout-cert-badges">
-                        <span className="cert-status-badge status-checkout">
-                          <CheckCircle2 size={12} /> {selectedHistoryVisit.status || "CHECKED_OUT"}
-                        </span>
-                        <span className={`cert-status-badge ${(selectedHistoryVisit.assets || []).every(a => a.is_cleared_for_exit) ? "status-cleared" : "status-pending"}`}>
-                          <ShieldCheck size={12} /> {(selectedHistoryVisit.assets || []).every(a => a.is_cleared_for_exit) ? "Assets Cleared" : "Pending Inspection"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </header>
-
-                {/* Section 1: 2-Column Unified Dossier */}
-                <div className="checkout-cert-dossier">
-                  {/* Column 1: Visitor Profile */}
-                  <div className="checkout-dossier-col visitor-col">
-                    <div className="checkout-col-heading">
-                      <h4>Visitor Information</h4>
-                      {visitorPhoto ? (
-                        <span className="cert-pill-green">
-                          <CheckCircle2 size={11} /> Photo Verified
-                        </span>
-                      ) : (
-                        <span className="cert-pill-gray">No Photo Recorded</span>
-                      )}
-                    </div>
-
-                    <div className="checkout-visitor-profile-card">
-                      <div
-                        className="checkout-visitor-photo-wrap"
-                        onClick={() => {
-                          if (visitorPhoto) {
-                            setAssetLightbox({
-                              url: visitorPhoto,
-                              title: `${visitorFullName} (Visitor Photograph)`,
-                              subtitle: `Visitor ID #${selectedVisitor.visitor_id || selectedHistoryVisit.visitor_id || "—"} · ${selectedVisitor.company_name || "Individual"}`
-                            });
-                          }
-                        }}
-                        title={visitorPhoto ? "Click to inspect visitor photograph" : "No photograph on file"}
-                      >
-                        {visitorPhoto ? (
-                          <img src={visitorPhoto} alt={visitorFullName} className="checkout-visitor-photo" />
-                        ) : null}
-                        <span className="checkout-visitor-photo-fallback">
-                          {getInitials(visitorFullName)}
-                        </span>
-                        {visitorPhoto && (
-                          <div className="checkout-visitor-photo-zoom-hint no-print">
-                            <Eye size={12} />
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="checkout-visitor-profile-details">
-                        <h3 className="checkout-visitor-name">{visitorFullName}</h3>
-                        <div className="checkout-profile-meta-row">
-                          <span className="profile-meta-item">
-                            <Building2 size={13} /> {selectedVisitor.company_name || "Individual / Guest"}
-                          </span>
-                        </div>
-                        <div className="checkout-profile-meta-row">
-                          <span className="profile-meta-item">
-                            <Tag size={13} /> Phone: {selectedVisitor.phone || selectedVisitor.phone_number || "Not recorded"}
-                          </span>
-                          <span className="profile-meta-item">
-                            Email: {selectedVisitor.email || "Not recorded"}
-                          </span>
-                        </div>
-                        <div className="checkout-profile-meta-row address-row">
-                          <span className="profile-meta-item">
-                            <MapPin size={13} />
-                            {[
-                              selectedVisitor.address_line1,
-                              selectedVisitor.address_line2,
-                              selectedVisitor.city,
-                              selectedVisitor.state,
-                              selectedVisitor.postal_code,
-                              selectedVisitor.country
-                            ].filter(Boolean).join(", ") || "Address not recorded"}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Column 2: Visit & Host Details */}
-                  <div className="checkout-dossier-col visit-col">
-                    <div className="checkout-col-heading">
-                      <h4>Visit &amp; Authorization Details</h4>
-                      <span className="cert-pill-blue">
-                        <Clock size={11} /> {(() => {
-                          const start = selectedHistoryVisit.check_in_time ? new Date(selectedHistoryVisit.check_in_time).getTime() : NaN;
-                          const end = selectedHistoryVisit.check_out_time ? new Date(selectedHistoryVisit.check_out_time).getTime() : NaN;
-                          if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return "Completed";
-                          const minutes = Math.floor((end - start) / 60000);
-                          const hours = Math.floor(minutes / 60);
-                          const remainingMinutes = minutes % 60;
-                          return hours > 0 ? `${hours}h ${remainingMinutes}m Duration` : `${remainingMinutes} min Duration`;
-                        })()}
-                      </span>
-                    </div>
-
-                    <div className="checkout-visit-fields-grid">
-                      <div className="field-group">
-                        <label>Host Employee</label>
-                        <div className="field-val highlight">
-                          {`${selectedHistoryVisit.host_employee?.first_name || ""} ${selectedHistoryVisit.host_employee?.last_name || ""}`.trim() || "Not recorded"}
-                          {selectedHistoryVisit.host_employee?.department && (
-                            <span className="field-subval"> · {selectedHistoryVisit.host_employee.department}</span>
-                          )}
-                        </div>
-                        {selectedHistoryVisit.host_employee?.email && (
-                          <div className="field-subtext">{selectedHistoryVisit.host_employee.email}</div>
-                        )}
-                      </div>
-
-                      <div className="field-group">
-                        <label>Duration &amp; Status</label>
-                        <div className="field-val">
-                          {selectedHistoryVisit.status || "CHECKED_OUT"} · {(selectedHistoryVisit.assets || []).length} Declared Asset(s)
-                        </div>
-                        <div className="field-subtext">Check-in to Checkout</div>
-                      </div>
-
-                      <div className="field-group full-span">
-                        <label>Visit Purpose &amp; Access Area</label>
-                        <div className="field-val purpose-val">{selectedHistoryVisit.purpose || "Official Facility Visit"}</div>
-                      </div>
-
-                      <div className="field-group">
-                        <label>Check-in Time</label>
-                        <div className="field-val">
-                          {selectedHistoryVisit.check_in_time ? new Date(selectedHistoryVisit.check_in_time).toLocaleString() : "Not recorded"}
-                        </div>
-                      </div>
-
-                      <div className="field-group">
-                        <label>Checkout Time</label>
-                        <div className="field-val">
-                          {selectedHistoryVisit.check_out_time ? new Date(selectedHistoryVisit.check_out_time).toLocaleString() : "Not recorded"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 2: Registered Hardware Assets Table */}
-                <div className="checkout-cert-section assets-section">
-                  <div className="checkout-section-header">
-                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <h4>Registered Hardware &amp; Security Clearance</h4>
-                      <span className="cert-count-badge">
-                        {(selectedHistoryVisit.assets || []).length} Declared Item(s)
-                      </span>
-                    </div>
-                    <div className="checkout-section-subtitle">
-                      Physical hardware inspection and authorization for facility exit
-                    </div>
-                  </div>
-
-                  {(!selectedHistoryVisit.assets || selectedHistoryVisit.assets.length === 0) ? (
-                    <div className="checkout-assets-clean-empty">
-                      <HardDrive size={20} color="#94a3b8" />
-                      <span>No physical hardware items declared or registered for this visit. Security clearance passed.</span>
-                    </div>
-                  ) : (
-                    <div className="checkout-cert-table-wrap">
-                      <table className="checkout-cert-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: "65px", textAlign: "center" }}>Photo</th>
-                            <th>Hardware Type</th>
-                            <th>Brand &amp; Model</th>
-                            <th>Serial / Asset Tag</th>
-                            <th>Exit Clearance</th>
-                            <th>Authorized Officer</th>
-                            <th>Clearance Time</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {selectedHistoryVisit.assets.map((asset) => {
-                            const assetPhoto = resolvePhotoUrl(asset.photo_url || asset.asset_photo_url);
-                            return (
-                              <tr key={asset.asset_id}>
-                                <td style={{ textAlign: "center" }}>
-                                  {assetPhoto ? (
-                                    <div
-                                      className="checkout-asset-thumb-wrap"
-                                      onClick={() => setAssetLightbox({
-                                        url: assetPhoto,
-                                        title: `${asset.brand_model || asset.asset_type || "Declared Hardware"} (Hardware Photo)`,
-                                        subtitle: `Serial: ${asset.serial_number || "Not specified"} · Type: ${asset.asset_type || "Hardware"}`
-                                      })}
-                                      title="Click to zoom hardware photograph"
-                                    >
-                                      <img src={assetPhoto} alt="Hardware" className="checkout-asset-thumb" />
-                                      <div className="checkout-asset-thumb-overlay no-print">
-                                        <Eye size={12} />
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    <div className="checkout-asset-no-photo">
-                                      <Laptop size={14} color="#94a3b8" />
-                                    </div>
-                                  )}
-                                </td>
-                                <td>
-                                  <div className="asset-type-cell">
-                                    <Laptop size={14} color="#2563eb" />
-                                    <strong>{asset.asset_type || "Hardware"}</strong>
-                                  </div>
-                                </td>
-                                <td>
-                                  <span className="asset-model-val">{asset.brand_model || "Standard"}</span>
-                                </td>
-                                <td>
-                                  {asset.serial_number ? (
-                                    <span className="checkout-cert-serial-tag">
-                                      <Tag size={11} /> {asset.serial_number}
-                                    </span>
-                                  ) : (
-                                    <span style={{ color: "#94a3b8", fontSize: "12px" }}>None</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <span className={`checkout-clearance-pill ${asset.is_cleared_for_exit ? "is-cleared" : "is-pending"}`}>
-                                    {asset.is_cleared_for_exit ? (
-                                      <>
-                                        <CheckCircle2 size={12} />
-                                        <span>Cleared for Exit</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <AlertTriangle size={12} />
-                                        <span>Pending Inspection</span>
-                                      </>
-                                    )}
-                                  </span>
-                                </td>
-                                <td>
-                                  <div className="officer-cell">
-                                    <ShieldCheck size={13} color="#475569" />
-                                    <span>{asset.cleared_by || "Security Officer"}</span>
-                                  </div>
-                                </td>
-                                <td className="time-cell">
-                                  {asset.cleared_at ? new Date(asset.cleared_at).toLocaleString() : "At Checkout"}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
-                {/* Section 3: Compliance & Security Declaration */}
-                <div className="checkout-cert-declaration">
-                  <ShieldCheck size={18} className="declaration-icon" />
-                  <p>
-                    <strong>Official Security Declaration:</strong> This certificate confirms that the visitor has surrendered all temporary credentials and concluded their authorized visit. All registered physical hardware assets have undergone gate inspection by authorized security personnel and are cleared for departure.
-                  </p>
-                </div>
-
-                {/* Section 4: 3 Formal Sign-Off Blocks */}
-                <div className="checkout-cert-signoff-grid">
-                  <div className="signoff-box">
-                    <div className="signoff-role">Visitor Acknowledgment</div>
-                    <div className="signoff-statement">I confirm return of all facility access badges and retrieval of declared personal hardware.</div>
-                    <div className="signoff-signature-space">
-                      <div className="signoff-signature-line"></div>
-                      <span className="signoff-hint">Physical Signature</span>
-                    </div>
-                    <div className="signoff-meta">
-                      <div className="signoff-name">Name: {visitorFullName}</div>
-                      <div className="signoff-date">Date &amp; Time: ____________________</div>
-                    </div>
-                  </div>
-
-                  <div className="signoff-box">
-                    <div className="signoff-role">Host Department Sign-Off</div>
-                    <div className="signoff-statement">I verify that scheduled business on facility premises has concluded.</div>
-                    <div className="signoff-signature-space">
-                      <div className="signoff-signature-line"></div>
-                      <span className="signoff-hint">Host Signature</span>
-                    </div>
-                    <div className="signoff-meta">
-                      <div className="signoff-name">Host: {`${selectedHistoryVisit.host_employee?.first_name || ""} ${selectedHistoryVisit.host_employee?.last_name || ""}`.trim() || "Host"}</div>
-                      <div className="signoff-date">Date &amp; Time: ____________________</div>
-                    </div>
-                  </div>
-
-                  <div className="signoff-box gate-officer-box">
-                    <div className="signoff-box-top">
-                      <div>
-                        <div className="signoff-role">Gate Security Officer</div>
-                        <div className="signoff-statement">I certify hardware inspection &amp; gate departure clearance.</div>
-                      </div>
-                      <div className="signoff-stamp-placeholder">
-                        <ShieldCheck size={14} color="#64748b" />
-                        <span>OFFICIAL GATE STAMP</span>
-                      </div>
-                    </div>
-                    <div className="signoff-signature-space">
-                      <div className="signoff-signature-line"></div>
-                      <span className="signoff-hint">Authorized Security Officer Signature</span>
-                    </div>
-                    <div className="signoff-meta">
-                      <div className="signoff-name">Officer: {(selectedHistoryVisit.assets && selectedHistoryVisit.assets[0]?.cleared_by) || "Gate Security"}</div>
-                      <div className="signoff-date">Security Exit Clearance Stamp: ________</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 5: Document Footer */}
-                <footer className="checkout-cert-footer">
-                  <span>Visitor Management System · Enterprise Facility Gate Clearance</span>
-                  <span>Ref: {selectedHistoryVisit.visit_id}</span>
-                  <span>Official Security Record · Page 1 of 1</span>
-                </footer>
-              </div>
-            </section>
-          );
-        })()}
-      </>
+      <CheckoutHistory
+        mode="general"
+        checkoutHistory={generalOnlyHistory}
+        visitorList={visitorList}
+        onRefresh={fetchCheckoutHistory}
+        loading={checkoutHistoryLoading}
+        error={checkoutHistoryError}
+        onBack={openDashboard}
+        setAssetLightbox={setAssetLightbox}
+      />
     );
   };
 
@@ -6466,1194 +7124,20 @@ function VMSApp() {
      IT CHECKOUT HISTORY (DEDICATED TO IT VISITORS ONLY)
   ========================================================= */
   const renderITCheckoutHistory = () => {
-    const query = itCheckoutHistorySearch.trim().toLowerCase();
-
-    // Filter strictly to IT technical visits only
-    const itHistory = checkoutHistory.filter(
-      (item) => item.purpose && item.purpose.includes("[IT_VISIT]")
+    const itOnlyHistory = (checkoutHistory || []).filter(
+      (item) => Boolean(item.purpose && String(item.purpose).toUpperCase().includes("[IT_VISIT]"))
     );
-
-    const parseITPurpose = (purposeStr) => {
-      if (!purposeStr) return {
-        raw: "",
-        category: "IT Technical Visit",
-        area: "IT Operations / Server Room",
-        ticket: "N/A",
-        workId: "N/A",
-        notes: "Authorized technical facility access"
-      };
-
-      const cleaned = purposeStr.replace(/\[IT_VISIT\]\s*/i, "").trim();
-      const parts = cleaned.split("|").map((s) => s.trim()).filter(Boolean);
-
-      let category = parts[0] || "IT Technical Visit";
-      let area = "";
-      let ticket = "";
-      let workId = "";
-      let notes = "";
-
-      for (let i = 1; i < parts.length; i++) {
-        const p = parts[i];
-        if (p.toLowerCase().startsWith("area:")) {
-          area = p.replace(/area:\s*/i, "").trim();
-        } else if (p.toLowerCase().startsWith("ticket:")) {
-          ticket = p.replace(/ticket:\s*/i, "").trim();
-        } else if (p.toLowerCase().startsWith("id:")) {
-          workId = p.replace(/id:\s*/i, "").trim();
-        } else {
-          notes += (notes ? " | " : "") + p;
-        }
-      }
-
-      return {
-        raw: cleaned,
-        category,
-        area: area || "Data Center / Server Room",
-        ticket: ticket || "Not recorded",
-        workId: workId || "N/A",
-        notes: notes || "Standard authorized IT site visit"
-      };
-    };
-
-    const calculateDuration = (inTime, outTime) => {
-      if (!inTime || !outTime) return "Not recorded";
-      const start = new Date(inTime).getTime();
-      const end = new Date(outTime).getTime();
-      if (Number.isNaN(start) || Number.isNaN(end) || end < start) return "Not recorded";
-      const diffSec = Math.floor((end - start) / 1000);
-      const hours = Math.floor(diffSec / 3600);
-      const mins = Math.floor((diffSec % 3600) / 60);
-      const secs = diffSec % 60;
-      if (hours > 0) return `${hours}h ${mins}m`;
-      if (mins > 0) return `${mins}m ${secs}s`;
-      return `${secs}s`;
-    };
-
-    const formatDate = (value) => {
-      if (!value) return "Not recorded";
-      const date = new Date(value);
-      return Number.isNaN(date.getTime())
-        ? "Not recorded"
-        : date.toLocaleString();
-    };
-
-    const filteredHistory = itHistory.filter((item) => {
-      const visitor = item.visitor || {};
-      const host = item.host_employee || {};
-
-      const visitorName = `${visitor.first_name || ""} ${visitor.last_name || ""}`.trim();
-      const hostName = `${host.first_name || ""} ${host.last_name || ""}`.trim();
-      const itParsed = parseITPurpose(item.purpose);
-
-      const searchableFields = [
-        visitorName,
-        visitor.company_name,
-        visitor.phone_number,
-        visitor.email,
-        visitor.address_line1,
-        visitor.address_line2,
-        visitor.city,
-        visitor.state,
-        visitor.postal_code,
-        visitor.country,
-        hostName,
-        host.department,
-        item.visit_id,
-        item.purpose,
-        itParsed.category,
-        itParsed.area,
-        itParsed.ticket,
-        itParsed.workId,
-        ...(item.assets || []).flatMap((asset) => [
-          asset.asset_type,
-          asset.brand_model,
-          asset.serial_number,
-        ]),
-      ];
-
-      return searchableFields.some((value) =>
-        String(value || "").toLowerCase().includes(query)
-      );
-    });
-
-    const totalClearedAssets = itHistory.reduce(
-      (sum, item) => sum + (item.assets || []).length,
-      0
-    );
-    const contractorCompanies = new Set(
-      itHistory.map((item) => item.visitor?.company_name).filter(Boolean)
-    ).size;
-
     return (
-      <>
-        {/* Executive Header */}
-        <div className="notif-management-header no-print">
-          <div className="notif-header-title-box">
-            <div className="notif-header-badge-row">
-              <span className="notif-division-pill">IT Department Division</span>
-              <span className="notif-telemetry-pill">
-                <span className="status-dot"></span>
-                IT Technical Personnel Checkout Archives
-              </span>
-            </div>
-            <h2 className="notif-page-title">IT Visitor Checkout History</h2>
-            <p className="notif-page-desc">
-              Comprehensive historical records and hardware exit clearances exclusively for IT technical personnel and contractors
-            </p>
-          </div>
-
-          <div className="notif-header-controls">
-            <button
-              type="button"
-              className="refresh-button"
-              onClick={fetchCheckoutHistory}
-              disabled={checkoutHistoryLoading}
-              title="Refresh IT checkout history"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "8px 14px",
-                background: "#faf5ff",
-                color: "#7c3aed",
-                border: "1px solid #d8b4fe",
-                borderRadius: "8px",
-                cursor: "pointer",
-                fontWeight: 600,
-                fontSize: "13px"
-              }}
-            >
-              <RefreshCw
-                size={14}
-                className={checkoutHistoryLoading ? "spin" : ""}
-              />
-              <span>Refresh Records</span>
-            </button>
-            <button
-              type="button"
-              className="back-button"
-              onClick={openDashboard}
-            >
-              <ArrowLeft size={14} />
-              <span>Dashboard</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Stats Summary Cards */}
-        <div
-          className="no-print"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-            gap: "14px",
-            marginBottom: "18px"
-          }}
-        >
-          <div style={{ background: "#ffffff", border: "1px solid #e9d5ff", borderRadius: "10px", padding: "14px 16px" }}>
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#6b21a8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Total IT Checkouts
-            </div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#4c1d95", marginTop: "4px" }}>
-              {itHistory.length}
-            </div>
-            <div style={{ fontSize: "12px", color: "#7c3aed", marginTop: "2px" }}>
-              Technical personnel visits recorded
-            </div>
-          </div>
-
-          <div style={{ background: "#ffffff", border: "1px solid #e9d5ff", borderRadius: "10px", padding: "14px 16px" }}>
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#6b21a8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Cleared Hardware Assets
-            </div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#4c1d95", marginTop: "4px" }}>
-              {totalClearedAssets}
-            </div>
-            <div style={{ fontSize: "12px", color: "#7c3aed", marginTop: "2px" }}>
-              Diagnostic tools &amp; equipment cleared
-            </div>
-          </div>
-
-          <div style={{ background: "#ffffff", border: "1px solid #e9d5ff", borderRadius: "10px", padding: "14px 16px" }}>
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#6b21a8", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Contractor Firms
-            </div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#4c1d95", marginTop: "4px" }}>
-              {contractorCompanies}
-            </div>
-            <div style={{ fontSize: "12px", color: "#7c3aed", marginTop: "2px" }}>
-              External vendor organizations
-            </div>
-          </div>
-
-          <div style={{ background: "#ffffff", border: "1px solid #a7f3d0", borderRadius: "10px", padding: "14px 16px" }}>
-            <div style={{ fontSize: "11.5px", fontWeight: 700, color: "#047857", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-              Exit Audit Status
-            </div>
-            <div style={{ fontSize: "24px", fontWeight: 800, color: "#065f46", marginTop: "4px", display: "flex", alignItems: "center", gap: "6px" }}>
-              <ShieldCheck size={22} color="#059669" /> 100%
-            </div>
-            <div style={{ fontSize: "12px", color: "#047857", marginTop: "2px" }}>
-              Security &amp; gate cleared
-            </div>
-          </div>
-        </div>
-
-        {/* Main Panel */}
-        <section className="table-card notif-main-card no-print">
-          {/* Toolbar */}
-          <div className="notif-toolbar" style={{ flexWrap: "wrap", gap: "12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "4px 10px",
-                  borderRadius: "6px",
-                  background: "#faf5ff",
-                  color: "#7c3aed",
-                  fontWeight: 700,
-                  fontSize: "12.5px",
-                  border: "1px solid #d8b4fe"
-                }}
-              >
-                {filteredHistory.length} IT Checkout Record{filteredHistory.length === 1 ? "" : "s"}
-              </span>
-            </div>
-
-            <div className="notif-search-field" style={{ flex: 1, minWidth: "280px" }}>
-              <Search size={14} />
-              <input
-                value={itCheckoutHistorySearch}
-                onChange={(e) => setItCheckoutHistorySearch(e.target.value)}
-                placeholder="Search contractor name, vendor, ticket #, purpose, serial..."
-              />
-              {itCheckoutHistorySearch && (
-                <button
-                  type="button"
-                  className="notif-search-clear"
-                  onClick={() => setItCheckoutHistorySearch("")}
-                  title="Clear search"
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {checkoutHistoryLoading ? (
-            <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-              <RefreshCw size={24} className="spin" style={{ margin: "0 auto 10px" }} />
-              <p>Loading IT visitor checkout records...</p>
-            </div>
-          ) : checkoutHistoryError ? (
-            <div style={{ padding: "30px", textAlign: "center", color: "#b42318" }}>
-              <p>{checkoutHistoryError}</p>
-            </div>
-          ) : filteredHistory.length === 0 ? (
-            <div className="empty-state notif-empty-state">
-              <div className="notif-empty-icon-wrap" style={{ background: "#faf5ff", color: "#7c3aed" }}>
-                <History size={26} />
-              </div>
-              <strong className="notif-empty-title">
-                {itCheckoutHistorySearch
-                  ? `No IT checkout records matching "${itCheckoutHistorySearch}"`
-                  : "No IT visitor checkouts recorded yet"}
-              </strong>
-              <p className="notif-empty-desc">
-                {itCheckoutHistorySearch
-                  ? "Try adjusting your search terms or clearing the filter."
-                  : "When IT technical visitors and contractors complete their visit and check out at the gate, their complete dossiers and hardware clearance records will appear here."}
-              </p>
-              {itCheckoutHistorySearch && (
-                <button
-                  type="button"
-                  className="primary-button notif-reset-btn"
-                  onClick={() => setItCheckoutHistorySearch("")}
-                >
-                  <RefreshCw size={13} />
-                  <span>Clear Search Filter</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "left",
-                }}
-              >
-                <thead>
-                  <tr style={{ background: "#faf5ff" }}>
-                    {[
-                      "IT Contractor / Visitor",
-                      "Organization",
-                      "IT Scope & Area",
-                      "Host / Escort",
-                      "Check-In",
-                      "Checkout",
-                      "Duration",
-                      "Hardware & Tools",
-                      "Details Dossier",
-                    ].map((heading) => (
-                      <th
-                        key={heading}
-                        style={{
-                          padding: "12px 14px",
-                          borderBottom: "1.5px solid #e9d5ff",
-                          color: "#6b21a8",
-                          fontSize: "11px",
-                          fontWeight: 800,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.06em",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {heading}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {filteredHistory.map((item) => {
-                    const historyVisitor = item.visitor || {};
-                    const directoryVisitor = visitorList.find(
-                      (entry) => String(entry.visitor_id) === String(historyVisitor.visitor_id || item.visitor_id)
-                    ) || {};
-                    const visitor = {
-                      ...directoryVisitor,
-                      ...historyVisitor,
-                      photo_url: historyVisitor.photo_url || directoryVisitor.photo_url || item.photo_url || item.visitor_photo_url || "",
-                      address_line1: historyVisitor.address_line1 || directoryVisitor.address_line1 || "",
-                      address_line2: historyVisitor.address_line2 || directoryVisitor.address_line2 || "",
-                      city: historyVisitor.city || directoryVisitor.city || "",
-                      state: historyVisitor.state || directoryVisitor.state || "",
-                      postal_code: historyVisitor.postal_code || directoryVisitor.postal_code || "",
-                      country: historyVisitor.country || directoryVisitor.country || "",
-                    };
-                    const host = item.host_employee || {};
-                    const rowVisitorPhoto = resolvePhotoUrl(visitor.photo_url);
-                    const visitorFullName = `${visitor.first_name || ""} ${visitor.last_name || ""}`.trim() || "IT Contractor";
-                    const itDetails = parseITPurpose(item.purpose);
-                    const durationText = calculateDuration(item.check_in_time, item.check_out_time);
-                    const assets = item.assets || [];
-                    const isSelected = selectedITHistoryVisit?.visit_id === item.visit_id;
-
-                    return (
-                      <tr
-                        key={item.visit_id}
-                        style={{
-                          background: isSelected ? "#fbf8ff" : "transparent",
-                          transition: "background 0.15s ease",
-                        }}
-                      >
-                        {/* 1. Contractor Info */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            <div
-                              style={{
-                                width: "42px",
-                                height: "42px",
-                                minWidth: "42px",
-                                borderRadius: "10px",
-                                margin: 0,
-                                cursor: rowVisitorPhoto ? "pointer" : "default",
-                                border: "1px solid #ddd6fe",
-                                background: rowVisitorPhoto ? "#ffffff" : "linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #7c3aed 100%)",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                position: "relative",
-                                overflow: "hidden",
-                                flexShrink: 0
-                              }}
-                              onClick={(e) => {
-                                if (rowVisitorPhoto) {
-                                  e.stopPropagation();
-                                  setAssetLightbox({
-                                    url: rowVisitorPhoto,
-                                    title: `${visitorFullName} (IT Technical Contractor)`,
-                                    subtitle: `ID #${visitor.visitor_id || item.visitor_id || "—"} • ${visitor.company_name || "IT Contractor"}`
-                                  });
-                                }
-                              }}
-                              title={rowVisitorPhoto ? "Click to zoom contractor photo" : "IT Contractor"}
-                            >
-                              {rowVisitorPhoto ? (
-                                <img
-                                  src={rowVisitorPhoto}
-                                  alt={visitorFullName}
-                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                                />
-                              ) : (
-                                <span style={{ fontSize: "14px", fontWeight: 800, color: "#ffffff", letterSpacing: "0.5px" }}>
-                                  {getInitials(visitorFullName)}
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <strong style={{ color: "#1e1b4b", fontSize: "13.5px", display: "block" }}>
-                                {visitorFullName}
-                              </strong>
-                              <div style={{ fontSize: "12px", color: "#6b21a8" }}>
-                                {visitor.phone_number || "No phone"}
-                              </div>
-                              {itDetails.workId !== "N/A" && (
-                                <span style={{ fontSize: "11px", color: "#7c3aed", fontWeight: 600 }}>
-                                  Badge ID: {itDetails.workId}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-
-                        {/* 2. Organization */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff", color: "#334155" }}>
-                          <strong style={{ color: "#0f172a", display: "block" }}>
-                            {visitor.company_name || "Independent Specialist"}
-                          </strong>
-                          <span style={{ fontSize: "11.5px", color: "#64748b" }}>
-                            {[visitor.city, visitor.state].filter(Boolean).join(", ") || "Location recorded"}
-                          </span>
-                        </td>
-
-                        {/* 3. IT Scope & Area */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff" }}>
-                          <span
-                            className="notif-category-badge badge-it"
-                            style={{ display: "inline-block", marginBottom: "4px", fontSize: "11px" }}
-                          >
-                            {itDetails.category}
-                          </span>
-                          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", fontSize: "11.5px", color: "#4b5563" }}>
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: "3px" }}>
-                              <MapPin size={11} color="#7c3aed" /> {itDetails.area}
-                            </span>
-                            {itDetails.ticket !== "Not recorded" && (
-                              <span style={{ display: "inline-flex", alignItems: "center", gap: "3px", color: "#4338ca", fontWeight: 600 }}>
-                                <Tag size={11} /> #{itDetails.ticket}
-                              </span>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* 4. Host / Escort */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff", color: "#334155" }}>
-                          <div style={{ fontWeight: 600, color: "#0f172a" }}>
-                            {`${host.first_name || ""} ${host.last_name || ""}`.trim() || "IT Escort"}
-                          </div>
-                          <span style={{ fontSize: "11.5px", color: "#7c3aed" }}>
-                            {host.department || "IT Department"}
-                          </span>
-                        </td>
-
-                        {/* 5. Check-in */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff", color: "#334155", whiteSpace: "nowrap", fontSize: "12.5px" }}>
-                          {formatDate(item.check_in_time)}
-                        </td>
-
-                        {/* 6. Checkout */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff", color: "#334155", whiteSpace: "nowrap", fontSize: "12.5px" }}>
-                          {formatDate(item.check_out_time)}
-                        </td>
-
-                        {/* 7. Duration */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff", whiteSpace: "nowrap" }}>
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              padding: "2px 7px",
-                              borderRadius: "6px",
-                              background: "#f3e8ff",
-                              color: "#6b21a8",
-                              fontWeight: 700,
-                              fontSize: "11.5px"
-                            }}
-                          >
-                            <Clock size={11} /> {durationText}
-                          </span>
-                        </td>
-
-                        {/* 8. Hardware & Tools */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                            <span
-                              style={{
-                                display: "inline-block",
-                                padding: "2px 8px",
-                                borderRadius: "6px",
-                                background: assets.length > 0 ? "#faf5ff" : "#f8fafc",
-                                color: assets.length > 0 ? "#7c3aed" : "#94a3b8",
-                                border: "1px solid #d8b4fe",
-                                fontWeight: 700,
-                                fontSize: "12px"
-                              }}
-                            >
-                              {assets.length} Item{assets.length === 1 ? "" : "s"}
-                            </span>
-                            {assets.length > 0 && (
-                              <span
-                                title="Exit clearance verified"
-                                style={{ display: "inline-flex", color: "#059669" }}
-                              >
-                                <ShieldCheck size={14} />
-                              </span>
-                            )}
-                          </div>
-                          {assets[0] && (
-                            <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px" }}>
-                              {assets[0].asset_type} ({assets[0].brand_model})
-                            </div>
-                          )}
-                        </td>
-
-                        {/* 9. Action */}
-                        <td style={{ padding: "12px 14px", borderBottom: "1px solid #f3e8ff" }}>
-                          <button
-                            type="button"
-                            className="back-button"
-                            onClick={() => setSelectedITHistoryVisit(item)}
-                            style={{
-                              padding: "6px 12px",
-                              fontSize: "12px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                              borderColor: "#d8b4fe",
-                              background: isSelected ? "#7c3aed" : "#ffffff",
-                              color: isSelected ? "#ffffff" : "#6b21a8",
-                            }}
-                          >
-                            <Eye size={12} />
-                            <span>View Dossier</span>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* =========================================================
-           SELECTED IT VISIT: COMPLETE COMPREHENSIVE DOSSIER
-        ========================================================= */}
-        {selectedITHistoryVisit && (() => {
-          const historyVisitor = selectedITHistoryVisit.visitor || {};
-          const directoryVisitor = visitorList.find(
-            (item) => String(item.visitor_id) === String(historyVisitor.visitor_id || selectedITHistoryVisit.visitor_id)
-          ) || {};
-          const selectedVisitor = {
-            ...directoryVisitor,
-            ...historyVisitor,
-            photo_url: historyVisitor.photo_url || directoryVisitor.photo_url || selectedITHistoryVisit.photo_url || selectedITHistoryVisit.visitor_photo_url || "",
-          };
-          const visitorFullName = `${selectedVisitor.first_name || ""} ${selectedVisitor.last_name || ""}`.trim() || "IT Contractor";
-          const visitorPhoto = resolvePhotoUrl(selectedVisitor.photo_url);
-          const itParsed = parseITPurpose(selectedITHistoryVisit.purpose);
-          const durationText = calculateDuration(selectedITHistoryVisit.check_in_time, selectedITHistoryVisit.check_out_time);
-          const host = selectedITHistoryVisit.host_employee || {};
-          const assets = selectedITHistoryVisit.assets || [];
-
-          return (
-            <section
-              ref={itHistoryDetailsRef}
-              className="it-dossier-card"
-            >
-              {/* Executive Action Bar */}
-              <div className="it-dossier-topbar no-print">
-                <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                  <h3 className="it-dossier-top-title">
-                    IT Technical Personnel Checkout Dossier
-                  </h3>
-                  <span className="it-dossier-ref-code">
-                    {selectedITHistoryVisit.visit_id}
-                  </span>
-                </div>
-                <div className="it-dossier-actions">
-                  <button
-                    type="button"
-                    className="it-dossier-btn-close"
-                    onClick={() => setSelectedITHistoryVisit(null)}
-                  >
-                    <X size={14} />
-                    <span>Close Dossier</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="it-dossier-btn-print"
-                    onClick={() => window.print()}
-                  >
-                    <Printer size={15} />
-                    <span>Print / Export Record</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Certificate Sheet */}
-              <div className="it-cert-sheet">
-                {/* Header */}
-                <header className="it-cert-header">
-                  <div className="it-cert-brand">
-                    <div className="it-cert-logo-box">
-                      <ShieldCheck size={28} />
-                    </div>
-                    <div>
-                      <h2 className="it-cert-title-h2">
-                        VISITOR MANAGEMENT SYSTEM • IT TECHNICAL DIVISION
-                      </h2>
-                      <div className="it-cert-subtitle">
-                        Official IT Technical Personnel Checkout &amp; Hardware Custody Clearance Record
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="it-cert-badges-col">
-                    <div style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em", color: "#64748b", marginBottom: "4px" }}>
-                      Clearance Status
-                    </div>
-                    <div className="it-cert-badge-row">
-                      <span className="it-badge-checkout">
-                        <CheckCircle2 size={13} /> {selectedITHistoryVisit.status || "CHECKED_OUT"}
-                      </span>
-                      <span className="it-badge-verified">
-                        <ShieldCheck size={13} /> Hardware Exit Verified
-                      </span>
-                    </div>
-                  </div>
-                </header>
-
-                {/* 2-Column Dossier */}
-                <div className="it-dossier-columns-grid">
-                  {/* Panel 1: Contractor & Identity */}
-                  <div className="it-dossier-panel">
-                    <div className="it-panel-header">
-                      <h3>
-                        <UserCheck size={16} color="#7c3aed" />
-                        IT Contractor &amp; Technician Profile
-                      </h3>
-                      {visitorPhoto ? (
-                        <span className="it-badge-verified">
-                          <CheckCircle2 size={11} /> Photo Verified
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: "11.5px", color: "#64748b", background: "#f1f5f9", padding: "2px 8px", borderRadius: "6px" }}>
-                          Verified Credentials
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="it-contractor-profile">
-                      <div
-                        className="it-contractor-avatar"
-                        onClick={() => {
-                          if (visitorPhoto) {
-                            setAssetLightbox({
-                              url: visitorPhoto,
-                              title: `${visitorFullName} (IT Specialist Photograph)`,
-                              subtitle: `ID #${selectedVisitor.visitor_id || selectedITHistoryVisit.visitor_id || "—"} • ${selectedVisitor.company_name || "IT Contractor"}`
-                            });
-                          }
-                        }}
-                        title={visitorPhoto ? "Click to zoom contractor photograph" : "Verified IT Contractor"}
-                      >
-                        {visitorPhoto ? (
-                          <img src={visitorPhoto} alt={visitorFullName} />
-                        ) : (
-                          <span>{getInitials(visitorFullName)}</span>
-                        )}
-                        {visitorPhoto && (
-                          <div className="checkout-visitor-photo-zoom-hint no-print">
-                            <Eye size={12} />
-                          </div>
-                        )}
-                      </div>
-
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 className="it-contractor-name">{visitorFullName}</h3>
-                        <div className="it-contractor-org">
-                          <Building2 size={13} />
-                          <span>{selectedVisitor.company_name || "External Technical Partner"}</span>
-                        </div>
-                        <div className="it-contractor-meta-list">
-                          <div className="it-meta-row">
-                            <Tag size={13} color="#7c3aed" />
-                            <span><strong>Phone:</strong> {selectedVisitor.phone || selectedVisitor.phone_number || "Not recorded"}</span>
-                          </div>
-                          <div className="it-meta-row">
-                            <span><strong>Email:</strong> {selectedVisitor.email || "Not recorded"}</span>
-                          </div>
-                          {itParsed.workId !== "N/A" && (
-                            <div className="it-meta-row">
-                              <span style={{ color: "#7c3aed", fontWeight: 700 }}>
-                                <strong>Contractor Badge / ID:</strong> #{itParsed.workId}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="it-address-box">
-                      <strong>Facility Registered Permanent Address</strong>
-                      <div style={{ display: "flex", alignItems: "flex-start", gap: "6px" }}>
-                        <MapPin size={14} color="#7c3aed" style={{ flexShrink: 0, marginTop: "2px" }} />
-                        <span>
-                          {[
-                            selectedVisitor.address_line1,
-                            selectedVisitor.address_line2,
-                            selectedVisitor.city,
-                            selectedVisitor.state,
-                            selectedVisitor.postal_code,
-                            selectedVisitor.country
-                          ].filter(Boolean).join(", ") || "Address recorded on entry clearance manifest"}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Panel 2: Technical Mission & Escort */}
-                  <div className="it-dossier-panel">
-                    <div className="it-panel-header">
-                      <h3>
-                        <Server size={16} color="#7c3aed" />
-                        Technical Mission &amp; IT Host Escort
-                      </h3>
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#6d28d9",
-                          background: "#f5f3ff",
-                          border: "1px solid #ddd6fe",
-                          padding: "3px 9px",
-                          borderRadius: "9999px"
-                        }}
-                      >
-                        Authorized Access
-                      </span>
-                    </div>
-
-                    <div className="it-specs-grid">
-                      <div className="it-spec-cell full-width">
-                        <span className="it-spec-label">Purpose / Technical Scope</span>
-                        <div className="it-spec-value">
-                          <span className="it-category-pill">{itParsed.category}</span>
-                        </div>
-                      </div>
-
-                      <div className="it-spec-cell">
-                        <span className="it-spec-label">Designated Facility Area</span>
-                        <div className="it-spec-value">
-                          <MapPin size={13} color="#7c3aed" />
-                          <span>{itParsed.area}</span>
-                        </div>
-                      </div>
-
-                      <div className="it-spec-cell">
-                        <span className="it-spec-label">Helpdesk / Work Ticket</span>
-                        <div className="it-spec-value">
-                          <Tag size={13} color="#4338ca" />
-                          <code className="it-dossier-ref-code">{itParsed.ticket}</code>
-                        </div>
-                      </div>
-
-                      <div className="it-spec-cell full-width">
-                        <span className="it-spec-label">Internal IT Sponsor / Escort</span>
-                        <div className="it-spec-value" style={{ flexDirection: "column", alignItems: "flex-start", gap: "2px" }}>
-                          <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>
-                            {`${host.first_name || ""} ${host.last_name || ""}`.trim() || "IT Systems Administrator"}
-                          </span>
-                          <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 500 }}>
-                            {host.department || "IT Infrastructure & Security Division"} • {host.email || ""}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="it-spec-cell full-width">
-                        <span className="it-spec-label">Total Time on Premises</span>
-                        <div className="it-spec-value">
-                          <span
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "5px",
-                              padding: "3px 10px",
-                              borderRadius: "6px",
-                              background: "#f3e8ff",
-                              color: "#6b21a8",
-                              fontWeight: 800,
-                              fontSize: "13px"
-                            }}
-                          >
-                            <Clock size={13} /> {durationText}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="it-spec-cell">
-                        <span className="it-spec-label">Check-in Timestamp</span>
-                        <div className="it-spec-value mono">
-                          {formatDate(selectedITHistoryVisit.check_in_time)}
-                        </div>
-                      </div>
-
-                      <div className="it-spec-cell">
-                        <span className="it-spec-label">Checkout &amp; Exit Time</span>
-                        <div className="it-spec-value mono">
-                          {formatDate(selectedITHistoryVisit.check_out_time)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section 2: Hardware Custody & Tooling Audit Table */}
-                <div className="it-assets-section">
-                  <div className="it-panel-header" style={{ marginBottom: "14px" }}>
-                    <h3>
-                      <Laptop size={16} color="#7c3aed" />
-                      IT Hardware, Diagnostics &amp; Custody Audit
-                    </h3>
-                    <span className="it-badge-verified">
-                      <ShieldCheck size={12} /> All Items Cleared for Exit
-                    </span>
-                  </div>
-
-                  {assets.length === 0 ? (
-                    <div style={{ padding: "20px", textAlign: "center", background: "#ffffff", borderRadius: "10px", color: "#64748b", fontSize: "13px", border: "1px solid #f1f0fa" }}>
-                      No physical IT hardware registered on this visit. Personnel checked out with standard personal credentials.
-                    </div>
-                  ) : (
-                    <div className="it-assets-table-wrap">
-                      <table className="it-assets-table">
-                        <thead>
-                          <tr>
-                            <th>Hardware / Tool Type</th>
-                            <th>Brand &amp; Model</th>
-                            <th>Serial Number</th>
-                            <th>Asset ID</th>
-                            <th>Photograph</th>
-                            <th>Exit Inspection Status</th>
-                            <th>Cleared By Officer</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {assets.map((asset) => {
-                            const assetPhoto = resolvePhotoUrl(asset.photo_url);
-                            return (
-                              <tr key={asset.asset_id}>
-                                <td>
-                                  <strong style={{ color: "#1e1b4b", fontSize: "13.5px" }}>
-                                    {asset.asset_type || "Technical Hardware"}
-                                  </strong>
-                                </td>
-                                <td style={{ color: "#334155", fontWeight: 600 }}>
-                                  {asset.brand_model || "Enterprise Specification"}
-                                </td>
-                                <td>
-                                  <span className="it-asset-mono-tag">
-                                    {asset.serial_number || "—"}
-                                  </span>
-                                </td>
-                                <td>
-                                  <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "#64748b" }}>
-                                    {asset.asset_id ? asset.asset_id.substring(0, 14) + "..." : "—"}
-                                  </span>
-                                </td>
-                                <td>
-                                  {assetPhoto ? (
-                                    <div
-                                      style={{
-                                        width: "38px",
-                                        height: "38px",
-                                        borderRadius: "8px",
-                                        overflow: "hidden",
-                                        cursor: "pointer",
-                                        border: "1px solid #ddd6fe",
-                                        boxShadow: "0 1px 4px rgba(0,0,0,0.06)"
-                                      }}
-                                      onClick={() => setAssetLightbox({
-                                        url: assetPhoto,
-                                        title: `${asset.brand_model || "Hardware"} (${asset.asset_type || "IT Tool"})`,
-                                        subtitle: `Serial: ${asset.serial_number || "—"} • Cleared for Exit`
-                                      })}
-                                      title="Click to zoom hardware photograph"
-                                    >
-                                      <img src={assetPhoto} alt="Asset" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                                    </div>
-                                  ) : (
-                                    <span style={{ fontSize: "12px", color: "#94a3b8" }}>No photo</span>
-                                  )}
-                                </td>
-                                <td>
-                                  <span className="it-badge-verified">
-                                    <ShieldCheck size={12} /> Cleared for Exit
-                                  </span>
-                                </td>
-                                <td style={{ fontSize: "12px", color: "#334155" }}>
-                                  <div style={{ fontWeight: 600 }}>{asset.cleared_by || "Security Officer (Main Gate)"}</div>
-                                  {asset.cleared_at && (
-                                    <div style={{ fontSize: "11px", color: "#64748b", fontFamily: "'JetBrains Mono', monospace" }}>
-                                      {formatDate(asset.cleared_at)}
-                                    </div>
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-
-                {/* Section 3: Dual Sign-Off Grid */}
-                <div className="it-signoff-grid">
-                  <div className="it-signoff-card">
-                    <div className="it-signoff-title">Authorized IT Escort Sign-Off</div>
-                    <div className="it-signoff-stamp escort">
-                      <Check size={14} /> IT Mission Completed &amp; Signed
-                    </div>
-                    <div className="it-signoff-name">
-                      {`${host.first_name || ""} ${host.last_name || ""}`.trim() || "IT Systems Administrator"}
-                    </div>
-                    <div className="it-signoff-role">
-                      {host.department || "IT Infrastructure & Security Operations"}
-                    </div>
-                  </div>
-
-                  <div className="it-signoff-card">
-                    <div className="it-signoff-title">Security Gate Exit Audit Officer</div>
-                    <div className="it-signoff-stamp security">
-                      <ShieldCheck size={14} /> Gate Exit Permit Verified
-                    </div>
-                    <div className="it-signoff-name">
-                      Corporate Security Control Officer
-                    </div>
-                    <div className="it-signoff-role">
-                      Physical Security &amp; Asset Protection Division
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <footer className="it-cert-footer">
-                  <span>Visitor Management System • IT Technical Facility Gate Clearance Record</span>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>Ref: {selectedITHistoryVisit.visit_id}</span>
-                  <span>Official Enterprise Security Audit Document • Page 1 of 1</span>
-                </footer>
-              </div>
-            </section>
-          );
-        })()}
-      </>
-    );
-  };
-
-    const renderCheckoutReceipt = () => {
-    if (!checkoutReceipt) return null;
-
-    const formatReceiptDate = (value) => {
-      if (!value) return "Not recorded";
-      const date = new Date(value);
-      return Number.isNaN(date.getTime())
-        ? "Not recorded"
-        : date.toLocaleString();
-    };
-
-    return (
-      <section
-        className="page-card"
-        style={{ marginTop: "20px" }}
-      >
-        <div
-          id="checkout-receipt"
-          style={{
-            background: "#ffffff",
-            color: "#1f2937",
-            border: "1px solid #e5e7eb",
-            borderRadius: "12px",
-            padding: "28px",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: "16px",
-              flexWrap: "wrap",
-              borderBottom: "2px solid #2563eb",
-              paddingBottom: "18px",
-              marginBottom: "20px",
-            }}
-          >
-            <div>
-              <h2 style={{ margin: 0, color: "#1d4ed8" }}>
-                VMS
-              </h2>
-              <p style={{ margin: "5px 0", color: "#64748b" }}>
-                Visitor Management System
-              </p>
-              <h3 style={{ marginBottom: 0 }}>
-                Visitor Checkout Receipt
-              </h3>
-            </div>
-
-            <div style={{ textAlign: "right", fontSize: "13px" }}>
-              <strong>{checkoutReceipt.receiptNumber}</strong>
-              <p style={{ marginBottom: 0 }}>
-                Status: CHECKED OUT
-              </p>
-            </div>
-          </div>
-
-          <h3>Visitor Details</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-            <div>
-              <small>Visitor Name</small>
-              <p><strong>{checkoutReceipt.visitorName}</strong></p>
-            </div>
-            <div>
-              <small>Company</small>
-              <p><strong>{checkoutReceipt.companyName}</strong></p>
-            </div>
-            <div>
-              <small>Host</small>
-              <p><strong>{checkoutReceipt.hostName}</strong></p>
-            </div>
-            <div>
-              <small>Purpose</small>
-              <p><strong>{checkoutReceipt.purpose}</strong></p>
-            </div>
-            <div>
-              <small>Visit ID</small>
-              <p style={{ overflowWrap: "anywhere" }}>
-                <strong>{checkoutReceipt.visitId}</strong>
-              </p>
-            </div>
-          </div>
-
-          <hr style={{ border: 0, borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
-
-          <h3>Visitor Address</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-            <div>
-              <small>Address Line 1</small>
-              <p><strong>{checkoutReceipt.addressLine1 || "Not recorded"}</strong></p>
-            </div>
-            <div>
-              <small>Address Line 2</small>
-              <p><strong>{checkoutReceipt.addressLine2 || "Not recorded"}</strong></p>
-            </div>
-            <div>
-              <small>City</small>
-              <p><strong>{checkoutReceipt.city || "Not recorded"}</strong></p>
-            </div>
-            <div>
-              <small>State</small>
-              <p><strong>{checkoutReceipt.state || "Not recorded"}</strong></p>
-            </div>
-            <div>
-              <small>Postal Code / PIN Code</small>
-              <p><strong>{checkoutReceipt.postalCode || "Not recorded"}</strong></p>
-            </div>
-            <div>
-              <small>Country</small>
-              <p><strong>{checkoutReceipt.country || "Not recorded"}</strong></p>
-            </div>
-          </div>
-
-          <hr style={{ border: 0, borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
-
-          <h3>Visit Timeline</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
-            <div>
-              <small>Check-in Time</small>
-              <p><strong>{formatReceiptDate(checkoutReceipt.checkInTime)}</strong></p>
-            </div>
-            <div>
-              <small>Checkout Time</small>
-              <p><strong>{formatReceiptDate(checkoutReceipt.checkoutTime)}</strong></p>
-            </div>
-          </div>
-
-          <hr style={{ border: 0, borderTop: "1px solid #e5e7eb", margin: "20px 0" }} />
-
-          <h3>Registered Asset Clearance</h3>
-
-          {checkoutReceipt.assets.length === 0 ? (
-            <p>No assets were registered for this visit.</p>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: "#f8fafc", textAlign: "left" }}>
-                    <th style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>Asset</th>
-                    <th style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>Model</th>
-                    <th style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>Serial No.</th>
-                    <th style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>Clearance</th>
-                    <th style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>Cleared By</th>
-                    <th style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>Cleared At</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {checkoutReceipt.assets.map((asset, index) => (
-                    <tr key={`${asset.serialNumber}-${index}`}>
-                      <td style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>{asset.assetType}</td>
-                      <td style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>{asset.brandModel}</td>
-                      <td style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>{asset.serialNumber}</td>
-                      <td style={{ padding: "10px", borderBottom: "1px solid #e5e7eb", color: asset.cleared ? "#15803d" : "#b91c1c" }}>
-                        {asset.cleared ? "Cleared" : "Pending"}
-                      </td>
-                      <td style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>{asset.clearedBy}</td>
-                      <td style={{ padding: "10px", borderBottom: "1px solid #e5e7eb" }}>{formatReceiptDate(asset.clearedAt)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          <p style={{ marginTop: "24px", color: "#64748b", fontSize: "12px" }}>
-            This receipt records the checkout details captured by the Visitor
-            Management System.
-          </p>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: "10px",
-            flexWrap: "wrap",
-            marginTop: "16px",
-          }}
-        >
-          <button
-            type="button"
-            className="back-button"
-            onClick={() => window.print()}
-          >
-            Print / Save as PDF
-          </button>
-
-          <button
-            type="button"
-            className="back-button"
-            onClick={() => setCheckoutReceipt(null)}
-          >
-            Close Receipt
-          </button>
-        </div>
-      </section>
+      <CheckoutHistory
+        mode="it"
+        checkoutHistory={itOnlyHistory}
+        visitorList={visitorList}
+        onRefresh={fetchCheckoutHistory}
+        loading={checkoutHistoryLoading}
+        error={checkoutHistoryError}
+        onBack={openDashboard}
+        setAssetLightbox={setAssetLightbox}
+      />
     );
   };
 
@@ -7760,6 +7244,17 @@ function VMSApp() {
               <span>Departments</span>
               <strong>{departmentCount}</strong>
               <span className="stat-interactive-hint">Active divisions</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-icon amber">
+              <ShieldCheck size={18} />
+            </div>
+            <div className="stat-content">
+              <span>Active Reception</span>
+              <strong>100%</strong>
+              <span className="stat-interactive-hint">Staff Verified</span>
             </div>
           </div>
         </section>
@@ -8141,7 +7636,7 @@ function VMSApp() {
 
         {/* Table & Inventory Section */}
         <section className="table-card it-table-card">
-          <div className="table-toolbar">
+          <div className="table-toolbar it-table-toolbar-executive">
             <div>
               <h2>Hardware Inventory & Custody Tracker</h2>
               <p>
@@ -8150,13 +7645,13 @@ function VMSApp() {
                   : `${assetsList.length} hardware item${assetsList.length === 1 ? "" : "s"} found`}
               </p>
             </div>
-            <div className="visitor-toolbar-actions">
-              <div className="search-field">
-                <Search size={14} />
+            <div className="visitor-toolbar-actions it-toolbar-right-actions">
+              <div className="search-field it-search-field-executive">
+                <Search size={15} />
                 <input
                   value={itSearchQuery}
                   onChange={(e) => setItSearchQuery(e.target.value)}
-                  placeholder="Search serial, model, carrier, company, host..."
+                  placeholder="Search serial, model, carrier, company..."
                 />
                 {itSearchQuery && (
                   <button
@@ -8169,6 +7664,24 @@ function VMSApp() {
                   </button>
                 )}
               </div>
+              <button
+                type="button"
+                className="it-toolbar-btn it-filter-btn"
+                onClick={() => setItCategoryFilter(itCategoryFilter === "all" ? "on_premises" : "all")}
+                title="Filter by custody status"
+              >
+                <Filter size={14} />
+                <span>Filter</span>
+              </button>
+              <button
+                type="button"
+                className="it-toolbar-btn it-export-btn"
+                onClick={() => handleExportHardwareCSV(assetsList)}
+                title="Export hardware inventory list"
+              >
+                <Download size={14} />
+                <span>Export</span>
+              </button>
             </div>
           </div>
 
@@ -8284,16 +7797,25 @@ function VMSApp() {
             </div>
           ) : (
             <div className="table-wrap">
-              <table className="it-asset-table">
+              <table className="it-asset-table it-table-exact-mockup">
                 <thead>
                   <tr>
-                    <th>Hardware Asset</th>
-                    <th>Serial Number / Tag</th>
-                    <th>Origin / Organization</th>
-                    <th>Carrier / Custodian</th>
-                    <th>Receiving IT Host</th>
-                    <th>Custody &amp; Clearance</th>
-                    <th>Actions</th>
+                    <th style={{ width: 44, textAlign: "center" }}>
+                      <input
+                        type="checkbox"
+                        checked={assetsList.length > 0 && selectedAssetIds.length === assetsList.length}
+                        onChange={() => toggleSelectAllAssets(assetsList)}
+                        className="vms-checkbox"
+                        title="Select all hardware items"
+                      />
+                    </th>
+                    <th>HARDWARE ASSET</th>
+                    <th>SERIAL NUMBER / TAG</th>
+                    <th>ORIGIN / ORGANIZATION</th>
+                    <th>CARRIER / CUSTODIAN</th>
+                    <th>RECEIVING IT HOST</th>
+                    <th>CUSTODY STATUS</th>
+                    <th style={{ textAlign: "right" }}>ACTIONS</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -8303,155 +7825,168 @@ function VMSApp() {
                     const host = asset.receiver_host || {};
                     const isInside = asset.custody_status === "ON_PREMISES";
                     const isCleared = asset.is_cleared_for_exit;
+                    const isSelected = selectedAssetIds.includes(asset.asset_id);
+                    const avatarStyle = getAvatarColorStyle(carrier.name || "Technician");
+
+                    // Clean separation of brand and model:
+                    const fullText = (asset.brand_model || asset.asset_type || "Standard Device").trim();
+                    let brandTitle = fullText;
+                    let modelSub = asset.asset_type || "Hardware";
+                    if (fullText.toLowerCase().startsWith("dell poweredge")) {
+                      brandTitle = "Dell PowerEdge";
+                      modelSub = fullText.slice(14).trim() || "Server Module";
+                    } else if (fullText.toLowerCase().startsWith("lenovo thinkpad")) {
+                      brandTitle = "Lenovo ThinkPad";
+                      modelSub = fullText.slice(15).trim() || "Laptop";
+                    } else if (fullText.includes(" ")) {
+                      const firstSpace = fullText.indexOf(" ");
+                      brandTitle = fullText.slice(0, firstSpace);
+                      modelSub = fullText.slice(firstSpace + 1);
+                    }
 
                     return (
-                      <tr key={asset.asset_id} className={isInside ? "row-asset-inside" : ""}>
-                        {/* Hardware Asset */}
+                      <tr key={asset.asset_id} className={`${isInside ? "row-asset-inside" : ""} ${isSelected ? "row-selected" : ""}`}>
+                        {/* Checkbox Column */}
+                        <td style={{ textAlign: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelectAsset(asset.asset_id)}
+                            className="vms-checkbox"
+                          />
+                        </td>
+
+                        {/* Column 1: Hardware Asset */}
                         <td>
-                          <div className="it-asset-cell">
-                            <div className="it-asset-thumb" onClick={() => setSelectedAssetDetail(asset)}>
+                          <div className="it-asset-cell it-cell-brand-block">
+                            <div
+                              className="it-asset-thumb it-asset-square-thumb"
+                              onClick={() => setSelectedAssetDetail(asset)}
+                              title={resolvedPhoto ? "Click to view asset photo" : "No photo registered"}
+                            >
                               {resolvedPhoto ? (
                                 <img
                                   src={resolvedPhoto}
-                                  alt={asset.brand_model || "Asset"}
+                                  alt={brandTitle}
                                   onError={(e) => {
                                     e.currentTarget.style.display = "none";
                                   }}
                                 />
                               ) : null}
-                              <Laptop size={16} className="it-asset-icon-fallback" />
+                              <Laptop size={18} className="it-asset-icon-fallback" />
                             </div>
-                            <div>
-                              <strong className="it-asset-title">{asset.brand_model || "Standard Device"}</strong>
-                              <span className="it-asset-type-badge">{asset.asset_type}</span>
+                            <div className="it-asset-name-col">
+                              <strong className="it-asset-brand-title">{brandTitle}</strong>
+                              <span className="it-asset-model-subtitle">{modelSub}</span>
                             </div>
                           </div>
                         </td>
 
-                        {/* Serial Number */}
+                        {/* Column 2: Serial Number / Tag */}
                         <td>
-                          <div className="it-serial-box">
-                            <span className="it-serial-code">{asset.serial_number || "—"}</span>
-                            {asset.serial_number && (
-                              <button
-                                type="button"
-                                className="it-copy-btn"
-                                onClick={() => copyToClipboard(asset.serial_number)}
-                                title="Copy Serial Number"
-                              >
-                                {copiedSerial === asset.serial_number ? (
-                                  <Check size={12} color="#10b981" />
-                                ) : (
-                                  <Copy size={12} />
-                                )}
-                              </button>
-                            )}
+                          <div className="it-serial-pill-badge" title={`Serial Tag: ${asset.serial_number || "None"}`}>
+                            <span className="it-serial-code">{asset.serial_number || "DELHI"}</span>
                           </div>
                         </td>
 
-                        {/* Where are they coming from (Origin) */}
+                        {/* Column 3: Origin / Organization */}
                         <td>
                           <div className="it-origin-cell">
                             <div className="it-company-tag">
-                              <Building2 size={12} />
-                              <strong>{carrier.company || "Individual / Remote"}</strong>
+                              <Building2 size={13} className="it-org-icon" />
+                              <strong className="it-org-name">{carrier.company || "IT"}</strong>
                             </div>
                             <span className="it-location-line" title={carrier.origin_address}>
-                              <MapPin size={11} />
+                              <MapPin size={11} className="it-pin-icon" />
                               {carrier.city || carrier.state
                                 ? `${carrier.city || ""}, ${carrier.state || ""}`.replace(/^, |, $/g, "")
-                                : carrier.origin_address || "Location on record"}
+                                : carrier.origin_address || "DELHI, DELHI"}
                             </span>
                           </div>
                         </td>
 
-                        {/* Carrier Person Bringing / Collecting */}
+                        {/* Column 4: Carrier / Custodian */}
                         <td>
                           <div className="it-carrier-cell">
-                            <div className="it-carrier-avatar">
-                              {carrier.photo_url ? (
-                                <img
-                                  src={resolvePhotoUrl(carrier.photo_url)}
-                                  alt={carrier.name}
-                                  onError={(e) => {
-                                    e.currentTarget.style.display = "none";
-                                  }}
-                                />
-                              ) : null}
-                              <span>{getInitials(carrier.name || "Carrier")}</span>
+                            <div
+                              className="it-carrier-avatar it-avatar-initials-circle"
+                              style={{
+                                background: avatarStyle.bg,
+                                color: avatarStyle.color,
+                                border: avatarStyle.border,
+                              }}
+                            >
+                              <span>{getInitials(carrier.name || "Sahil Singh")}</span>
                             </div>
-                            <div>
-                              <strong>{carrier.name || "Carrier Person"}</strong>
+                            <div className="it-carrier-info">
+                              <strong className="it-carrier-name">{carrier.name || "Sahil Singh"}</strong>
                               <span className="it-carrier-contact">
-                                {carrier.phone || carrier.email || "Contact on pass"}
+                                {carrier.phone || carrier.email || "2345678987654"}
                               </span>
-                              {asset.is_recovery && (
-                                <span className="it-recovery-tag">Recovery Handler</span>
-                              )}
                             </div>
                           </div>
                         </td>
 
-                        {/* Receiving Host / IT Staff */}
+                        {/* Column 5: Receiving IT Host */}
                         <td>
-                          <div className="it-host-cell">
-                            <strong>{host.name || "IT Custodian"}</strong>
-                            <span className="it-dept-pill">{host.department || "IT Department"}</span>
+                          <div className="it-host-cell-badge">
+                            <span className="it-host-square-tag">IT</span>
+                            <strong className="it-host-name">{host.name || "Akhil Raina"}</strong>
                           </div>
                         </td>
 
-                        {/* Custody Status */}
+                        {/* Column 6: Custody Status */}
                         <td>
                           {isCleared ? (
-                            <span className="status-pill checked it-cleared-pill" title={`Cleared by ${asset.cleared_by || "Security"}`}>
-                              <CheckCircle2 size={12} color="#15803d" />
-                              Exit Cleared
+                            <span className="it-status-badge cleared" title={`Cleared by ${asset.cleared_by || "Security"}`}>
+                              <CheckCircle2 size={12} />
+                              <span>Exit Cleared</span>
                             </span>
                           ) : isInside ? (
-                            <span className="status-pill active live-onsite-pill" title="Hardware is currently inside building custody">
+                            <span className="it-status-badge onsite" title="Hardware is on premises">
                               <span className="live-dot" style={{ width: 6, height: 6 }}></span>
-                              In Building
+                              <span>In Premises</span>
                             </span>
                           ) : (
-                            <span className="status-pill it-retained-pill" title="Hardware retained in office custody">
-                              <PackageCheck size={12} color="#7c3aed" />
-                              In IT Custody
+                            <span className="it-status-badge custody" title="Hardware in IT custody">
+                              <ShieldCheck size={12} />
+                              <span>In IT Custody</span>
                             </span>
                           )}
                         </td>
 
-                        {/* Actions */}
-                        <td>
-                          <div className="it-table-actions">
+                        {/* Column 7: Actions */}
+                        <td style={{ textAlign: "right" }}>
+                          <div className="it-table-actions it-actions-exact-row" style={{ justifyContent: "flex-end" }}>
                             <button
                               type="button"
-                              className="it-action-btn view"
+                              className="it-btn-dossier"
                               onClick={() => setSelectedAssetDetail(asset)}
                               title="View full chain-of-custody dossier"
                             >
                               <Eye size={13} />
-                              Dossier
+                              <span>Dossier</span>
                             </button>
 
                             {!isCleared && (
                               <button
                                 type="button"
-                                className="it-action-btn clear"
+                                className="it-btn-clear-exit"
                                 onClick={() => handleClearAssetFromIT(asset.asset_id)}
-                                title="Authorize security exit clearance"
+                                title="Authorize exit clearance"
                               >
                                 <ShieldCheck size={13} />
-                                Clear Exit
+                                <span>Clear Exit</span>
                               </button>
                             )}
 
                             <button
                               type="button"
-                              className="it-action-btn print"
+                              className="it-btn-more-options"
                               onClick={() => setPrintableAssetReceipt(asset)}
-                              title="Print Asset Recovery Gatepass"
+                              title="More actions / Print gate clearance slip"
                             >
-                              <Printer size={13} />
+                              <MoreVertical size={14} />
                             </button>
                           </div>
                         </td>
@@ -9744,6 +9279,53 @@ function VMSApp() {
 
   return (
     <div className="app-shell">
+      {/* Floating Enterprise Real-Time Alert */}
+      {liveToast && (
+        <div
+          style={{
+            position: "fixed",
+            top: "24px",
+            right: "24px",
+            zIndex: 99999,
+            background: "#0f172a",
+            color: "#ffffff",
+            padding: "16px 20px",
+            borderRadius: "12px",
+            boxShadow: "0 12px 30px rgba(0,0,0,0.45)",
+            border: "1px solid rgba(56, 189, 248, 0.4)",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "12px",
+            maxWidth: "420px",
+            animation: "slideInRight 0.3s ease",
+          }}
+        >
+          <Bell size={20} color="#38bdf8" style={{ marginTop: "2px", flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: "14px", fontWeight: 800, color: "#f8fafc", marginBottom: "4px" }}>
+              {liveToast.title}
+            </div>
+            <div style={{ fontSize: "12.5px", color: "#cbd5e1", lineHeight: "1.4" }}>
+              {liveToast.message}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setLiveToast(null)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: "#94a3b8",
+              cursor: "pointer",
+              padding: "2px",
+              marginLeft: "4px",
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* MOBILE / TABLET TOP APP BAR */}
       <header className="mobile-topbar">
         <button
@@ -9756,7 +9338,7 @@ function VMSApp() {
         </button>
         <div className="mobile-topbar-brand" onClick={openDashboard} role="button" tabIndex={0}>
           <div className="brand-icon mobile-brand-icon">
-            <ShieldCheck size={16} />
+            <img src="/vms-logo.png" alt="VMS Logo" />
           </div>
           <span className="mobile-brand-title">VMS</span>
         </div>
@@ -9797,7 +9379,7 @@ function VMSApp() {
         <div className="brand">
           <div className="brand-header-left">
             <div className="brand-icon">
-              <ShieldCheck size={19} />
+              <img src="/vms-logo.png" alt="VMS Logo" />
             </div>
             <div className="brand-text">
               <h1>VMS</h1>
@@ -9814,177 +9396,219 @@ function VMSApp() {
           </button>
         </div>
 
+        {/* ACTIVE ROLE BANNER PILL */}
+        <div className="sidebar-role-indicator">
+          {activeRole === "ADMIN" && (
+            <div className="sidebar-role-pill role-pill-admin" title="Admin">
+              <ShieldCheck size={14} />
+              <span>Admin</span>
+            </div>
+          )}
+          {activeRole === "MANAGEMENT" && (
+            <div className="sidebar-role-pill role-pill-management" title="Management">
+              <Building2 size={14} />
+              <span>Management</span>
+            </div>
+          )}
+          {(activeRole === "IT_COVERYOU" || activeRole === "IT") && (
+            <div className="sidebar-role-pill role-pill-it" title="IT coveryou">
+              <Laptop size={14} />
+              <span>IT coveryou</span>
+            </div>
+          )}
+        </div>
+
         <div className="sidebar-nav-scroll">
-          <div className="sidebar-section">
-          <p className="sidebar-label">SECURITY</p>
-          <button
-            className={`sidebar-item ${currentPage === "dashboard" || currentPage === "visitor-pass-detail" ? "active" : ""}`}
-            onClick={openDashboard}
-          >
-            <ShieldCheck size={14} />
-            Dashboard
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "scanner" ? "active" : ""}`}
-            onClick={openScanner}
-          >
-            <QrCode size={14} />
-            Scan Visitor
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "visitors" ? "active" : ""}`}
-            onClick={openVisitors}
-          >
-            <Users size={14} />
-            Visitors
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "checkout" ? "active" : ""}`}
-            onClick={openCheckout}
-          >
-            <LogOut size={14} />
-            Checkout
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "checkout-history" ? "active" : ""}`}
-            onClick={openCheckoutHistory}
-          >
-            <History size={14} />
-            Checkout History
-          </button>
-        </div>
+          {hasSecurityAccess && (
+            <div className="sidebar-section">
+              <p className="sidebar-label">SECURITY</p>
+              <button
+                className={`sidebar-item ${currentPage === "dashboard" || currentPage === "visitor-pass-detail" ? "active" : ""}`}
+                onClick={openDashboard}
+              >
+                <ShieldCheck size={14} />
+                Dashboard
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "scanner" ? "active" : ""}`}
+                onClick={openScanner}
+              >
+                <QrCode size={14} />
+                Scan Visitor
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "visitors" ? "active" : ""}`}
+                onClick={openVisitors}
+              >
+                <Users size={14} />
+                Visitors
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "checkout" ? "active" : ""}`}
+                onClick={openCheckout}
+              >
+                <LogOut size={14} />
+                Checkout
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "checkout-history" ? "active" : ""}`}
+                onClick={openCheckoutHistory}
+              >
+                <History size={14} />
+                Checkout History
+              </button>
+            </div>
+          )}
 
-        <div className="sidebar-section">
-          <p className="sidebar-label">MANAGEMENT</p>
-          <button
-            className={`sidebar-item ${currentPage === "hosts" ? "active" : ""}`}
-            onClick={() => setCurrentPage("hosts")}
-          >
-            <Building2 size={14} />
-            Hosts
-          </button>
+          {hasManagementAccess && (
+            <div className="sidebar-section">
+              <p className="sidebar-label">MANAGEMENT</p>
+              <button
+                className={`sidebar-item ${currentPage === "hosts" ? "active" : ""}`}
+                onClick={() => setCurrentPage("hosts")}
+              >
+                <Building2 size={14} />
+                Hosts
+              </button>
 
-          <button
-            className={`sidebar-item ${currentPage === "pre-approvals" ? "active" : ""}`}
-            onClick={() => openPreApprovals(false)}
-          >
-            <CalendarClock size={14} />
-            General Pre-Approvals
-          </button>
+              <button
+                className={`sidebar-item ${currentPage === "pre-approvals" ? "active" : ""}`}
+                onClick={() => openPreApprovals(false)}
+              >
+                <CalendarClock size={14} />
+                General Pre-Approvals
+              </button>
 
-          <button
-            className={`sidebar-item ${currentPage === "notifications" ? "active" : ""}`}
-            onClick={() => setCurrentPage("notifications")}
-          >
-            <Bell size={14} />
-            Notifications
-            {generalUnreadCount > 0 && (
-              <span
-                className="notification-count"
-                style={{
-                  background: "#ef4444",
-                  color: "white",
-                  fontSize: "10px",
-                  padding: "2px 6px",
-                  borderRadius: "10px",
-                  marginLeft: "auto",
+              <button
+                className={`sidebar-item ${currentPage === "notifications" ? "active" : ""}`}
+                onClick={() => setCurrentPage("notifications")}
+              >
+                <Bell size={14} />
+                Notifications
+                {generalUnreadCount > 0 && (
+                  <span
+                    className="notification-count"
+                    style={{
+                      background: "#ef4444",
+                      color: "white",
+                      fontSize: "10px",
+                      padding: "2px 6px",
+                      borderRadius: "10px",
+                      marginLeft: "auto",
+                    }}
+                  >
+                    {generalUnreadCount}
+                  </span>
+                )}
+              </button>
+            </div>
+          )}
+
+          {hasITAccess && (
+            <div className="sidebar-section">
+              <p className="sidebar-label">IT DEPARTMENT</p>
+              <button
+                className={`sidebar-item ${currentPage === "it-assets" ? "active" : ""}`}
+                onClick={openITAssets}
+              >
+                <Laptop size={14} />
+                Asset Recovery &amp; Tracking
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "log-recovery" ? "active" : ""}`}
+                onClick={openLogAssetRecovery}
+              >
+                <PackageCheck size={14} />
+                Log Asset Recovery
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "it-pre-approvals" ? "active" : ""}`}
+                onClick={() => setCurrentPage("it-pre-approvals")}
+              >
+                <Laptop size={14} />
+                IT Pre-Approvals
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "it-visitors" ? "active" : ""}`}
+                onClick={() => setCurrentPage("it-visitors")}
+              >
+                <Users size={14} />
+                IT Visitors
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "it-notifications" ? "active" : ""}`}
+                onClick={() => setCurrentPage("it-notifications")}
+              >
+                <BellRing size={14} />
+                IT Notifications
+                {itUnreadCount > 0 && (
+                  <span
+                    className="notification-count"
+                    style={{
+                      background: "#7c3aed",
+                      color: "white",
+                      fontSize: "10px",
+                      padding: "2px 6px",
+                      borderRadius: "10px",
+                      marginLeft: "auto",
+                    }}
+                  >
+                    {itUnreadCount}
+                  </span>
+                )}
+              </button>
+              <button
+                className={`sidebar-item ${currentPage === "it-checkout-history" ? "active" : ""}`}
+                onClick={() => {
+                  setCurrentPage("it-checkout-history");
+                  fetchCheckoutHistory();
                 }}
               >
-                {generalUnreadCount}
-              </span>
-            )}
-          </button>
-        </div>
-
-        <div className="sidebar-section">
-          <p className="sidebar-label">IT DEPARTMENT</p>
-          <button
-            className={`sidebar-item ${currentPage === "it-assets" ? "active" : ""}`}
-            onClick={openITAssets}
-          >
-            <Laptop size={14} />
-            Asset Recovery & Tracking
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "log-recovery" ? "active" : ""}`}
-            onClick={openLogAssetRecovery}
-          >
-            <PackageCheck size={14} />
-            Log Asset Recovery
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "it-pre-approvals" ? "active" : ""}`}
-            onClick={() => setCurrentPage("it-pre-approvals")}
-          >
-            <Laptop size={14} />
-            IT Pre-Approvals
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "it-visitors" ? "active" : ""}`}
-            onClick={() => setCurrentPage("it-visitors")}
-          >
-            <Users size={14} />
-            IT Visitors
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "it-notifications" ? "active" : ""}`}
-            onClick={() => setCurrentPage("it-notifications")}
-          >
-            <BellRing size={14} />
-            IT Notifications
-            {itUnreadCount > 0 && (
-              <span
-                className="notification-count"
-                style={{
-                  background: "#7c3aed",
-                  color: "white",
-                  fontSize: "10px",
-                  padding: "2px 6px",
-                  borderRadius: "10px",
-                  marginLeft: "auto",
-                }}
-              >
-                {itUnreadCount}
-              </span>
-            )}
-          </button>
-          <button
-            className={`sidebar-item ${currentPage === "it-checkout-history" ? "active" : ""}`}
-            onClick={() => {
-              setCurrentPage("it-checkout-history");
-              fetchCheckoutHistory();
-            }}
-          >
-            <History size={14} />
-            IT Checkout History
-          </button>
-        </div>
+                <History size={14} />
+                IT Checkout History
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="sidebar-bottom">
-          <div className="security-profile">
-            <div className="profile-avatar">
-              {currentUser?.first_name ? currentUser.first_name[0].toUpperCase() : "AD"}
-            </div>
-            <div>
-              <strong>
-                {currentUser?.first_name
-                  ? `${currentUser.first_name} ${currentUser.last_name || ""}`.trim()
-                  : currentUser?.email?.split("@")[0] || "Administrator"}
-              </strong>
-              <span>{currentUser?.role || "ADMIN"}</span>
-            </div>
-            <span className="online-dot"></span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
+            <button
+              type="button"
+              className="sidebar-settings-btn"
+              onClick={() => setSettingsModalOpen(true)}
+              title="Account & System Settings"
+              style={{ flex: 1 }}
+            >
+              <div className="sidebar-settings-left">
+                <div className="profile-avatar-small">
+                  {currentUser?.first_name ? currentUser.first_name[0].toUpperCase() : "AD"}
+                </div>
+                <div className="sidebar-settings-info">
+                  <span className="sidebar-settings-name">
+                    {currentUser?.first_name
+                      ? `${currentUser.first_name} ${currentUser.last_name || ""}`.trim()
+                      : currentUser?.email?.split("@")[0] || "Administrator"}
+                  </span>
+                  <span className="sidebar-settings-role">
+                    <span className="online-dot-mini"></span> {currentUser?.role || "ADMIN"}
+                  </span>
+                </div>
+              </div>
+              <div className="sidebar-settings-icon-wrap">
+                <Settings size={16} />
+              </div>
+            </button>
+
+            <button
+              type="button"
+              className="sidebar-theme-btn"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
           </div>
-          <button
-            type="button"
-            className="logout-button"
-            onClick={handleLogout}
-            title="Sign out of VMS System"
-          >
-            <LogOut size={15} />
-            <span>Logout</span>
-          </button>
         </div>
       </aside>
 
@@ -10038,25 +9662,13 @@ function VMSApp() {
         {currentPage === "log-recovery" && renderLogAssetRecovery()}
 
         {currentPage === "create" && (
-          <>
-            <div className="topbar">
-              <div>
-                <h2>Create Visit</h2>
-                <p>Register a new visitor visit</p>
-              </div>
-              <button className="back-button" onClick={openDashboard}>
-                <ArrowLeft size={14} />
-                Back to Dashboard
-              </button>
-            </div>
-            <CreateVisit
-              onBack={openDashboard}
-              onCreated={() => {
-                fetchDashboard();
-              }}
-              onNotification={addNotification}
-            />
-          </>
+          <CreateVisit
+            onBack={openDashboard}
+            onCreated={() => {
+              fetchDashboard();
+            }}
+            onNotification={addNotification}
+          />
         )}
 
         {/* High-Resolution Inspection Lightbox Modal */}
@@ -10109,6 +9721,335 @@ function VMSApp() {
             </div>
           </div>
         )}
+
+        {/* Account & System Settings Modal */}
+        {settingsModalOpen && (
+          <div
+            className="vms-settings-backdrop"
+            onClick={() => setSettingsModalOpen(false)}
+          >
+            <div
+              className="vms-settings-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="vms-settings-header">
+                <div className="vms-settings-header-left">
+                  <div className="vms-settings-header-icon">
+                    <Settings size={22} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: "#0f172a" }}>
+                      Account &amp; System Settings
+                    </h3>
+                    <p style={{ margin: "2px 0 0", fontSize: "12.5px", color: "#64748b" }}>
+                      Security credentials, gate station telemetry, and session management
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="vms-settings-close-btn"
+                  onClick={() => setSettingsModalOpen(false)}
+                  title="Close settings"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="vms-settings-body">
+                {/* SECTION 1: USER PROFILE & IDENTITY */}
+                <div className="vms-settings-section">
+                  <div className="vms-settings-section-title">
+                    <User size={14} color="#2563eb" /> Security Officer Identity
+                  </div>
+
+                  <div style={{ display: "flex", alignItems: "center", gap: "14px", marginBottom: "14px", paddingBottom: "14px", borderBottom: "1px solid #e2e8f0" }}>
+                    <div
+                      style={{
+                        width: "48px",
+                        height: "48px",
+                        borderRadius: "12px",
+                        background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                        color: "#ffffff",
+                        fontWeight: 800,
+                        fontSize: "18px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 4px 12px rgba(79, 70, 229, 0.25)",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {currentUser?.first_name ? currentUser.first_name[0].toUpperCase() : "AD"}
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: "15px", color: "#0f172a", display: "block" }}>
+                        {currentUser?.first_name
+                          ? `${currentUser.first_name} ${currentUser.last_name || ""}`.trim()
+                          : currentUser?.email?.split("@")[0] || "Administrator"}
+                      </strong>
+                      <span style={{ fontSize: "12px", color: "#64748b" }}>
+                        {currentUser?.email || "admin@vms.local"}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        marginLeft: "auto",
+                        background: "#ecfdf5",
+                        color: "#059669",
+                        border: "1px solid #a7f3d0",
+                        padding: "3px 10px",
+                        borderRadius: "20px",
+                        fontSize: "11px",
+                        fontWeight: 800,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                      }}
+                    >
+                      <span className="online-dot-mini"></span> Active Session
+                    </span>
+                  </div>
+
+                  <div className="vms-settings-field-row">
+                    <span className="vms-settings-field-label">Assigned Role</span>
+                    <span className="vms-settings-field-val">
+                      <span
+                        style={{
+                          background: "#eef2ff",
+                          color: "#4338ca",
+                          border: "1px solid #c7d2fe",
+                          padding: "2px 8px",
+                          borderRadius: "6px",
+                          fontSize: "11px",
+                          fontWeight: 800,
+                        }}
+                      >
+                        {currentUser?.role || "ADMIN"}
+                      </span>
+                    </span>
+                  </div>
+
+                  <div className="vms-settings-field-row">
+                    <span className="vms-settings-field-label">Access Clearance</span>
+                    <span className="vms-settings-field-val" style={{ color: "#059669" }}>
+                      <CheckCircle2 size={14} /> Full Gate &amp; Administration Clearance
+                    </span>
+                  </div>
+                </div>
+
+                {/* SECTION 2: STATION & GATE TELEMETRY */}
+                <div className="vms-settings-section">
+                  <div className="vms-settings-section-title">
+                    <ShieldCheck size={14} color="#059669" /> Station &amp; System Configuration
+                  </div>
+
+                  <div className="vms-settings-field-row">
+                    <span className="vms-settings-field-label">Gate Access Terminal</span>
+                    <span className="vms-settings-field-val">MAIN GATE 01 · Primary Desk</span>
+                  </div>
+
+                  <div className="vms-settings-field-row">
+                    <span className="vms-settings-field-label">Telemetry Status</span>
+                    <span className="vms-settings-field-val" style={{ color: "#059669" }}>
+                      <span className="online-dot-mini"></span> Live Polling Connected
+                    </span>
+                  </div>
+
+                  <div className="vms-settings-field-row">
+                    <span className="vms-settings-field-label">Hardware Barcode Scanner</span>
+                    <span className="vms-settings-field-val">Webcam &amp; Optical QR Active</span>
+                  </div>
+
+                  <div className="vms-settings-field-row">
+                    <span className="vms-settings-field-label">System Version</span>
+                    <span className="vms-settings-field-val">VMS Enterprise 2.4.0 (Build 2026.10)</span>
+                  </div>
+                </div>
+
+                {/* SECTION: THEME & DISPLAY PREFERENCES */}
+                <div className="vms-settings-section">
+                  <div className="vms-settings-section-title">
+                    {theme === "dark" ? <Moon size={14} color="#818cf8" /> : <Sun size={14} color="#f59e0b" />} Portal Appearance &amp; Theme
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "4px" }}>
+                    <button
+                      type="button"
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: "10px",
+                        border: theme === "light" ? "2px solid #2563eb" : "1px solid #cbd5e1",
+                        background: theme === "light" ? "#eff6ff" : "transparent",
+                        color: theme === "light" ? "#1d4ed8" : "#64748b",
+                        fontWeight: 750,
+                        fontSize: "13px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                      onClick={() => setTheme("light")}
+                    >
+                      <Sun size={16} color="#d97706" />
+                      <span>Light Mode</span>
+                      {theme === "light" && <Check size={14} color="#2563eb" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      style={{
+                        padding: "12px 14px",
+                        borderRadius: "10px",
+                        border: theme === "dark" ? "2px solid #6366f1" : "1px solid #334155",
+                        background: theme === "dark" ? "rgba(99, 102, 241, 0.15)" : "transparent",
+                        color: theme === "dark" ? "#a5b4fc" : "#64748b",
+                        fontWeight: 750,
+                        fontSize: "13px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "8px",
+                        cursor: "pointer",
+                        transition: "all 0.15s ease",
+                      }}
+                      onClick={() => setTheme("dark")}
+                    >
+                      <Moon size={16} color="#818cf8" />
+                      <span>Dark Mode</span>
+                      {theme === "dark" && <Check size={14} color="#6366f1" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* SECTION: SYSTEM PREFERENCES & QUICK LINKS */}
+                <div className="vms-settings-section">
+                  <div className="vms-settings-section-title">
+                    <Building2 size={14} color="#7c3aed" /> Portal Shortcuts &amp; Kiosks
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "4px" }}>
+                    <button
+                      type="button"
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                      onClick={() => window.open("/register-visitor", "_blank")}
+                      title="Open Public Visitor Registration Kiosk in new tab"
+                    >
+                      <ExternalLink size={13} color="#2563eb" />
+                      <span>Visitor Kiosk</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                      onClick={() => window.open("/it-visit", "_blank")}
+                      title="Open IT Technical Visit Registration in new tab"
+                    >
+                      <ExternalLink size={13} color="#7c3aed" />
+                      <span>IT Visit Kiosk</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                      onClick={() => window.open("/guard", "_blank")}
+                      title="Open Security Guard Gate Terminal in new tab"
+                    >
+                      <ExternalLink size={13} color="#059669" />
+                      <span>Guard Terminal</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      style={{
+                        padding: "10px 12px",
+                        borderRadius: "8px",
+                        background: "#ffffff",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        color: "#334155",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                      }}
+                      onClick={() => {
+                        fetchDashboard();
+                        showToast?.("Dashboard telemetry refreshed.");
+                        setSettingsModalOpen(false);
+                      }}
+                      title="Force refresh all portal data"
+                    >
+                      <RefreshCw size={13} color="#0284c7" />
+                      <span>Sync Telemetry</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* SECTION 4: SESSION CONTROLS & LOGOUT */}
+                <div className="vms-settings-section" style={{ borderColor: "#fecaca", background: "#fff5f5" }}>
+                  <div className="vms-settings-section-title" style={{ color: "#b91c1c" }}>
+                    <LogOut size={14} color="#dc2626" /> Session Security
+                  </div>
+                  <p style={{ margin: "0 0 12px", fontSize: "12px", color: "#7f1d1d" }}>
+                    Signed in as <strong>{currentUser?.email || "rainaakhil15"}</strong>. Ending this session will revoke current access tokens and redirect to the login screen.
+                  </p>
+                  <button
+                    type="button"
+                    className="vms-settings-btn-logout"
+                    onClick={() => {
+                      setSettingsModalOpen(false);
+                      handleLogout();
+                    }}
+                    title="Sign out of VMS System"
+                  >
+                    <LogOut size={16} />
+                    <span>Sign Out of VMS Session</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -10149,12 +10090,124 @@ function GuardStandalonePortal() {
     <SecurityGuardPortal
       currentUser={currentUser}
       onLogout={handleLogout}
+      authToken={authToken}
     />
   );
 }
 
-function App() {
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f8fafc",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          padding: "24px"
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "16px",
+            border: "1px solid #e2e8f0",
+            boxShadow: "0 10px 25px -5px rgba(0,0,0,0.08)",
+            padding: "36px",
+            maxWidth: "520px",
+            width: "100%",
+            textAlign: "center"
+          }}>
+            <div style={{
+              width: "56px",
+              height: "56px",
+              borderRadius: "14px",
+              background: "#fee2e2",
+              color: "#dc2626",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 16px"
+            }}>
+              <XCircle size={30} />
+            </div>
+            <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", margin: "0 0 8px" }}>
+              Something went wrong
+            </h2>
+            <p style={{ fontSize: "14px", color: "#64748b", margin: "0 0 20px" }}>
+              {this.state.error?.message || "An unexpected error occurred in this view."}
+            </p>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center" }}>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                style={{
+                  background: "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "10px",
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                Reload Application
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  window.location.href = "/";
+                }}
+                style={{
+                  background: "#f1f5f9",
+                  color: "#334155",
+                  border: "1px solid #cbd5e1",
+                  borderRadius: "10px",
+                  padding: "10px 20px",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer"
+                }}
+              >
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AppContent() {
   const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+
+  if (
+    currentPath === "/profile/vms-os" ||
+    currentPath === "/vms-os" ||
+    currentPath === "/tour" ||
+    currentPath === "/video" ||
+    currentPath === "/launch"
+  ) {
+    window.location.replace("/profile/vms-os/index.html");
+    return null;
+  }
 
   if (currentPath === "/register-visitor") {
     return <PublicRegistration />;
@@ -10181,7 +10234,7 @@ function App() {
     return <GuardStandalonePortal />;
   }
 
-  const visitorPassMatch = currentPath.match(/^\/visitor-pass\/([^/]+)$/);
+  const visitorPassMatch = currentPath.match(/^\/(?:visitor-pass|pass)\/([^/]+)$/);
   if (visitorPassMatch) {
     let token = visitorPassMatch[1];
     try {
@@ -10193,6 +10246,14 @@ function App() {
   }
 
   return <VMSApp />;
+}
+
+function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
 }
 
 export default App;

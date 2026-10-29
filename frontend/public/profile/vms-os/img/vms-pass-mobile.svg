@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 1688" width="780" height="1688">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a0e17"/>
+      <stop offset="100%" stop-color="#141a29"/>
+    </linearGradient>
+    <linearGradient id="badgeG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="okG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <rect width="780" height="1688" fill="url(#bg)"/>
+
+  <!-- Top bar -->
+  <g transform="translate(48, 70)">
+    <circle cx="20" cy="20" r="18" fill="#4f46e5"/>
+    <path d="M12 20 L18 26 L28 14" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="54" y="27" fill="#ffffff" font-family="'Inter', -apple-system, sans-serif" font-weight="700" font-size="28" letter-spacing="-0.5">VMS DIGITAL PASS</text>
+    <rect x="520" y="4" width="160" height="34" rx="17" fill="url(#okG)"/>
+    <text x="600" y="27" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="16" text-anchor="middle" letter-spacing="1">ACTIVE ENTRY</text>
+  </g>
+
+  <!-- Visitor Card -->
+  <g transform="translate(48, 140)">
+    <rect width="684" height="1220" rx="36" fill="#161f30" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+    
+    <!-- Photo + Name Header -->
+    <g transform="translate(40, 48)">
+      <rect width="110" height="110" rx="28" fill="#243047" stroke="#4f46e5" stroke-width="3"/>
+      <!-- Avatar silhouette -->
+      <circle cx="55" cy="44" r="22" fill="#64748b"/>
+      <path d="M25 96 C25 74 40 68 55 68 C70 68 85 74 85 96 Z" fill="#64748b"/>
+      <!-- Online dot -->
+      <circle cx="95" cy="95" r="10" fill="#10b981" stroke="#161f30" stroke-width="3"/>
+      
+      <text x="136" y="42" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="34">Rajesh Kumar</text>
+      <text x="136" y="74" fill="#94a3b8" font-family="'Inter', sans-serif" font-weight="500" font-size="22">Senior Infrastructure Lead</text>
+      <text x="136" y="104" fill="#6366f1" font-family="'Inter', sans-serif" font-weight="600" font-size="20">TechCorp Solutions Pvt Ltd</text>
+    </g>
+
+    <!-- Divider -->
+    <line x1="40" y1="200" x2="644" y2="200" stroke="rgba(255,255,255,0.08)" stroke-width="2"/>
+
+    <!-- QR Code Centerpiece -->
+    <g transform="translate(182, 240)">
+      <rect width="320" height="320" rx="28" fill="#ffffff" filter="url(#glow)"/>
+      <!-- QR mock matrix -->
+      <rect x="24" y="24" width="76" height="76" rx="10" fill="#0f172a"/>
+      <rect x="36" y="36" width="52" height="52" rx="6" fill="#ffffff"/>
+      <rect x="48" y="48" width="28" height="28" rx="4" fill="#0f172a"/>
+
+      <rect x="220" y="24" width="76" height="76" rx="10" fill="#0f172a"/>
+      <rect x="232" y="36" width="52" height="52" rx="6" fill="#ffffff"/>
+      <rect x="244" y="48" width="28" height="28" rx="4" fill="#0f172a"/>
+
+      <rect x="24" y="220" width="76" height="76" rx="10" fill="#0f172a"/>
+      <rect x="36" y="232" width="52" height="52" rx="6" fill="#ffffff"/>
+      <rect x="48" y="244" width="28" height="28" rx="4" fill="#0f172a"/>
+
+      <!-- Random QR dots -->
+      <circle cx="140" cy="50" r="10" fill="#0f172a"/>
+      <circle cx="180" cy="50" r="10" fill="#0f172a"/>
+      <circle cx="160" cy="90" r="10" fill="#0f172a"/>
+      <circle cx="140" cy="140" r="12" fill="#4f46e5"/>
+      <circle cx="180" cy="140" r="10" fill="#0f172a"/>
+      <circle cx="160" cy="180" r="12" fill="#0f172a"/>
+      <circle cx="120" cy="240" r="10" fill="#0f172a"/>
+      <circle cx="160" cy="260" r="10" fill="#0f172a"/>
+      <circle cx="240" cy="140" r="10" fill="#0f172a"/>
+      <circle cx="260" cy="200" r="10" fill="#0f172a"/>
+      <circle cx="230" cy="250" r="10" fill="#0f172a"/>
+      
+      <!-- Security Seal Center -->
+      <circle cx="160" cy="160" r="26" fill="#4f46e5" stroke="#ffffff" stroke-width="4"/>
+      <path d="M152 160 L158 166 L169 154" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+
+    <!-- Pass Details Grid -->
+    <g transform="translate(40, 600)">
+      <text x="302" y="20" fill="#94a3b8" font-family="'JetBrains Mono', monospace" font-size="18" text-anchor="middle" letter-spacing="2">PASS #VMS-2026-9482</text>
+      
+      <!-- Box 1: Host -->
+      <g transform="translate(0, 50)">
+        <rect width="290" height="110" rx="20" fill="#1c273c"/>
+        <text x="24" y="38" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="16">HOST EMPLOYEE</text>
+        <text x="24" y="74" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="24">Akhil Sharma</text>
+        <text x="24" y="96" fill="#6366f1" font-family="'Inter', sans-serif" font-weight="600" font-size="16">Tech Team &#183; 3rd Floor</text>
+      </g>
+
+      <!-- Box 2: Gate / Time -->
+      <g transform="translate(314, 50)">
+        <rect width="290" height="110" rx="20" fill="#1c273c"/>
+        <text x="24" y="38" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="16">LOCATION / GATE</text>
+        <text x="24" y="74" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="24">Gate 1 North</text>
+        <text x="24" y="96" fill="#10b981" font-family="'Inter', sans-serif" font-weight="600" font-size="16">Check-In: 09:21 AM</text>
+      </g>
+
+      <!-- Box 3: Declared Assets -->
+      <g transform="translate(0, 180)">
+        <rect width="604" height="120" rx="20" fill="#1c273c" stroke="rgba(79, 70, 229, 0.3)" stroke-width="1.5"/>
+        <circle cx="48" cy="60" r="24" fill="#2d3b55"/>
+        <text x="48" y="67" fill="#6366f1" font-family="'Inter', sans-serif" font-weight="700" font-size="20" text-anchor="middle">💻</text>
+        <text x="90" y="46" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="15">DECLARED ASSET (1 ITEM)</text>
+        <text x="90" y="74" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="20">Apple MacBook Pro 16" &#183; Space Black</text>
+        <text x="90" y="98" fill="#10b981" font-family="'JetBrains Mono', monospace" font-size="16">SN: C02G9012MD6R &#183; Verified Gate Clear</text>
+      </g>
+
+      <!-- Box 4: Security Verification Stamp -->
+      <g transform="translate(0, 320)">
+        <rect width="604" height="90" rx="20" fill="#152424" stroke="#059669" stroke-width="1.5"/>
+        <circle cx="48" cy="45" r="20" fill="#059669"/>
+        <path d="M42 45 L46 49 L55 40" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <text x="86" y="38" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="18">GUARD VERIFIED &amp; APPROVED</text>
+        <text x="86" y="66" fill="#a7f3d0" font-family="'Inter', sans-serif" font-size="16">Security Guard: Bahadur Singh (Badge #G-104)</text>
+      </g>
+
+      <!-- Tap instruction -->
+      <text x="302" y="460" fill="#64748b" font-family="'Inter', sans-serif" font-size="16" text-anchor="middle">Show this QR code at Security Gate upon exit</text>
+    </g>
+  </g>
+
+  <!-- Bottom Home bar -->
+  <g transform="translate(290, 1630)">
+    <rect width="200" height="6" rx="3" fill="#ffffff" opacity="0.3"/>
+  </g>
+</svg>

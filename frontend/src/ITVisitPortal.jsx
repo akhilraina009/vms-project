@@ -47,7 +47,7 @@ export default function ITVisitPortal() {
         <header className="public-header">
           <div className="public-brand">
             <span className="public-brand-icon">
-              <ShieldCheck size={26} />
+              <img src="/vms-logo.png" alt="VMS Logo" />
             </span>
             <div>
               <h1>Visitor Management</h1>
@@ -74,7 +74,7 @@ export default function ITVisitPortal() {
         <header className="public-header">
           <div className="public-brand">
             <span className="public-brand-icon">
-              <ShieldCheck size={26} />
+              <img src="/vms-logo.png" alt="VMS Logo" />
             </span>
             <div>
               <h1>Visitor Management</h1>

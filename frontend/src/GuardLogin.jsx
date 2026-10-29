@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ShieldCheck,
   Eye,
@@ -7,9 +7,8 @@ import {
   Mail,
   ArrowRight,
   RefreshCw,
-  KeyRound,
-  Smartphone,
-  Radio,
+  Sun,
+  Moon,
 } from "lucide-react";
 import "./Login.css";
 
@@ -22,10 +21,18 @@ export default function GuardLogin({ onLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const fillDemoGuard = () => {
-    setEmail("guard@vms.com");
-    setPassword("Guard@123");
-    setError("");
+  // Sync theme
+  const [theme, setTheme] = useState(() => localStorage.getItem("vms-theme") || "dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("vms-theme", theme);
+    localStorage.setItem("vms_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
   };
 
   async function handleSubmit(event) {
@@ -48,12 +55,14 @@ export default function GuardLogin({ onLogin }) {
         throw new Error(
           typeof data.detail === "string"
             ? data.detail
+            : response.status === 500
+            ? "Database or server connection error. Please try again."
             : "Login failed. Check your security credentials."
         );
       }
 
       if (!data.access_token) {
-        throw new Error("The server did not return an access token.");
+        throw new Error("No authorization token received.");
       }
 
       const userResponse = await fetch(`${API_BASE_URL}/auth/me`, {
@@ -63,17 +72,22 @@ export default function GuardLogin({ onLogin }) {
       });
 
       if (!userResponse.ok) {
-        throw new Error("Unable to verify security account. Please try again.");
+        throw new Error("Unable to verify security operator account.");
       }
 
       const user = await userResponse.json();
 
+      if (user.role !== "GUARD" && user.role !== "ADMIN") {
+        throw new Error("Access restricted to Security Personnel (GUARD) or ADMIN.");
+      }
+
+      localStorage.setItem("guard_token", data.access_token);
       onLogin(data.access_token, user);
     } catch (err) {
       setError(
         err.message === "Failed to fetch"
-          ? "Cannot connect to server. Check Wi-Fi connection and backend status."
-          : err.message || "Invalid email or password."
+          ? "Cannot connect to gate authentication server."
+          : err.message || "Invalid operator credentials."
       );
     } finally {
       setLoading(false);
@@ -81,290 +95,107 @@ export default function GuardLogin({ onLogin }) {
   }
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background: "linear-gradient(135deg, #0a0f1d 0%, #0f172a 100%)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-        fontFamily: "'Plus Jakarta Sans', Inter, -apple-system, sans-serif",
-        color: "#ffffff",
-        boxSizing: "border-box",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "440px",
-          background: "#ffffff",
-          borderRadius: "20px",
-          boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(37, 99, 235, 0.15)",
-          padding: "32px 26px",
-          color: "#0f172a",
-          border: "1px solid rgba(255, 255, 255, 0.1)",
-        }}
-      >
-        {/* Terminal Header */}
-        <div style={{ textAlign: "center", marginBottom: "24px" }}>
-          <div
-            style={{
-              width: "54px",
-              height: "54px",
-              borderRadius: "16px",
-              background: "linear-gradient(135deg, #2563eb, #1d4ed8)",
-              color: "#ffffff",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 14px",
-              boxShadow: "0 0 20px rgba(37, 99, 235, 0.45)",
-            }}
-          >
-            <ShieldCheck size={30} strokeWidth={2.4} />
-          </div>
-
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-              background: "#eff6ff",
-              color: "#1d4ed8",
-              padding: "4px 12px",
-              borderRadius: "20px",
-              fontSize: "11px",
-              fontWeight: 800,
-              letterSpacing: "0.5px",
-              marginBottom: "8px",
-            }}
-          >
-            <Radio size={12} /> GATE 01 · ACCESS DESK
-          </div>
-
-          <h2 style={{ margin: "0 0 6px", fontSize: "22px", fontWeight: 800, color: "#0f172a" }}>
-            Gate Terminal Login
-          </h2>
-          <p style={{ margin: 0, fontSize: "13px", color: "#64748b", lineHeight: "1.4" }}>
-            Enter your security guard credentials to operate the mobile gate scanner &amp; check-in desk.
-          </p>
-        </div>
-
-        {/* Quick Demo Fill Pill for Touch/Phone */}
-        <div
-          onClick={fillDemoGuard}
-          style={{
-            background: "#f8fafc",
-            border: "1.5px dashed #93c5fd",
-            borderRadius: "12px",
-            padding: "10px 14px",
-            marginBottom: "20px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            fontSize: "12px",
-            color: "#1d4ed8",
-            transition: "all 0.2s ease",
-          }}
-          title="Tap to auto-fill guard credentials"
+    <div className="login-page">
+      {/* Top Theme Toggle */}
+      <div className="login-top-bar">
+        <button
+          type="button"
+          className="login-theme-btn"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to Light Theme" : "Switch to Dark Theme"}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Smartphone size={16} color="#2563eb" />
-            <span>
-              Tap to auto-fill <strong>guard@vms.com</strong>
-            </span>
-          </div>
-          <span style={{ fontWeight: 700, fontSize: "11px", textDecoration: "underline" }}>
-            1-Tap Fill
-          </span>
-        </div>
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          <span>{theme === "dark" ? "Light" : "Dark"}</span>
+        </button>
+      </div>
 
-        {/* Login Form */}
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: "16px" }}>
-            <label
-              htmlFor="guard-email"
-              style={{
-                display: "block",
-                fontSize: "12px",
-                fontWeight: 700,
-                color: "#334155",
-                marginBottom: "6px",
-                textTransform: "uppercase",
-                letterSpacing: "0.4px",
-              }}
-            >
-              Guard Email / ID
-            </label>
-            <div style={{ position: "relative" }}>
-              <Mail
-                size={17}
-                style={{
-                  position: "absolute",
-                  left: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#94a3b8",
-                }}
-              />
-              <input
-                id="guard-email"
-                type="email"
-                placeholder="guard@vms.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="username"
-                style={{
-                  width: "100%",
-                  padding: "13px 12px 13px 40px",
-                  borderRadius: "12px",
-                  border: "1.5px solid #cbd5e1",
-                  fontSize: "14px",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  color: "#0f172a",
-                  background: "#ffffff",
-                }}
-              />
+      <div className="login-card-wrapper">
+        <div className="login-card">
+          {/* Terminal Header */}
+          <div className="login-brand">
+            <div className="login-logo-ring">
+              <img src="/vms-logo.png" alt="VMS Logo" className="login-logo-img" />
             </div>
+            <h1 className="login-title">Gate Terminal Access</h1>
+            <p className="login-subtitle">Security Guard Kiosk · Optical Pass Clearance</p>
           </div>
 
-          <div style={{ marginBottom: "20px" }}>
-            <label
-              htmlFor="guard-password"
-              style={{
-                display: "block",
-                fontSize: "12px",
-                fontWeight: 700,
-                color: "#334155",
-                marginBottom: "6px",
-                textTransform: "uppercase",
-                letterSpacing: "0.4px",
-              }}
-            >
-              Security Password
-            </label>
-            <div style={{ position: "relative" }}>
-              <LockKeyhole
-                size={17}
-                style={{
-                  position: "absolute",
-                  left: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  color: "#94a3b8",
-                }}
-              />
-              <input
-                id="guard-password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter password..."
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                style={{
-                  width: "100%",
-                  padding: "13px 42px 13px 40px",
-                  borderRadius: "12px",
-                  border: "1.5px solid #cbd5e1",
-                  fontSize: "14px",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  color: "#0f172a",
-                  background: "#ffffff",
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                style={{
-                  position: "absolute",
-                  right: "12px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  border: "none",
-                  background: "transparent",
-                  color: "#94a3b8",
-                  cursor: "pointer",
-                  padding: "4px",
-                }}
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
+          <div className="login-heading">
+            <h2>Operator Login</h2>
+            <p>Enter your security guard credentials to operate the mobile gate scanner.</p>
           </div>
 
-          {error && (
-            <div
-              style={{
-                marginBottom: "18px",
-                padding: "12px 14px",
-                borderRadius: "10px",
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                color: "#b91c1c",
-                fontSize: "12.5px",
-                lineHeight: "1.4",
-              }}
-            >
-              {error}
+          <form onSubmit={handleSubmit} className="login-form">
+            <div className="login-form-group">
+              <label htmlFor="guard-email">Guard Email / ID</label>
+              <div className="login-input-wrap">
+                <Mail size={16} className="login-input-icon" />
+                <input
+                  id="guard-email"
+                  type="email"
+                  placeholder="guard@vms.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="username"
+                />
+              </div>
             </div>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{
-              width: "100%",
-              padding: "15px",
-              borderRadius: "12px",
-              background: "#2563eb",
-              color: "#ffffff",
-              border: "none",
-              fontSize: "15px",
-              fontWeight: 800,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "8px",
-              boxShadow: "0 4px 14px rgba(37, 99, 235, 0.35)",
-              transition: "all 0.2s ease",
-            }}
-          >
-            {loading ? (
-              <>
-                <RefreshCw size={17} className="spin" />
-                <span>Verifying Guard Credentials...</span>
-              </>
-            ) : (
-              <>
-                <span>Sign In to Gate Terminal</span>
-                <ArrowRight size={17} />
-              </>
+            <div className="login-form-group">
+              <label htmlFor="guard-password">Security Password</label>
+              <div className="login-input-wrap">
+                <LockKeyhole size={16} className="login-input-icon" />
+                <input
+                  id="guard-password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter access passphrase"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  className="login-password-toggle"
+                  onClick={() => setShowPassword((p) => !p)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="login-error">
+                <span>{error}</span>
+              </div>
             )}
-          </button>
-        </form>
 
-        <div
-          style={{
-            marginTop: "20px",
-            textAlign: "center",
-            fontSize: "11.5px",
-            color: "#64748b",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "6px",
-          }}
-        >
-          <KeyRound size={13} color="#94a3b8" />
-          <span>Gate Desk Terminal · TLS Encrypted Session</span>
+            <button
+              className="login-submit"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? (
+                <>
+                  <RefreshCw size={15} className="spin" />
+                  <span>Authorizing gate terminal...</span>
+                </>
+              ) : (
+                <>
+                  <span>Access Guard Station</span>
+                  <ArrowRight size={15} />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="login-footer">
+            <ShieldCheck size={13} />
+            <span>Gate Clearance Terminal · Authenticated Officer Access</span>
+          </div>
         </div>
       </div>
     </div>

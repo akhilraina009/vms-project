@@ -247,6 +247,38 @@ export default function PublicVisitorPass({ token }) {
         </div>
       </div>
     );
+  } else if (rawStatus === "RESCHEDULED") {
+    const nextDateStr = pass?.expected_in_time
+      ? new Date(pass.expected_in_time).toLocaleDateString([], {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "Next Scheduled Date";
+
+    statusBadgeText = "HOST ABSENT · VISIT RESCHEDULED";
+    statusBadgeClass = "blue";
+    statusBanner = (
+      <div className="pass-status-banner banner-blue" style={{ background: "#f0f9ff", border: "1px solid #bae6fd", color: "#0369a1" }}>
+        <div className="pass-banner-icon-box" style={{ background: "#e0f2fe", color: "#0284c7" }}>
+          <Calendar size={20} className="pass-banner-icon" />
+        </div>
+        <div className="pass-banner-content">
+          <strong className="pass-banner-title" style={{ color: "#0369a1" }}>
+            Host is Absent Today · Visit Rescheduled to {nextDateStr}
+          </strong>
+          <p className="pass-banner-desc" style={{ color: "#0c4a6e" }}>
+            Your host ({pass?.host_name || "Host Employee"}) is not present in the office today. Your technical appointment has been rescheduled. Your digital pass and QR code remain active for this new date — you do not need to register again.
+          </p>
+          <span className="pass-banner-live-tag" style={{ color: "#0284c7" }}>
+            <span className="pass-pulse-dot" style={{ background: "#0284c7" }}></span>
+            Valid for entrance on {nextDateStr}
+          </span>
+        </div>
+      </div>
+    );
   } else if (rawStatus === "WAITING") {
     statusBadgeText = "HOST IS BUSY · ON HOLD";
     statusBadgeClass = "orange";
@@ -631,13 +663,25 @@ export default function PublicVisitorPass({ token }) {
                     <div className="pass-asset-right">
                       <div className="pass-asset-title-row">
                         <strong className="pass-asset-type">{asset.asset_type || "Equipment"}</strong>
-                        <span
-                          className={`pass-asset-pill ${
-                            asset.is_cleared_for_exit ? "cleared" : "pending"
-                          }`}
-                        >
-                          {asset.is_cleared_for_exit ? "✓ Cleared" : "Exit Pending"}
-                        </span>
+                        {(() => {
+                          const isRetained = (asset.cleared_by && asset.cleared_by.includes("RETAINED")) || asset.disposition === "RETAINED_ON_PREMISES";
+                          if (isRetained) {
+                            return (
+                              <span className="pass-asset-pill" style={{ background: "#eff6ff", color: "#1d4ed8", border: "1px solid #bfdbfe", fontWeight: 700 }}>
+                                📦 Retained in Facility
+                              </span>
+                            );
+                          }
+                          return (
+                            <span
+                              className={`pass-asset-pill ${
+                                asset.is_cleared_for_exit ? "cleared" : "pending"
+                              }`}
+                            >
+                              {asset.is_cleared_for_exit ? "✓ Cleared" : "Exit Pending"}
+                            </span>
+                          );
+                        })()}
                       </div>
 
                       <p className="pass-asset-model">
@@ -654,7 +698,7 @@ export default function PublicVisitorPass({ token }) {
                 ))}
               </div>
 
-              {pass.assets.some((a) => !a.is_cleared_for_exit) ? (
+              {pass.assets.some((a) => !a.is_cleared_for_exit && !((a.cleared_by && a.cleared_by.includes("RETAINED")) || a.disposition === "RETAINED_ON_PREMISES")) ? (
                 <div className="pass-alert-notice warning">
                   <Clock size={14} />
                   <span>Items must be verified by gate security prior to building exit.</span>
@@ -662,11 +706,27 @@ export default function PublicVisitorPass({ token }) {
               ) : (
                 <div className="pass-alert-notice success">
                   <CheckCircle2 size={14} />
-                  <span>All registered items cleared for building departure.</span>
+                  <span>All registered items cleared / reconciled for building departure.</span>
                 </div>
               )}
             </section>
           )}
+        </div>
+
+        {/* Official Sign-Off for PDF / Printed Pass */}
+        <div className="pass-print-footer">
+          <div className="pass-signature-box">
+            <div className="sig-line"></div>
+            <span>Visitor Signature</span>
+          </div>
+          <div className="pass-signature-box">
+            <div className="sig-line"></div>
+            <span>Host Authorization</span>
+          </div>
+          <div className="pass-signature-box">
+            <div className="sig-line"></div>
+            <span>Security Gate Stamp</span>
+          </div>
         </div>
 
         {/* Security Compliance Footer */}

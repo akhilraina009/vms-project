@@ -7,6 +7,10 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     https: true,
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
     proxy: {
       "/auth": {
         target: "http://127.0.0.1:8000",

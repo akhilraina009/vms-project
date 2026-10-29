@@ -31,6 +31,11 @@ import {
   Radio,
   FileText,
   BadgeAlert,
+  Bell,
+  BellRing,
+  CalendarClock,
+  Sun,
+  Moon,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { Html5QrcodeScanner } from "html5-qrcode";
@@ -58,17 +63,33 @@ const resolvePhotoUrl = (url) => {
   return `/${clean}`;
 };
 
-function SecurityGuardPortalInner({ currentUser, onLogout }) {
-  const [activeTab, setActiveTab] = useState("checkin"); // 'checkin' | 'active' | 'approved-queue' | 'kiosk'
+function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken }) {
+  const [theme, setTheme] = useState(() => localStorage.getItem("vms-theme") || "dark");
+  const [activeTab, setActiveTab] = useState("checkin");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("vms-theme", theme);
+    localStorage.setItem("vms_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark")); // 'checkin' | 'active' | 'approved-queue' | 'kiosk'
   const [authToken, setAuthTokenState] = useState(
-    () => localStorage.getItem("guard_token") || localStorage.getItem("vms_token") || ""
+    () => propToken || localStorage.getItem("guard_token") || localStorage.getItem("vms_token") || ""
   );
 
-  const getGuardToken = () => {
-    return localStorage.getItem("guard_token") || localStorage.getItem("vms_token") || "";
-  };
+  useEffect(() => {
+    if (propToken && propToken !== authToken) {
+      setAuthTokenState(propToken);
+    }
+  }, [propToken, authToken]);
 
-  const refreshGuardToken = async () => {
+  const getGuardToken = useCallback(() => {
+    return propToken || localStorage.getItem("guard_token") || localStorage.getItem("vms_token") || "";
+  }, [propToken]);
+
+  const refreshGuardToken = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/login`, {
         method: "POST",
@@ -87,7 +108,23 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
       console.warn("Could not auto-refresh guard token:", err);
     }
     return null;
-  };
+  }, []);
+
+  const getValidToken = useCallback(async () => {
+    let token = getGuardToken();
+    if (!token) {
+      token = await refreshGuardToken();
+    }
+    return token;
+  }, [getGuardToken, refreshGuardToken]);
+
+  const parseAuditDate = useCallback((dateStr) => {
+    if (!dateStr) return null;
+    const str = String(dateStr);
+    const withZ = (str.endsWith("Z") || str.includes("+")) ? str : `${str}Z`;
+    const dt = new Date(withZ);
+    return Number.isNaN(dt.getTime()) ? new Date(str) : dt;
+  }, []);
 
   // Real-time live clock
   const [currentTime, setCurrentTime] = useState(() => new Date());
@@ -139,6 +176,113 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
     setTimeout(() => setToastMessage(""), 4500);
   };
 
+  // Real-time Visit & Pre-Approval Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notifDrawerOpen, setNotifDrawerOpen] = useState(false);
+  const previousUnreadCountRef = useRef(null);
+
+  const playAlertChime = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(587.33, now);
+      gain1.gain.setValueAtTime(0.08, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.15);
+
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(880, now + 0.12);
+      gain2.gain.setValueAtTime(0.1, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.35);
+    } catch {
+      // Audio suppression fallback
+    }
+  }, []);
+
+  const fetchGuardNotifications = useCallback(async () => {
+    let token = await getValidToken();
+    if (!token) return;
+    try {
+      let res = await fetch(`${API_BASE_URL}/audit-logs/?limit=60`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.status === 401) {
+        token = await refreshGuardToken();
+        if (token) {
+          res = await fetch(`${API_BASE_URL}/audit-logs/?limit=60`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      }
+      if (res.ok) {
+        const logs = await res.json();
+        const relevant = (Array.isArray(logs) ? logs : []).filter((log) => {
+          const action = String(log.action || "").toUpperCase();
+          const desc = String(log.description || "").toUpperCase();
+          return (
+            action.includes("REQUEST_RAISED") ||
+            action.includes("PRE_APPROVAL") ||
+            action.includes("RESCHEDULED") ||
+            action.includes("HOLD") ||
+            action.includes("WAIT") ||
+            action.includes("VISIT_REQUEST") ||
+            action.includes("CHECKED_IN") ||
+            action.includes("CHECKED_OUT") ||
+            action.includes("REJECT") ||
+            desc.includes("REQUEST RAISED") ||
+            desc.includes("RESCHEDULED") ||
+            desc.includes("WAIT") ||
+            desc.includes("APPROVED") ||
+            desc.includes("REJECTED")
+          );
+        });
+        setNotifications(relevant);
+
+        // Read IDs tracking for foolproof unread counting across reloads
+        let readIdsSet = new Set();
+        try {
+          const raw = localStorage.getItem("vms_guard_read_ids");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) readIdsSet = new Set(parsed.map(String));
+          }
+        } catch {
+          readIdsSet = new Set();
+        }
+
+        const unreadLogs = relevant.filter((n) => !readIdsSet.has(String(n.audit_id)));
+        setUnreadCount(unreadLogs.length);
+
+        if (
+          previousUnreadCountRef.current !== null &&
+          unreadLogs.length > previousUnreadCountRef.current
+        ) {
+          playAlertChime();
+          const newest = unreadLogs[0];
+          showToast(newest.description || `New Alert: ${newest.action}`);
+        }
+        previousUnreadCountRef.current = unreadLogs.length;
+      }
+    } catch (err) {
+      console.error("Error fetching guard notifications:", err);
+    }
+  }, [getValidToken, refreshGuardToken, playAlertChime]);
+
   // Generate Kiosk QR codes once
   useEffect(() => {
     const origin = window.location.origin;
@@ -146,17 +290,33 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
     QRCode.toDataURL(`${origin}/it-visit`, { width: 340, margin: 2 }).then(setItQR).catch(() => {});
   }, []);
 
-  // Fetch Active Visitors
+  // Fetch Active Visitors (reads data.visitors from /visits/dashboard)
   const fetchActiveVisits = useCallback(async () => {
-    if (!authToken) return;
+    let token = await getValidToken();
+    if (!token) return;
     try {
       setActiveLoading(true);
-      const res = await fetch(`${API_BASE_URL}/visits/dashboard`, {
-        headers: authHeaders(),
+      let res = await fetch(`${API_BASE_URL}/visits/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401) {
+        token = await refreshGuardToken();
+        if (token) {
+          res = await fetch(`${API_BASE_URL}/visits/dashboard`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      }
       if (res.ok) {
         const data = await res.json();
-        const active = Array.isArray(data.active_visits) ? data.active_visits : [];
+        const visitorsList = Array.isArray(data.visitors)
+          ? data.visitors
+          : Array.isArray(data.active_visits)
+          ? data.active_visits
+          : [];
+        const active = visitorsList.filter(
+          (v) => String(v.status || "").toUpperCase() === "ACTIVE"
+        );
         setActiveVisits(active);
       }
     } catch (err) {
@@ -164,16 +324,25 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
     } finally {
       setActiveLoading(false);
     }
-  }, [authToken, authHeaders]);
+  }, [getValidToken, refreshGuardToken]);
 
   // Fetch Today's Approved Queue (Ready for check-in)
   const fetchApprovedQueue = useCallback(async () => {
-    if (!authToken) return;
+    let token = await getValidToken();
+    if (!token) return;
     try {
       setQueueLoading(true);
-      const res = await fetch(`${API_BASE_URL}/pre-approvals/`, {
-        headers: authHeaders(),
+      let res = await fetch(`${API_BASE_URL}/pre-approvals/`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
+      if (res.status === 401) {
+        token = await refreshGuardToken();
+        if (token) {
+          res = await fetch(`${API_BASE_URL}/pre-approvals/`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }
+      }
       if (res.ok) {
         const data = await res.json();
         const approved = (Array.isArray(data) ? data : []).filter(
@@ -186,13 +355,21 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
     } finally {
       setQueueLoading(false);
     }
-  }, [authToken, authHeaders]);
+  }, [getValidToken, refreshGuardToken]);
 
-  // Initial load for KPI bar and data
+  // Initial load for KPI bar, data, and live registration alerts (5s polling)
   useEffect(() => {
     fetchActiveVisits();
     fetchApprovedQueue();
-  }, [fetchActiveVisits, fetchApprovedQueue]);
+    fetchGuardNotifications();
+
+    const interval = setInterval(() => {
+      fetchGuardNotifications();
+      fetchApprovedQueue();
+      fetchActiveVisits();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [fetchActiveVisits, fetchApprovedQueue, fetchGuardNotifications]);
 
   useEffect(() => {
     if (activeTab === "active") {
@@ -732,11 +909,220 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
         </div>
       )}
 
+      {/* REAL-TIME NOTIFICATIONS DRAWER */}
+      {notifDrawerOpen && (
+        <div className="sgp-notif-drawer-backdrop" onClick={() => setNotifDrawerOpen(false)}>
+          <div className="sgp-notif-drawer" onClick={(e) => e.stopPropagation()}>
+            <div className="sgp-notif-drawer-header">
+              <div className="sgp-notif-drawer-title-group">
+                <Bell size={18} color="#38bdf8" />
+                <h3 className="sgp-notif-drawer-title">Live Registration Alerts</h3>
+                <span className="sgp-badge-live">
+                  <span className="pulse-dot"></span> REALTIME
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                {unreadCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allIds = notifications.map((n) => String(n.audit_id));
+                      localStorage.setItem("vms_guard_read_ids", JSON.stringify(allIds));
+                      setUnreadCount(0);
+                    }}
+                    style={{
+                      background: "rgba(56, 189, 248, 0.15)",
+                      border: "1px solid rgba(56, 189, 248, 0.4)",
+                      color: "#38bdf8",
+                      borderRadius: "6px",
+                      padding: "4px 8px",
+                      fontSize: "11px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                    title="Mark all as read"
+                  >
+                    Mark read
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={fetchGuardNotifications}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "none",
+                    color: "#94a3b8",
+                    borderRadius: "6px",
+                    padding: "6px",
+                    cursor: "pointer",
+                  }}
+                  title="Refresh alerts"
+                >
+                  <RefreshCw size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNotifDrawerOpen(false)}
+                  style={{
+                    background: "rgba(255, 255, 255, 0.08)",
+                    border: "none",
+                    color: "#cbd5e1",
+                    borderRadius: "6px",
+                    padding: "6px",
+                    cursor: "pointer",
+                  }}
+                  title="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="sgp-notif-drawer-body">
+              {notifications.length === 0 ? (
+                <div style={{ padding: "40px 20px", textAlign: "center", color: "#64748b" }}>
+                  <Bell size={32} style={{ margin: "0 auto 12px", opacity: 0.5 }} />
+                  <p style={{ margin: 0, fontSize: "14px" }}>No recent registration alerts.</p>
+                </div>
+              ) : (
+                notifications.map((item) => {
+                  const actionUpper = String(item.action || "").toUpperCase();
+                  const descUpper = String(item.description || "").toUpperCase();
+
+                  const isIT =
+                    actionUpper.includes("IT_") ||
+                    descUpper.includes("[IT_VISIT]") ||
+                    descUpper.includes("IT VISITOR");
+
+                  const isRequestRaised = actionUpper.includes("REQUEST_RAISED") || descUpper.includes("REQUEST RAISED");
+                  const isApproved = actionUpper.includes("APPROVED") || descUpper.includes("APPROVED");
+                  const isRescheduled = actionUpper.includes("RESCHEDULED") || descUpper.includes("RESCHEDULED");
+                  const isOnHold = !isRequestRaised && (actionUpper.includes("HOLD") || descUpper.includes("ON HOLD") || descUpper.includes("LOBBY") || descUpper.includes("WAIT IN") || descUpper.includes("WAITING IN"));
+                  const isRejected = actionUpper.includes("REJECT") || descUpper.includes("REJECTED") || descUpper.includes("DENIED");
+                  const isCheckedIn = actionUpper.includes("CHECKED_IN");
+                  const isCheckedOut = actionUpper.includes("CHECKED_OUT");
+
+                  let cardClass = isApproved
+                    ? "approved-card"
+                    : isRescheduled
+                    ? "rescheduled-card"
+                    : isOnHold
+                    ? "on-hold-card"
+                    : isRejected
+                    ? "rejected-card"
+                    : isCheckedIn
+                    ? "checkedin-card"
+                    : isCheckedOut
+                    ? "checkedout-card"
+                    : isIT
+                    ? "it-card"
+                    : "general-card";
+
+                  let pillClass = isApproved
+                    ? "approved"
+                    : isRescheduled
+                    ? "rescheduled"
+                    : isOnHold
+                    ? "on-hold"
+                    : isRejected
+                    ? "rejected"
+                    : isCheckedIn
+                    ? "checkedin"
+                    : isCheckedOut
+                    ? "checkedout"
+                    : isIT
+                    ? "it"
+                    : "general";
+
+                  let pillLabel = isApproved
+                    ? "APPROVED · READY AT GATE"
+                    : isRescheduled
+                    ? "VISIT RESCHEDULED"
+                    : isOnHold
+                    ? "ON HOLD · HOST BUSY"
+                    : isRejected
+                    ? "ENTRY DENIED · REJECTED"
+                    : isCheckedIn
+                    ? "VISITOR CHECKED IN"
+                    : isCheckedOut
+                    ? "VISITOR CHECKED OUT"
+                    : isIT
+                    ? "IT VISITOR REGISTRATION"
+                    : "VISITOR REGISTRATION";
+
+                  const itemDate = parseAuditDate(item.created_at);
+
+                  return (
+                    <div key={item.audit_id} className={`sgp-notif-card ${cardClass}`}>
+                      <div className="sgp-notif-card-header">
+                        <span className={`sgp-notif-pill ${pillClass}`}>{pillLabel}</span>
+                        <span className="sgp-notif-time">
+                          {itemDate ? itemDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : ""}
+                        </span>
+                      </div>
+                      <p className="sgp-notif-desc">{item.description}</p>
+                      <div className="sgp-notif-action-row">
+                        {isApproved ? (
+                          <button
+                            type="button"
+                            className="sgp-notif-action-btn"
+                            onClick={() => {
+                              setActiveTab("approved-queue");
+                              setNotifDrawerOpen(false);
+                            }}
+                          >
+                            <UserCheck size={13} />
+                            <span>Go to Approved Queue</span>
+                          </button>
+                        ) : isRescheduled ? (
+                          <span style={{ fontSize: "11px", color: "#f59e0b", fontWeight: 600 }}>
+                            📅 Rescheduled for next date
+                          </span>
+                        ) : isOnHold ? (
+                          <span style={{ fontSize: "11px", color: "#f97316", fontWeight: 600 }}>
+                            🛑 Host is busy · Visitor waiting in lobby
+                          </span>
+                        ) : isRejected ? (
+                          <span style={{ fontSize: "11px", color: "#ef4444", fontWeight: 600 }}>
+                            ❌ Entry denied by Admin/Host
+                          </span>
+                        ) : isCheckedIn ? (
+                          <button
+                            type="button"
+                            className="sgp-notif-action-btn"
+                            style={{ background: "#059669" }}
+                            onClick={() => {
+                              setActiveTab("active");
+                              setNotifDrawerOpen(false);
+                            }}
+                          >
+                            <Users size={13} />
+                            <span>View Active Badge</span>
+                          </button>
+                        ) : isCheckedOut ? (
+                          <span style={{ fontSize: "11px", color: "#94a3b8", fontWeight: 600 }}>
+                            🏁 Visit completed & checked out
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: "11px", color: "#38bdf8", fontWeight: 600 }}>
+                            ⏳ Awaiting Pre-Approval Clearance
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* TOP COMMAND BAR */}
       <header className="sgp-header">
         <div className="sgp-brand-group">
           <div className="sgp-brand-logo">
-            <ShieldCheck size={24} strokeWidth={2.4} />
+            <img src="/vms-logo.png" alt="VMS Logo" />
           </div>
           <div>
             <div className="sgp-title-row">
@@ -754,6 +1140,31 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
 
         {/* Right Officer Status & Actions */}
         <div className="sgp-header-right">
+          <button
+            type="button"
+            className={`sgp-notif-btn ${notifDrawerOpen ? "active" : ""}`}
+            onClick={() => {
+              setNotifDrawerOpen((prev) => !prev);
+              fetchGuardNotifications();
+            }}
+            title="Live Registration & Pre-Approval Alerts"
+          >
+            <Bell size={15} />
+            <span>Alerts</span>
+            {unreadCount > 0 && <span className="sgp-notif-badge">{unreadCount}</span>}
+          </button>
+
+          <button
+            type="button"
+            className="sgp-theme-btn"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun size={14} color="#f59e0b" /> : <Moon size={14} color="#cbd5e1" />}
+            <span>{theme === "dark" ? "Light" : "Dark"}</span>
+          </button>
+
           <div className="sgp-clock-pill">
             <Clock size={14} color="#38bdf8" />
             <span>
@@ -790,8 +1201,8 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
           onClick={() => setActiveTab("approved-queue")}
           title="Click to view all approved arrivals"
         >
-          <div className="sgp-kpi-icon" style={{ background: "linear-gradient(135deg, #059669, #047857)" }}>
-            <UserCheck size={20} />
+          <div className="sgp-kpi-icon">
+            <UserCheck size={22} />
           </div>
           <div className="sgp-kpi-content">
             <span className="sgp-kpi-label">Approved Arrivals Waiting</span>
@@ -805,8 +1216,8 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
           onClick={() => setActiveTab("active")}
           title="Click to view active visitors on-premises"
         >
-          <div className="sgp-kpi-icon" style={{ background: "linear-gradient(135deg, #2563eb, #1d4ed8)" }}>
-            <Users size={20} />
+          <div className="sgp-kpi-icon">
+            <Users size={22} />
           </div>
           <div className="sgp-kpi-content">
             <span className="sgp-kpi-label">Currently Inside Premises</span>
@@ -820,8 +1231,8 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
           onClick={() => setActiveTab("kiosk")}
           title="View walk-in kiosk QR displays"
         >
-          <div className="sgp-kpi-icon" style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)" }}>
-            <Laptop size={20} />
+          <div className="sgp-kpi-icon">
+            <Laptop size={22} />
           </div>
           <div className="sgp-kpi-content">
             <span className="sgp-kpi-label">Self-Service Kiosks</span>
@@ -835,13 +1246,13 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
           onClick={() => setActiveTab("checkin")}
           title="Ready to scan passes"
         >
-          <div className="sgp-kpi-icon" style={{ background: "linear-gradient(135deg, #0891b2, #0e7490)" }}>
-            <Radio size={20} />
+          <div className="sgp-kpi-icon">
+            <Radio size={22} />
           </div>
           <div className="sgp-kpi-content">
             <span className="sgp-kpi-label">Gate Scanner Status</span>
-            <span className="sgp-kpi-value" style={{ color: "#059669", fontSize: "16px", marginTop: "2px" }}>
-              ● Operational
+            <span className="sgp-kpi-value sgp-kpi-status-live">
+              <span className="pulse-dot"></span> Operational
             </span>
             <span className="sgp-kpi-subtext">Camera &amp; Token Ready</span>
           </div>
@@ -868,7 +1279,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
             <Users size={16} />
             Active On-Premises &amp; Checkout
             {activeVisits.length > 0 && (
-              <span className="sgp-tab-badge" style={{ background: "#2563eb" }}>
+              <span className="sgp-tab-badge">
                 {activeVisits.length}
               </span>
             )}
@@ -882,7 +1293,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
             <UserCheck size={16} />
             Today's Approved Entry Queue
             {approvedQueue.length > 0 && (
-              <span className="sgp-tab-badge" style={{ background: "#059669" }}>
+              <span className="sgp-tab-badge">
                 {approvedQueue.length}
               </span>
             )}
@@ -897,6 +1308,40 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
             Visitor Registration Kiosk &amp; QR
           </button>
         </nav>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span
+            style={{
+              background: "#ecfdf5",
+              color: "#059669",
+              border: "1px solid #a7f3d0",
+              padding: "6px 12px",
+              borderRadius: "10px",
+              fontSize: "12px",
+              fontWeight: 700,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+            }}
+          >
+            <span className="pulse-dot" style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#059669" }}></span>
+            Gate 01 Online
+          </span>
+
+          <button
+            type="button"
+            className="sgp-nav-refresh-pill"
+            onClick={() => {
+              fetchActiveVisits();
+              fetchApprovedQueue();
+              showToast("Gate telemetry & visitor queues refreshed.");
+            }}
+            title="Refresh active and pre-approved queues"
+          >
+            <RefreshCw size={13} className={queueLoading || activeLoading ? "spin" : ""} />
+            Refresh Telemetry
+          </button>
+        </div>
       </div>
 
       {/* MAIN CONTAINER */}
@@ -905,264 +1350,9 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
             TAB 1: SCAN & CHECK-IN DESK
         ======================================================== */}
         {activeTab === "checkin" && (
-          <div className="sgp-desk-grid">
-            {/* Left Column: Command & Lookup Station */}
-            <div>
-              {/* Card 1: Scanner & Input */}
-              <div className="sgp-card">
-                <div className="sgp-card-header">
-                  <div>
-                    <h3 className="sgp-card-title">Gate Clearance Scanner</h3>
-                    <p className="sgp-card-desc">
-                      Scan digital/printed QR pass or search by visitor name, phone, or pass token.
-                    </p>
-                  </div>
-                </div>
-
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    verifyVisitorByInput(searchQuery);
-                  }}
-                  className="sgp-search-box"
-                >
-                  <div className="sgp-input-wrap">
-                    <Search size={16} className="sgp-input-icon" />
-                    <input
-                      type="text"
-                      placeholder="e.g. VIS-9281, name, or phone..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="sgp-input-field"
-                    />
-                    {searchQuery && (
-                      <button
-                        type="button"
-                        onClick={() => setSearchQuery("")}
-                        className="sgp-input-clear"
-                        title="Clear input"
-                      >
-                        <X size={14} />
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    type="submit"
-                    className="sgp-btn-verify"
-                    disabled={searchLoading || !searchQuery.trim()}
-                  >
-                    {searchLoading ? <RefreshCw size={15} className="spin" /> : "Verify Pass"}
-                  </button>
-                </form>
-
-                <button
-                  type="button"
-                  className={`sgp-btn-camera ${scannerActive ? "active" : ""}`}
-                  onClick={() => setScannerActive((v) => !v)}
-                >
-                  <Camera size={16} />
-                  {scannerActive ? "Stop Camera Scanner" : "Activate Webcam QR Scanner"}
-                </button>
-
-                {scannerActive && (
-                  <div className="sgp-camera-container">
-                    <div id="security-camera-reader" style={{ width: "100%" }}></div>
-                  </div>
-                )}
-
-                {searchError && (
-                  <div
-                    style={{
-                      marginTop: "14px",
-                      padding: "12px 14px",
-                      background: "#fef2f2",
-                      border: "1px solid #fecaca",
-                      borderRadius: "10px",
-                      color: "#b91c1c",
-                      fontSize: "12.5px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                      lineHeight: "1.4",
-                    }}
-                  >
-                    <XCircle size={16} style={{ flexShrink: 0 }} />
-                    <span>{searchError}</span>
-                  </div>
-                )}
-
-                {statusMessage && (
-                  <div
-                    style={{
-                      marginTop: "14px",
-                      padding: "10px 14px",
-                      background: "#ecfdf5",
-                      border: "1px solid #a7f3d0",
-                      borderRadius: "8px",
-                      color: "#065f46",
-                      fontSize: "12.5px",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
-                    <span>{statusMessage}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Card 2: Quick-Select Today's Approved Queue */}
-              <div className="sgp-card">
-                <div className="sgp-card-header">
-                  <div>
-                    <h3 className="sgp-card-title">Quick-Select Approved Arrivals</h3>
-                    <p className="sgp-card-desc">
-                      Visitors already approved by Admin today. Click any person to load their pass immediately.
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    className="it-refresh-btn"
-                    onClick={fetchApprovedQueue}
-                    disabled={queueLoading}
-                    title="Refresh list"
-                  >
-                    <RefreshCw size={13} className={queueLoading ? "spin" : ""} />
-                  </button>
-                </div>
-
-                {queueLoading ? (
-                  <div style={{ textAlign: "center", padding: "20px", color: "#64748b", fontSize: "12.5px" }}>
-                    <RefreshCw size={16} className="spin" style={{ margin: "0 auto 6px", display: "block" }} />
-                    Refreshing approved queue...
-                  </div>
-                ) : approvedQueue.length === 0 ? (
-                  <div
-                    style={{
-                      textAlign: "center",
-                      padding: "26px 18px",
-                      background: "linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)",
-                      borderRadius: "14px",
-                      border: "1px solid #e2e8f0",
-                      color: "#475569",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        borderRadius: "50%",
-                        background: "#ecfdf5",
-                        color: "#059669",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        margin: "0 auto 10px",
-                        border: "1px solid #a7f3d0",
-                      }}
-                    >
-                      <CheckCircle2 size={20} />
-                    </div>
-                    <div style={{ fontSize: "13.5px", fontWeight: 700, color: "#1e293b", marginBottom: "4px" }}>
-                      Queue All Clear
-                    </div>
-                    <p style={{ margin: 0, fontSize: "12px", color: "#64748b", lineHeight: "1.4" }}>
-                      All today's approved visitors have been processed or no arrivals are awaiting clearance.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="sgp-waiting-list">
-                    {approvedQueue.map((item) => {
-                      const isSelected = verifiedVisit && String(verifiedVisit.visit_id) === String(item.visit_id);
-                      return (
-                        <div
-                          key={item.pre_approval_id || item.visit_id}
-                          className={`sgp-waiting-item ${isSelected ? "selected" : ""}`}
-                          onClick={() => {
-                            if (item.visit_id) {
-                              setSearchQuery(item.visitor?.phone_number || item.visitor?.first_name || "");
-                              verifyVisitorByInput(item.visit_id);
-                            }
-                          }}
-                        >
-                          <div className="sgp-waiting-info">
-                            <div className="sgp-waiting-avatar">
-                              {item.visitor?.first_name ? item.visitor.first_name[0].toUpperCase() : "V"}
-                            </div>
-                            <div className="sgp-waiting-details">
-                              <span className="sgp-waiting-name">
-                                {item.visitor?.first_name} {item.visitor?.last_name}
-                              </span>
-                              <span className="sgp-waiting-sub">
-                                Host: {item.host_employee?.first_name} {item.host_employee?.last_name} ({item.host_employee?.department || "General"})
-                              </span>
-                            </div>
-                          </div>
-                          <span
-                            style={{
-                              background: isSelected ? "#2563eb" : "#ecfdf5",
-                              color: isSelected ? "#ffffff" : "#059669",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                              padding: "3px 8px",
-                              borderRadius: "6px",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {isSelected ? "Active View" : "Load Pass →"}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Card 3: Security Protocol Timeline */}
-              <div className="sgp-card">
-                <h4 style={{ margin: "0 0 14px", fontSize: "14px", color: "#0f172a", display: "flex", alignItems: "center", gap: "8px" }}>
-                  <ShieldCheck size={16} color="#2563eb" /> Gate Security Operating Protocol
-                </h4>
-                <div className="sgp-protocol-stepper">
-                  <div className="sgp-sop-step">
-                    <div className="sgp-sop-badge" style={{ background: "#eff6ff", color: "#1d4ed8" }}>1</div>
-                    <div>
-                      <p className="sgp-sop-title">Visitor Submits Registration Form</p>
-                      <p className="sgp-sop-desc">Visitor scans reception/IT kiosk QR or registers beforehand.</p>
-                    </div>
-                  </div>
-
-                  <div className="sgp-sop-step">
-                    <div className="sgp-sop-badge" style={{ background: "#fef3c7", color: "#b45309" }}>2</div>
-                    <div>
-                      <p className="sgp-sop-title">Admin Cross-Checks &amp; Grants Approval</p>
-                      <p className="sgp-sop-desc">Admin verifies identity, pass, and host availability before clearing.</p>
-                    </div>
-                  </div>
-
-                  <div className="sgp-sop-step">
-                    <div className="sgp-sop-badge" style={{ background: "#ecfdf5", color: "#047857" }}>3</div>
-                    <div>
-                      <p className="sgp-sop-title">Gate Guard Checks In (APPROVED Only)</p>
-                      <p className="sgp-sop-desc">Guard strictly authorizes check-in ONLY when status displays APPROVED.</p>
-                    </div>
-                  </div>
-
-                  <div className="sgp-sop-step">
-                    <div className="sgp-sop-badge" style={{ background: "#f1f5f9", color: "#475569" }}>4</div>
-                    <div>
-                      <p className="sgp-sop-title">Hardware Inspection on Building Exit</p>
-                      <p className="sgp-sop-desc">All declared laptops &amp; assets must be inspected before visitor departs.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right Column: Clearance Station & Dossier */}
-            <div>
-              {verifiedVisit ? (
+          <div className="sgp-checkin-view">
+            {verifiedVisit ? (
+              <div className="sgp-dossier-wrapper">
                 <div className="sgp-station-card">
                   {/* Status Gradient Banner */}
                   <div
@@ -1177,6 +1367,8 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
                         ? "rejected"
                         : rawStatus === "CHECKED_OUT"
                         ? "checked_out"
+                        : rawStatus === "RESCHEDULED"
+                        ? "rescheduled"
                         : "pending"
                     }`}
                   >
@@ -1195,6 +1387,8 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
                           ? "✕ ACCESS REJECTED · DO NOT ADMIT"
                           : rawStatus === "CHECKED_OUT"
                           ? "✓ VISIT CONCLUDED · VISITOR HAS CHECKED OUT"
+                          : rawStatus === "RESCHEDULED"
+                          ? "📅 HOST ABSENT · VISIT RESCHEDULED"
                           : "⏳ PENDING ADMIN APPROVAL · HOLD AT GATE"}
                       </h2>
                     </div>
@@ -1447,39 +1641,108 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
                             </div>
 
                             <div>
-                              <span
-                                style={{
-                                  fontSize: "11.5px",
-                                  fontWeight: 700,
-                                  padding: "4px 10px",
-                                  borderRadius: "12px",
-                                  background: asset.is_cleared_for_exit ? "#ecfdf5" : "#fef3c7",
-                                  color: asset.is_cleared_for_exit ? "#059669" : "#b45309",
-                                  border: `1px solid ${asset.is_cleared_for_exit ? "#a7f3d0" : "#fde68a"}`,
-                                }}
-                              >
-                                {asset.is_cleared_for_exit ? "✓ Cleared for Exit" : "⚠️ Inspection on Exit"}
-                              </span>
-                              {!asset.is_cleared_for_exit && rawStatus === "ACTIVE" && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleClearAsset(asset.asset_id)}
-                                  disabled={clearingAsset === asset.asset_id}
-                                  style={{
-                                    marginLeft: "8px",
-                                    background: "#0284c7",
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: "6px",
-                                    padding: "4px 8px",
-                                    fontSize: "11px",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  {clearingAsset === asset.asset_id ? "Clearing..." : "Authorize Exit"}
-                                </button>
-                              )}
+                              {(() => {
+                                const isRetained = (asset.cleared_by && asset.cleared_by.includes("RETAINED")) || asset.disposition === "RETAINED_ON_PREMISES";
+                                return (
+                                  <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                    {isRetained ? (
+                                      <span
+                                        style={{
+                                          fontSize: "11.5px",
+                                          fontWeight: 700,
+                                          padding: "4px 10px",
+                                          borderRadius: "12px",
+                                          background: "#eff6ff",
+                                          color: "#1d4ed8",
+                                          border: "1px solid #bfdbfe",
+                                        }}
+                                        title={asset.cleared_by || "Retained in Facility"}
+                                      >
+                                        📦 Retained in Facility
+                                      </span>
+                                    ) : asset.is_cleared_for_exit ? (
+                                      <span
+                                        style={{
+                                          fontSize: "11.5px",
+                                          fontWeight: 700,
+                                          padding: "4px 10px",
+                                          borderRadius: "12px",
+                                          background: "#ecfdf5",
+                                          color: "#059669",
+                                          border: "1px solid #a7f3d0",
+                                        }}
+                                      >
+                                        ✓ Cleared for Exit
+                                      </span>
+                                    ) : (
+                                      <span
+                                        style={{
+                                          fontSize: "11.5px",
+                                          fontWeight: 700,
+                                          padding: "4px 10px",
+                                          borderRadius: "12px",
+                                          background: "#fef3c7",
+                                          color: "#b45309",
+                                          border: "1px solid #fde68a",
+                                        }}
+                                      >
+                                        ⚠️ Inspection on Exit
+                                      </span>
+                                    )}
+
+                                    {rawStatus === "ACTIVE" && (
+                                      <div style={{ display: "inline-flex", gap: "4px" }}>
+                                        {!asset.is_cleared_for_exit && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleClearAsset(asset.asset_id)}
+                                            disabled={clearingAsset === asset.asset_id}
+                                            style={{
+                                              background: "#0284c7",
+                                              color: "white",
+                                              border: "none",
+                                              borderRadius: "6px",
+                                              padding: "4px 8px",
+                                              fontSize: "11px",
+                                              fontWeight: 700,
+                                              cursor: "pointer",
+                                            }}
+                                            title="Authorize departure exit clearance"
+                                          >
+                                            {clearingAsset === asset.asset_id ? "Clearing..." : "Authorize Exit"}
+                                          </button>
+                                        )}
+
+                                        {!isRetained && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              const note = prompt("Enter retention note or location for " + (asset.brand_model || asset.asset_type) + ":", "Installed on campus / kept in use");
+                                              if (note !== null) {
+                                                handleSetAssetDisposition(asset.asset_id, "RETAINED_ON_PREMISES", note);
+                                              }
+                                            }}
+                                            disabled={clearingAsset === asset.asset_id}
+                                            style={{
+                                              background: "#f8fafc",
+                                              color: "#1d4ed8",
+                                              border: "1px solid #bfdbfe",
+                                              borderRadius: "6px",
+                                              padding: "4px 8px",
+                                              fontSize: "11px",
+                                              fontWeight: 700,
+                                              cursor: "pointer",
+                                            }}
+                                            title="Mark asset as retained on premises / installed"
+                                          >
+                                            📦 Retain
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                           </div>
                           );
@@ -1487,9 +1750,99 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
                       </div>
                     )}
 
+                    
+                    {/* HIDDEN PRINT-ONLY PASS FOR EXECUTIVE PDF/PRINT EXPORT */}
+                    {verifiedVisit && (
+                      <div className="sgp-printable-pass no-screen">
+                        <div className="pass-print-header">
+                          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                            <div style={{ width: 44, height: 44, background: "#0f172a", color: "#ffffff", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 18, border: "1px solid #e43b24" }}>VMS</div>
+                            <div>
+                              <h2 className="pass-brand-h1">Gate Security Clearance Pass</h2>
+                              <p className="pass-brand-sub">Gate 01 Access Terminal · Official Admission Authorization</p>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right" }}>
+                            <span style={{ display: "block", fontSize: "9px", fontWeight: 700, color: "#64748b", textTransform: "uppercase" }}>Pass Reference</span>
+                            <strong style={{ fontSize: "15px", color: "#e43b24", fontFamily: "monospace" }}>#{verifiedVisit.visit_id}</strong>
+                          </div>
+                        </div>
+
+                        <div className="pass-info-grid">
+                          <div className="pass-meta-cell">
+                            <small>Visitor Name</small>
+                            <strong>{verifiedVisit.visitor?.first_name} {verifiedVisit.visitor?.last_name}</strong>
+                          </div>
+                          <div className="pass-meta-cell">
+                            <small>Organization / Firm</small>
+                            <strong>{verifiedVisit.visitor?.company_name || "Independent"}</strong>
+                          </div>
+                          <div className="pass-meta-cell">
+                            <small>Host Official &amp; Dept</small>
+                            <strong>{verifiedVisit.host_employee?.name || "Official Host"} ({verifiedVisit.host_employee?.department || "General"})</strong>
+                          </div>
+                          <div className="pass-meta-cell">
+                            <small>Purpose of Visit</small>
+                            <strong>{verifiedVisit.purpose || "Official Visit"}</strong>
+                          </div>
+                          <div className="pass-meta-cell">
+                            <small>Gate Clearance Status</small>
+                            <strong style={{ color: "#059669" }}>{verifiedVisit.status || "ACTIVE"}</strong>
+                          </div>
+                          <div className="pass-meta-cell">
+                            <small>Issuing Officer</small>
+                            <strong>{currentUser?.email || "Security Desk"}</strong>
+                          </div>
+                        </div>
+
+                        {Array.isArray(visitAssets) && visitAssets.length > 0 && (
+                          <table className="pass-assets-table">
+                            <thead>
+                              <tr>
+                                <th>Declared Item / Laptop</th>
+                                <th>Brand &amp; Model</th>
+                                <th>Serial Number</th>
+                                <th>Clearance</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {visitAssets.map((asset, idx) => (
+                                <tr key={asset.asset_id || idx}>
+                                  <td><strong>{asset.asset_type || "Hardware"}</strong></td>
+                                  <td>{asset.brand_model || "—"}</td>
+                                  <td><code>{asset.serial_number || "—"}</code></td>
+                                  <td>{asset.is_cleared_for_exit ? "Cleared for Exit" : "In Premises Custody"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+
+                        <div className="pass-print-footer">
+                          <div className="pass-signature-box">
+                            <div className="sig-line"></div>
+                            <span>Visitor Signature</span>
+                          </div>
+                          <div className="pass-signature-box">
+                            <div className="sig-line"></div>
+                            <span>Host Authorization</span>
+                          </div>
+                          <div className="pass-signature-box">
+                            <div className="sig-line"></div>
+                            <span>Security Gate Stamp</span>
+                          </div>
+                        </div>
+
+                        <p className="pass-print-disclaimer">
+                          This security clearance pass confirms physical identity verification, gate authorization, and declared equipment registration.
+                          Official document generated by VMS Enterprise Gate Security System.
+                        </p>
+                      </div>
+                    )}
+
                     {/* Primary Gate Action Center */}
                     <div className="sgp-action-footer">
-                      {(rawStatus === "APPROVED" || rawStatus === "PENDING") ? (
+                      {rawStatus === "APPROVED" ? (
                         <div>
                           <button
                             type="button"
@@ -1508,10 +1861,70 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
                             )}
                           </button>
                           <p style={{ margin: "10px 0 0", textAlign: "center", fontSize: "12.5px", color: "#059669", fontWeight: 700 }}>
-                            {rawStatus === "APPROVED"
-                              ? "✓ Clearance confirmed by administration. Press to record admission timestamp and activate physical badge."
-                              : "✓ Visitor registered. Security guard can verify photo & declared hardware, record admission timestamp, and admit visitor."}
+                            ✓ Clearance confirmed by administration. Press to record admission timestamp and activate physical badge.
                           </p>
+                        </div>
+                      ) : rawStatus === "PENDING" ? (
+                        <div className="sgp-notice-box pending" style={{ background: "#fffbeb", border: "1.5px solid #fde68a", color: "#92400e", padding: "18px 24px", borderRadius: "12px", textAlign: "center", width: "100%" }}>
+                          <Hourglass size={30} color="#d97706" style={{ margin: "0 auto 10px", display: "block" }} />
+                          <h4 style={{ margin: "0 0 6px", fontSize: "16px", fontWeight: 800, color: "#b45309" }}>
+                            ENTRY NOT AUTHORIZED · AWAITING ADMIN CLEARANCE
+                          </h4>
+                          <p style={{ margin: "0 0 14px", fontSize: "13px", color: "#78350f", lineHeight: "1.5" }}>
+                            This visitor registration is currently pending review. Gate entry cannot be authorized until Administration or the Host Employee approves the request in the Pre-Approvals desk.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => verifyVisitorByInput(verifiedVisit.visit_id)}
+                            style={{
+                              background: "#d97706",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "8px",
+                              padding: "9px 20px",
+                              fontSize: "12.5px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              margin: "0 auto",
+                            }}
+                          >
+                            <RefreshCw size={14} />
+                            Check Approval Status
+                          </button>
+                        </div>
+                      ) : rawStatus === "RESCHEDULED" ? (
+                        <div className="sgp-notice-box waiting" style={{ background: "#eff6ff", border: "1.5px solid #bfdbfe", color: "#1e40af", padding: "18px 24px", borderRadius: "12px", textAlign: "center", width: "100%" }}>
+                          <CalendarClock size={30} color="#2563eb" style={{ margin: "0 auto 10px", display: "block" }} />
+                          <h4 style={{ margin: "0 0 6px", fontSize: "16px", fontWeight: 800, color: "#1d4ed8" }}>
+                            HOST ABSENT · VISIT RESCHEDULED
+                          </h4>
+                          <p style={{ margin: "0 0 14px", fontSize: "13px", color: "#1e3a8a", lineHeight: "1.5" }}>
+                            The host is absent today and this visit has been rescheduled. Gate entry is not permitted for today.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => verifyVisitorByInput(verifiedVisit.visit_id)}
+                            style={{
+                              background: "#2563eb",
+                              color: "white",
+                              border: "none",
+                              borderRadius: "8px",
+                              padding: "9px 20px",
+                              fontSize: "12.5px",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              margin: "0 auto",
+                            }}
+                          >
+                            <RefreshCw size={14} />
+                            Check Updated Schedule
+                          </button>
                         </div>
                       ) : rawStatus === "WAITING" ? (
                         <div className="sgp-notice-box waiting">
@@ -1645,65 +2058,306 @@ function SecurityGuardPortalInner({ currentUser, onLogout }) {
                     </div>
                   </div>
                 </div>
-              ) : (
-                /* STANDBY CONSOLE */
-                <div className="sgp-station-card">
-                  <div className="sgp-standby-box">
-                    <div className="sgp-standby-radar">
-                      <Radio size={36} color="#2563eb" />
+
+              </div>
+            ) : (
+              <div className="sgp-terminal-wrapper">
+                <div className="sgp-terminal-grid">
+                  {/* Left Column: Unified Gate Clearance Terminal Card */}
+                  <div className="sgp-card sgp-terminal-card">
+                    <div className="sgp-card-header">
+                      <div>
+                        <h3 className="sgp-card-title">
+                          <QrCode size={18} color="#2563eb" />
+                          Gate Clearance &amp; Pass Lookup
+                        </h3>
+                        <p className="sgp-card-desc">
+                          Scan digital QR pass or search by visitor name, phone number, or pass token.
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          background: "#eff6ff",
+                          color: "#1d4ed8",
+                          border: "1px solid #bfdbfe",
+                          padding: "3px 9px",
+                          borderRadius: "6px",
+                          fontSize: "11px",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        Terminal Ready
+                      </span>
                     </div>
 
-                    <h3 className="sgp-standby-title">Gate Clearance Station Ready</h3>
-                    <p className="sgp-standby-subtitle">
-                      Awaiting visitor QR scan or lookup. You can scan a badge with the webcam, enter visitor details on the left, or select an approved visitor from the queue.
-                    </p>
-
-                    <div className="sgp-standby-quickgrid">
-                      <div
-                        className="sgp-standby-tile"
-                        onClick={() => setScannerActive(true)}
-                      >
-                        <span className="sgp-standby-tile-title">
-                          <Camera size={16} color="#2563eb" />
-                          Launch Webcam Scanner
-                        </span>
-                        <p className="sgp-standby-tile-desc">
-                          Activate physical camera to read visitor mobile/printed QR badge.
-                        </p>
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        verifyVisitorByInput(searchQuery);
+                      }}
+                      className="sgp-search-box"
+                    >
+                      <div className="sgp-input-wrap">
+                        <Search size={16} className="sgp-input-icon" />
+                        <input
+                          type="text"
+                          placeholder="Search name, phone, or token..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="sgp-input-field"
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery("")}
+                            className="sgp-input-clear"
+                            title="Clear input"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
                       </div>
-
-                      <div
-                        className="sgp-standby-tile"
-                        onClick={() => setActiveTab("approved-queue")}
+                      <button
+                        type="submit"
+                        className="sgp-btn-verify"
+                        disabled={searchLoading || !searchQuery.trim()}
                       >
-                        <span className="sgp-standby-tile-title">
-                          <UserCheck size={16} color="#059669" />
-                          Inspect Approved Queue ({approvedQueue.length})
-                        </span>
-                        <p className="sgp-standby-tile-desc">
-                          View full list of scheduled visitors cleared for today.
-                        </p>
-                      </div>
+                        {searchLoading ? <RefreshCw size={15} className="spin" /> : "Verify Pass"}
+                      </button>
+                    </form>
 
-                      <div
-                        className="sgp-standby-tile"
-                        onClick={() => setActiveTab("kiosk")}
+                    {/* Quick Search Helper Chips */}
+                    <div className="sgp-quick-chips">
+                      <span className="sgp-chip-label">Quick filter:</span>
+                      <button
+                        type="button"
+                        className="sgp-chip"
+                        onClick={() => {
+                          if (approvedQueue.length > 0 && approvedQueue[0].visitor?.phone_number) {
+                            setSearchQuery(approvedQueue[0].visitor.phone_number);
+                            verifyVisitorByInput(approvedQueue[0].visitor.phone_number);
+                          } else {
+                            showToast("Enter a phone number to search.");
+                          }
+                        }}
                       >
-                        <span className="sgp-standby-tile-title">
-                          <Laptop size={16} color="#7c3aed" />
-                          Show Walk-In Kiosk QRs
-                        </span>
-                        <p className="sgp-standby-tile-desc">
-                          Display public registration codes for unscheduled walk-in guests.
-                        </p>
+                        <Phone size={11} /> By Phone
+                      </button>
+                      <button
+                        type="button"
+                        className="sgp-chip"
+                        onClick={() => {
+                          if (approvedQueue.length > 0 && approvedQueue[0].visitor?.first_name) {
+                            setSearchQuery(approvedQueue[0].visitor.first_name);
+                            verifyVisitorByInput(approvedQueue[0].visitor.first_name);
+                          } else {
+                            showToast("Enter a visitor name to search.");
+                          }
+                        }}
+                      >
+                        <User size={11} /> By Name
+                      </button>
+                      <button
+                        type="button"
+                        className="sgp-chip"
+                        onClick={() => {
+                          if (approvedQueue.length > 0 && approvedQueue[0].visit_id) {
+                            setSearchQuery(String(approvedQueue[0].visit_id));
+                            verifyVisitorByInput(approvedQueue[0].visit_id);
+                          } else {
+                            showToast("Enter a pass token to search.");
+                          }
+                        }}
+                      >
+                        <Radio size={11} /> By Token
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`sgp-btn-camera ${scannerActive ? "active" : ""}`}
+                      onClick={() => setScannerActive((v) => !v)}
+                    >
+                      <Camera size={16} />
+                      {scannerActive ? "Close Webcam Scanner" : "Activate Webcam QR Scanner"}
+                    </button>
+
+                    {scannerActive && (
+                      <div className="sgp-camera-container">
+                        <div id="security-camera-reader" style={{ width: "100%" }}></div>
                       </div>
+                    )}
+
+                    {searchError && (
+                      <div className="sgp-alert-box error">
+                        <XCircle size={16} style={{ flexShrink: 0 }} />
+                        <span>{searchError}</span>
+                      </div>
+                    )}
+
+                    {statusMessage && (
+                      <div className="sgp-alert-box success">
+                        <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
+                        <span>{statusMessage}</span>
+                      </div>
+                    )}
+
+                    {/* Integrated Terminal Security Strip */}
+                    <div className="sgp-terminal-info-strip">
+                      <div className="sgp-terminal-info-item">
+                        <span className="sgp-info-key">Terminal Station</span>
+                        <strong className="sgp-info-val">GATE 01 · Access Desk</strong>
+                      </div>
+                      <div className="sgp-terminal-info-item">
+                        <span className="sgp-info-key">System Status</span>
+                        <strong className="sgp-info-val text-emerald">● Online &amp; Clear</strong>
+                      </div>
+                      <div className="sgp-terminal-info-item">
+                        <span className="sgp-info-key">Fast Shortcut</span>
+                        <strong className="sgp-info-val">Press Enter to Verify</strong>
+                      </div>
+                    </div>
+
+                    {/* Quick Kiosk Launch Shortcuts */}
+                    <div className="sgp-kiosk-shortcuts-row">
+                      <button
+                        type="button"
+                        className="sgp-kiosk-shortcut-btn"
+                        onClick={() => window.open("/register-visitor", "_blank")}
+                        title="Open Visitor Registration Kiosk in new tab"
+                      >
+                        <ExternalLink size={13} color="#2563eb" />
+                        <span>General Walk-in Kiosk</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className="sgp-kiosk-shortcut-btn"
+                        onClick={() => window.open("/it-visit", "_blank")}
+                        title="Open IT Technical Visit Registration in new tab"
+                      >
+                        <ExternalLink size={13} color="#7c3aed" />
+                        <span>IT Technical Pass Kiosk</span>
+                      </button>
                     </div>
                   </div>
+
+                  {/* Right Column: Today's Approved Arrivals & Immediate Action Console */}
+                  <div className="sgp-card sgp-queue-side-card">
+                    <div className="sgp-queue-side-header">
+                      <div>
+                        <h3 className="sgp-card-title">
+                          <UserCheck size={18} color="#059669" />
+                          Expected Arrivals Today
+                        </h3>
+                        <p className="sgp-card-desc">
+                          Pre-approved visitors awaiting entry · 1-click clearance
+                        </p>
+                      </div>
+                      <span className="sgp-side-count-badge">
+                        {approvedQueue.length} Waiting
+                      </span>
+                    </div>
+
+                    {approvedQueue.length > 0 ? (
+                      <div className="sgp-queue-side-list">
+                        {approvedQueue.map((item) => {
+                          const isItemIT = (item.purpose || "").includes("[IT_VISIT]");
+                          const visitorName = `${item.visitor?.first_name || ""} ${item.visitor?.last_name || ""}`.trim() || "Visitor";
+                          const company = item.visitor?.company_name || "Self";
+                          const hostName = item.host_employee ? `${item.host_employee.first_name || ""} ${item.host_employee.last_name || ""}`.trim() : "Host Assigned";
+
+                          return (
+                            <div key={item.pre_approval_id || item.visit_id} className="sgp-queue-side-item">
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0 }}>
+                                <div
+                                  style={{
+                                    width: "34px",
+                                    height: "34px",
+                                    borderRadius: "9px",
+                                    background: isItemIT ? "#f5f3ff" : "#ecfdf5",
+                                    color: isItemIT ? "#7c3aed" : "#059669",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontWeight: 800,
+                                    fontSize: "12px",
+                                    flexShrink: 0,
+                                    border: isItemIT ? "1px solid #ddd6fe" : "1px solid #a7f3d0",
+                                  }}
+                                >
+                                  {visitorName[0] ? visitorName[0].toUpperCase() : "V"}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <strong style={{ fontSize: "13px", color: "#0f172a", display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                    {visitorName}
+                                  </strong>
+                                  <span style={{ fontSize: "11px", color: "#64748b", display: "block" }}>
+                                    {company} · Host: {hostName}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                className="sgp-btn-quick-admit"
+                                onClick={() => {
+                                  verifyVisitorByInput(item.visit_id || item.visitor?.phone_number);
+                                }}
+                                title="Inspect dossier & check-in visitor"
+                              >
+                                <CheckCircle2 size={13} />
+                                Verify
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="sgp-queue-side-empty">
+                        <CheckCircle2 size={32} color="#059669" style={{ margin: "0 auto 8px" }} />
+                        <h4 style={{ margin: "0 0 4px", fontSize: "14px", fontWeight: 700, color: "#1e293b" }}>
+                          Pre-Approval Queue Clear
+                        </h4>
+                        <p style={{ margin: "0 0 14px", fontSize: "12px", color: "#64748b" }}>
+                          No visitors waiting in queue. Scan walk-in QR or search passes above.
+                        </p>
+
+                        <div className="sgp-side-stat-grid">
+                          <div className="sgp-side-stat-box">
+                            <span className="sgp-side-stat-num">{activeVisits.length}</span>
+                            <span className="sgp-side-stat-lbl">Currently Inside</span>
+                            <button
+                              type="button"
+                              className="sgp-side-stat-btn"
+                              onClick={() => setActiveTab("active")}
+                            >
+                              <Users size={11} /> View List
+                            </button>
+                          </div>
+
+                          <div className="sgp-side-stat-box">
+                            <span className="sgp-side-stat-num">2</span>
+                            <span className="sgp-side-stat-lbl">Active Kiosks</span>
+                            <button
+                              type="button"
+                              className="sgp-side-stat-btn"
+                              onClick={() => setActiveTab("kiosk")}
+                            >
+                              <Laptop size={11} /> View QRs
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
+
 
         {/* ========================================================
             TAB 2: ACTIVE ON-PREMISES & GATE CHECKOUT

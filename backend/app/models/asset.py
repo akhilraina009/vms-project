@@ -63,3 +63,11 @@ class Asset(Base):
         "Visit",
         back_populates="assets"
     )
+
+    @property
+    def disposition(self) -> str:
+        if self.cleared_by and 'RETAINED' in self.cleared_by:
+            return 'RETAINED_ON_PREMISES'
+        elif self.is_cleared_for_exit:
+            return 'CARRIED_OUT'
+        return 'PENDING'

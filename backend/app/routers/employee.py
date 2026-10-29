@@ -22,7 +22,7 @@ router = APIRouter(
 async def create_employee(
     employee_data: EmployeeCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(require_roles("ADMIN")),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "MANAGEMENT")),
 ):
     employee = Employee(
         first_name=employee_data.first_name,
@@ -45,7 +45,7 @@ async def create_employee(
 )
 async def get_employees(
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(require_roles("ADMIN", "EMPLOYEE")),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "MANAGEMENT", "EMPLOYEE", "SECURITY")),
 ):
     result = await db.execute(
         select(Employee).order_by(Employee.employee_id)

@@ -21,37 +21,6 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
   const [cameraError, setCameraError] = useState("");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const photoFileInputRef = useRef(null);
-
-  function handlePhotoFileChange(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setCameraError("Please select a valid image file (JPEG or PNG).");
-      return;
-    }
-
-    if (file.size > 3 * 1024 * 1024) {
-      setCameraError("Image size must be smaller than 3 MB.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPhoto(reader.result);
-      setCameraError("");
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
-      setCameraActive(false);
-    };
-    reader.onerror = () => {
-      setCameraError("Failed to read image file. Please try another.");
-    };
-    reader.readAsDataURL(file);
-  }
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -308,6 +277,38 @@ export default function PublicRegistration() {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const photoFileInputRef = useRef(null);
+
+  function handlePhotoFileChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setCameraError("Please select a valid image file (JPEG or PNG).");
+      return;
+    }
+
+    if (file.size > 3 * 1024 * 1024) {
+      setCameraError("Image size must be smaller than 3 MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPhoto(reader.result);
+      setCameraError("");
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      setCameraActive(false);
+    };
+    reader.onerror = () => {
+      setCameraError("Failed to read image file. Please try another.");
+    };
+    reader.readAsDataURL(file);
+    event.target.value = "";
+  }
 
   const [form, setForm] = useState({
     first_name: "",
@@ -552,7 +553,7 @@ export default function PublicRegistration() {
       <header className="public-header">
         <div className="public-brand">
           <span className="public-brand-icon">
-            <ShieldCheck size={26} />
+            <img src="/vms-logo.png" alt="VMS Logo" />
           </span>
 
           <div>

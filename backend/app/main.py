@@ -49,6 +49,14 @@ app.mount(
     name="asset-photos",
 )
 
+VMS_PROFILE_DIR = (BACKEND_DIR.parent / "frontend" / "public" / "profile" / "vms-os").resolve()
+VMS_PROFILE_DIR.mkdir(parents=True, exist_ok=True)
+app.mount(
+    "/profile/vms-os",
+    StaticFiles(directory=str(VMS_PROFILE_DIR), html=True),
+    name="vms-os-profile",
+)
+
 
 # =========================
 # CORS CONFIGURATION

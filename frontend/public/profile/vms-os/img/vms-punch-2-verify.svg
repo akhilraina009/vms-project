@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 1688" width="780" height="1688">
+  <defs>
+    <linearGradient id="bgG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b0f19"/>
+      <stop offset="100%" stop-color="#141c2e"/>
+    </linearGradient>
+    <linearGradient id="indigoG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="emeraldG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <rect width="780" height="1688" fill="url(#bgG)"/>
+
+  <!-- Status Bar -->
+  <g transform="translate(48, 40)">
+    <text x="0" y="24" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="600" font-size="20">09:21</text>
+    <g transform="translate(600, 10)">
+      <!-- Signal -->
+      <rect x="0" y="8" width="5" height="12" rx="2" fill="#fff"/>
+      <rect x="8" y="5" width="5" height="15" rx="2" fill="#fff"/>
+      <rect x="16" y="2" width="5" height="18" rx="2" fill="#fff"/>
+      <rect x="24" y="0" width="5" height="20" rx="2" fill="#fff"/>
+      <!-- Battery -->
+      <rect x="42" y="2" width="36" height="18" rx="5" fill="none" stroke="#fff" stroke-width="2"/>
+      <rect x="45" y="5" width="26" height="12" rx="3" fill="#10b981"/>
+      <rect x="79" y="7" width="3" height="8" rx="1" fill="#fff"/>
+    </g>
+  </g>
+
+  <!-- App Header -->
+  <g transform="translate(48, 100)">
+    <circle cx="24" cy="24" r="22" fill="#4f46e5"/>
+    <path d="M16 24 L22 30 L32 18" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="60" y="24" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="28" letter-spacing="-0.5">Verification</text>
+    <text x="60" y="44" fill="#818cf8" font-family="'Inter', sans-serif" font-weight="600" font-size="14" letter-spacing="1.5">VMS ENTERPRISE</text>
+  </g>
+
+  <!-- Content -->
+  
+  <g transform="translate(48, 180)">
+    <rect width="684" height="1380" rx="32" fill="#151d2c" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
+    
+    <g transform="translate(44, 50)">
+      <text x="0" y="32" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="32">Identity &amp; Asset Verification</text>
+      <text x="0" y="68" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="20">Hold camera still for live identity match</text>
+    </g>
+
+    <!-- Camera Oval Viewfinder -->
+    <g transform="translate(142, 180)">
+      <rect width="400" height="480" rx="200" fill="#0f1523" stroke="#10b981" stroke-width="4"/>
+      <!-- Face Silhouette -->
+      <circle cx="200" cy="200" r="90" fill="#243047" stroke="#4f46e5" stroke-width="3"/>
+      <path d="M 80 430 C 80 320 140 280 200 280 C 260 280 320 320 320 430 Z" fill="#243047"/>
+      <!-- Biometric scan points -->
+      <circle cx="165" cy="185" r="6" fill="#10b981"/>
+      <circle cx="235" cy="185" r="6" fill="#10b981"/>
+      <circle cx="200" cy="225" r="5" fill="#10b981"/>
+      <path d="M 175 255 Q 200 270 225 255" stroke="#10b981" stroke-width="4" fill="none"/>
+      <!-- Liveness pill -->
+      <rect x="110" y="40" width="180" height="40" rx="20" fill="rgba(16,185,129,0.2)" stroke="#10b981" stroke-width="1.5"/>
+      <text x="200" y="66" fill="#10b981" font-family="'Inter', sans-serif" font-weight="700" font-size="16" text-anchor="middle">✓ FACE MATCH 99.4%</text>
+    </g>
+
+    <!-- Declared Hardware Badge -->
+    <g transform="translate(44, 720)">
+      <rect width="596" height="170" rx="24" fill="#1c2638" stroke="rgba(99,102,241,0.3)" stroke-width="1.5"/>
+      <circle cx="56" cy="85" r="28" fill="#2e3b52"/>
+      <text x="56" y="93" fill="#6366f1" font-family="'Inter', sans-serif" font-size="26" text-anchor="middle">💻</text>
+      <text x="106" y="62" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="16">HARDWARE SERIAL DETECTED</text>
+      <text x="106" y="96" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="24">Apple MacBook Pro 16"</text>
+      <text x="106" y="126" fill="#10b981" font-family="'JetBrains Mono', monospace" font-size="18">SN: C02G9012MD6R &#183; Verified Gate Clear</text>
+    </g>
+
+    <!-- Button -->
+    <g transform="translate(44, 940)">
+      <rect width="596" height="84" rx="24" fill="#10b981"/>
+      <text x="298" y="52" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="26" text-anchor="middle">Confirm &amp; Issue Pass</text>
+    </g>
+  </g>
+
+
+  <!-- Home Indicator -->
+  <rect x="290" y="1640" width="200" height="6" rx="3" fill="#ffffff" opacity="0.3"/>
+</svg>

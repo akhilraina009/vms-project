@@ -13,7 +13,7 @@ from app.models.employee import Employee
 from app.models.security_user import SecurityUser
 from app.models.visit import Visit
 from app.models.visitor import Visitor
-from app.schemas.asset import AssetCreate, AssetResponse
+from app.schemas.asset import AssetCreate, AssetDispositionItem, AssetPhotoUpload, AssetResponse, AssetUpdate, BatchDispositionPayload
 from app.services.auth_dependencies import get_current_user, get_optional_current_user, require_roles
 
 
@@ -50,7 +50,7 @@ class AssetRecoveryPayload(BaseModel):
 async def create_asset(
     asset_data: AssetCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(get_current_user),
+    current_user: SecurityUser | None = Depends(get_optional_current_user),
 ):
     # Prevent registering the same serial number twice
     # for the same visit. Serial numbers are optional.
@@ -83,20 +83,297 @@ async def create_asset(
         from app.routers.public_registration import save_asset_photo
         photo_url = save_asset_photo(asset_data.photo_data)
 
+    user_email = (
+        current_user.email
+        if current_user and getattr(current_user, "email", None)
+        else "it-admin@company.com"
+    )
+
+    now = datetime.now(timezone.utc)
+    is_cleared = bool(asset_data.is_cleared_for_exit)
+
     asset = Asset(
         visit_id=asset_data.visit_id,
-        asset_type=asset_data.asset_type,
-        brand_model=asset_data.brand_model,
+        asset_type=asset_data.asset_type.strip(),
+        brand_model=asset_data.brand_model.strip() if asset_data.brand_model else None,
         serial_number=serial_number,
         photo_url=photo_url,
+        is_cleared_for_exit=is_cleared,
+        cleared_by=user_email if is_cleared else None,
+        cleared_at=now if is_cleared else None,
     )
 
     db.add(asset)
+
+    # Audit log entry for tracking in-visit hardware additions
+    audit_log = AuditLog(
+        visit_id=asset_data.visit_id,
+        action="ASSET_ADDED_DURING_VISIT",
+        description=(
+            f"Hardware asset '{asset.asset_type}' ({asset.brand_model or 'N/A'}, "
+            f"SN: {serial_number or 'N/A'}) registered by {user_email}. "
+            f"Exit clearance: {'Pre-cleared' if is_cleared else 'Pending inspection'}."
+        ),
+        performed_by=user_email,
+    )
+    db.add(audit_log)
 
     await db.commit()
     await db.refresh(asset)
 
     return asset
+
+
+@router.put(
+    "/{asset_id}",
+    response_model=AssetResponse
+)
+async def update_asset(
+    asset_id: UUID,
+    update_data: AssetUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser | None = Depends(get_optional_current_user),
+):
+    result = await db.execute(
+        select(Asset).where(Asset.asset_id == asset_id)
+    )
+    asset = result.scalar_one_or_none()
+
+    if asset is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
+
+    user_email = (
+        current_user.email
+        if current_user and getattr(current_user, "email", None)
+        else "it-admin@company.com"
+    )
+    now = datetime.now(timezone.utc)
+    changes = []
+
+    if update_data.asset_type is not None and update_data.asset_type.strip():
+        new_type = update_data.asset_type.strip()
+        if asset.asset_type != new_type:
+            changes.append(f"Type: '{asset.asset_type}' -> '{new_type}'")
+            asset.asset_type = new_type
+
+    if update_data.brand_model is not None:
+        new_bm = update_data.brand_model.strip() or None
+        if asset.brand_model != new_bm:
+            changes.append(f"Model: '{asset.brand_model}' -> '{new_bm}'")
+            asset.brand_model = new_bm
+
+    if update_data.serial_number is not None:
+        new_sn = update_data.serial_number.strip() or None
+        if asset.serial_number != new_sn:
+            # Check collision with other assets on this same visit
+            if new_sn:
+                collision_result = await db.execute(
+                    select(Asset).where(
+                        Asset.visit_id == asset.visit_id,
+                        Asset.asset_id != asset.asset_id,
+                        Asset.serial_number.ilike(new_sn),
+                    )
+                )
+                if collision_result.scalar_one_or_none() is not None:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Another asset with this serial number is already registered for this visit."
+                    )
+            changes.append(f"SN: '{asset.serial_number}' -> '{new_sn}'")
+            asset.serial_number = new_sn
+
+    if update_data.photo_data:
+        from app.routers.public_registration import save_asset_photo
+        new_photo_url = save_asset_photo(update_data.photo_data)
+        asset.photo_url = new_photo_url
+        changes.append("Updated physical photograph")
+    elif update_data.photo_url is not None and update_data.photo_url != asset.photo_url:
+        asset.photo_url = update_data.photo_url
+        changes.append("Updated photo URL")
+
+    if update_data.disposition:
+        disp = update_data.disposition.upper()
+        if disp == "RETAINED_ON_PREMISES":
+            asset.is_cleared_for_exit = True
+            note = (update_data.retention_note or "Installed / Kept in use on premises").strip()
+            asset.cleared_by = f"RETAINED_ON_PREMISES: {note} ({user_email})"
+            asset.cleared_at = now
+            changes.append(f"Disposition: Retained on Premises - {note}")
+        elif disp == "CARRIED_OUT":
+            asset.is_cleared_for_exit = True
+            asset.cleared_by = f"CARRIED_OUT: Cleared for departure exit ({user_email})"
+            asset.cleared_at = now
+            changes.append("Disposition: Carried Out (Departure Exit Cleared)")
+        elif disp == "PENDING":
+            asset.is_cleared_for_exit = False
+            asset.cleared_by = None
+            asset.cleared_at = None
+            changes.append("Disposition: Reset to Pending Inspection")
+    elif update_data.cleared_by is not None:
+        asset.cleared_by = update_data.cleared_by
+        if update_data.is_cleared_for_exit is not None:
+            asset.is_cleared_for_exit = update_data.is_cleared_for_exit
+        else:
+            asset.is_cleared_for_exit = True
+        asset.cleared_at = now
+        changes.append(f"Clearance tag updated: {asset.cleared_by}")
+    elif update_data.is_cleared_for_exit is not None:
+        if asset.is_cleared_for_exit != update_data.is_cleared_for_exit:
+            asset.is_cleared_for_exit = update_data.is_cleared_for_exit
+            if update_data.is_cleared_for_exit:
+                if not asset.cleared_by or "PENDING" in asset.cleared_by:
+                    asset.cleared_by = f"CARRIED_OUT: Cleared by {user_email}"
+                asset.cleared_at = now
+                changes.append("Granted departure clearance")
+            else:
+                asset.cleared_by = None
+                asset.cleared_at = None
+                changes.append("Marked exit clearance pending")
+
+    if changes:
+        audit_log = AuditLog(
+            visit_id=asset.visit_id,
+            action="ASSET_UPDATED_DURING_VISIT",
+            description=(
+                f"Asset {asset.asset_id} updated by {user_email}: {'; '.join(changes)}"
+            ),
+            performed_by=user_email,
+        )
+        db.add(audit_log)
+
+    await db.commit()
+    await db.refresh(asset)
+    return asset
+
+
+@router.post("/batch-disposition")
+async def batch_update_disposition(
+    payload: BatchDispositionPayload,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser | None = Depends(get_optional_current_user),
+):
+    user_email = (
+        current_user.email
+        if current_user and getattr(current_user, "email", None)
+        else "it-admin@company.com"
+    )
+    now = datetime.now(timezone.utc)
+    updated_assets = []
+    audit_notes = []
+
+    for item in payload.dispositions:
+        res = await db.execute(select(Asset).where(Asset.asset_id == item.asset_id, Asset.visit_id == payload.visit_id))
+        asset = res.scalar_one_or_none()
+        if not asset:
+            continue
+        disp = item.disposition.upper()
+        if disp == "RETAINED_ON_PREMISES":
+            asset.is_cleared_for_exit = True
+            note = (item.retention_note or "Installed / Kept in use on premises").strip()
+            asset.cleared_by = f"RETAINED_ON_PREMISES: {note} ({user_email})"
+            asset.cleared_at = now
+            audit_notes.append(f"{asset.asset_type} ({asset.brand_model or 'N/A'}): Retained ({note})")
+        elif disp == "CARRIED_OUT":
+            asset.is_cleared_for_exit = True
+            asset.cleared_by = f"CARRIED_OUT: Cleared for departure exit ({user_email})"
+            asset.cleared_at = now
+            audit_notes.append(f"{asset.asset_type} ({asset.brand_model or 'N/A'}): Carried Out")
+        elif disp == "PENDING":
+            asset.is_cleared_for_exit = False
+            asset.cleared_by = None
+            asset.cleared_at = None
+            audit_notes.append(f"{asset.asset_type} ({asset.brand_model or 'N/A'}): Pending Inspection")
+        updated_assets.append(asset)
+
+    if audit_notes:
+        audit_log = AuditLog(
+            visit_id=payload.visit_id,
+            action="ASSETS_DISPOSITION_UPDATED",
+            description=f"Hardware exit disposition updated by {user_email}: {'; '.join(audit_notes)}",
+            performed_by=user_email,
+        )
+        db.add(audit_log)
+
+    await db.commit()
+    for a in updated_assets:
+        await db.refresh(a)
+
+    return {
+        "success": True,
+        "visit_id": str(payload.visit_id),
+        "updated_count": len(updated_assets),
+        "assets": [
+            {
+                "asset_id": str(a.asset_id),
+                "asset_type": a.asset_type,
+                "brand_model": a.brand_model,
+                "serial_number": a.serial_number,
+                "photo_url": a.photo_url,
+                "is_cleared_for_exit": a.is_cleared_for_exit,
+                "cleared_by": a.cleared_by,
+                "cleared_at": a.cleared_at.isoformat() if a.cleared_at else None,
+                "disposition": a.disposition,
+            }
+            for a in updated_assets
+        ]
+    }
+
+
+@router.delete("/{asset_id}")
+async def delete_asset(
+    asset_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser | None = Depends(get_optional_current_user),
+):
+    result = await db.execute(
+        select(Asset).where(Asset.asset_id == asset_id)
+    )
+    asset = result.scalar_one_or_none()
+
+    if asset is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Asset not found"
+        )
+
+    user_email = (
+        current_user.email
+        if current_user and getattr(current_user, "email", None)
+        else "it-admin@company.com"
+    )
+    visit_id = asset.visit_id
+    asset_desc = f"{asset.asset_type} ({asset.brand_model or 'N/A'}, SN: {asset.serial_number or 'N/A'})"
+
+    await db.delete(asset)
+
+    audit_log = AuditLog(
+        visit_id=visit_id,
+        action="ASSET_REMOVED_FROM_VISIT",
+        description=f"Asset {asset_desc} removed from visit by {user_email}.",
+        performed_by=user_email,
+    )
+    db.add(audit_log)
+
+    await db.commit()
+    return {
+        "success": True,
+        "message": f"Asset {asset_desc} removed successfully",
+        "asset_id": str(asset_id),
+        "visit_id": str(visit_id),
+    }
+
+
+@router.post("/upload-photo")
+async def upload_asset_photo(
+    payload: AssetPhotoUpload,
+    current_user: SecurityUser | None = Depends(get_optional_current_user),
+):
+    from app.routers.public_registration import save_asset_photo
+    photo_url = save_asset_photo(payload.photo_data)
+    return {"photo_url": photo_url}
 
 
 @router.get(

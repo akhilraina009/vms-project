@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
+import "./PremiumEnterprise.css";
+import "./App.css";
 import {
   CalendarClock,
   CheckCircle2,
@@ -670,10 +672,10 @@ export default function PreApprovals({
                       {getStatusStyle(selectedApproval.status).label}
                     </span>
                   </div>
-                  <p style={{ margin: "0 0 6px", color: "#475569", fontSize: "13px" }}>
+                  <p style={{ margin: "0 0 6px", fontSize: "13px", fontWeight: 600 }}>
                     {selectedApproval.visitor?.company_name || "Independent Visitor"}
                   </p>
-                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "12px", color: "#64748b" }}>
+                  <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", fontSize: "12px", color: "#94a3b8" }}>
                     <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
                       <Phone size={13} /> {selectedApproval.visitor?.phone_number || "No phone"}
                     </span>
@@ -825,57 +827,33 @@ export default function PreApprovals({
 
               {/* Status Explanation Banner */}
               <div
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: "10px",
-                  background:
-                    selectedApproval.status === "APPROVED"
-                      ? "#ecfdf5"
-                      : selectedApproval.status === "WAITING"
-                      ? "#fff7ed"
-                      : selectedApproval.status === "REJECTED"
-                      ? "#fef2f2"
-                      : "#fffbeb",
-                  border: `1px solid ${
-                    selectedApproval.status === "APPROVED"
-                      ? "#a7f3d0"
-                      : selectedApproval.status === "WAITING"
-                      ? "#fed7aa"
-                      : selectedApproval.status === "REJECTED"
-                      ? "#fecaca"
-                      : "#fde68a"
-                  }`,
-                  fontSize: "13px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                }}
+                className={`preapproval-status-banner banner-${String(selectedApproval.status || "pending").toLowerCase()}`}
               >
                 {selectedApproval.status === "APPROVED" ? (
                   <>
-                    <CheckCircle2 size={18} color="#059669" />
-                    <span style={{ color: "#065f46" }}>
+                    <CheckCircle2 size={18} />
+                    <span>
                       <strong>Approved for Entry:</strong> Visitor pass is cleared. Gate Security Guard can now check in this visitor.
                     </span>
                   </>
                 ) : selectedApproval.status === "WAITING" ? (
                   <>
-                    <Clock size={18} color="#ea580c" />
-                    <span style={{ color: "#9a3412" }}>
+                    <Clock size={18} />
+                    <span>
                       <strong>On Hold (Host Busy):</strong> Visitor has been asked to wait in reception lobby. Click Approve once host is ready.
                     </span>
                   </>
                 ) : selectedApproval.status === "REJECTED" ? (
                   <>
-                    <XCircle size={18} color="#dc2626" />
-                    <span style={{ color: "#991b1b" }}>
+                    <XCircle size={18} />
+                    <span>
                       <strong>Request Rejected:</strong> Host declined this meeting. Gate Security will deny entry.
                     </span>
                   </>
                 ) : (
                   <>
-                    <Hourglass size={18} color="#d97706" />
-                    <span style={{ color: "#92400e" }}>
+                    <Hourglass size={18} />
+                    <span>
                       <strong>Pending Admin Review:</strong> Cross-check all details with visitor registration pass before making an entry decision.
                     </span>
                   </>
@@ -939,7 +917,7 @@ export default function PreApprovals({
                   <button
                     type="button"
                     className="back-button"
-                    style={{ color: "#dc2626", borderColor: "#fecaca" }}
+                    style={{ color: "#f87171", borderColor: "rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.1)" }}
                     disabled={actionLoading === selectedApproval.pre_approval_id}
                     onClick={() => handleDecision(selectedApproval, "reject")}
                   >
@@ -1236,7 +1214,7 @@ export default function PreApprovals({
                 </div>
               ))}
               <div style={{ gridColumn: "1 / -1", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
-                <h4 style={{ margin: "0 0 12px", fontSize: "14px", color: "#0f172a" }}>Address Details</h4>
+                <h4 style={{ margin: "0 0 12px", fontSize: "14px", color: "#ffffff", fontWeight: 700 }}>Address Details</h4>
               </div>
               {[
                 ["address_line1", "Address Line 1", "Building / Street"],

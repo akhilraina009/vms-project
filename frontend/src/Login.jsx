@@ -1,5 +1,15 @@
-import { useState } from "react";
-import { ShieldCheck, Eye, EyeOff, LockKeyhole, Mail, ArrowRight, RefreshCw, KeyRound } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Eye,
+  EyeOff,
+  LockKeyhole,
+  Mail,
+  ArrowRight,
+  RefreshCw,
+  ShieldCheck,
+  Sun,
+  Moon,
+} from "lucide-react";
 import "./Login.css";
 
 const API_BASE_URL = "";
@@ -10,6 +20,20 @@ export default function Login({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Sync theme
+  const [theme, setTheme] = useState(() => localStorage.getItem("vms-theme") || "dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("vms-theme", theme);
+    localStorage.setItem("vms_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -22,15 +46,22 @@ export default function Login({ onLogin }) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
 
-      const data = await response.json();
+      let data = {};
+      try {
+        data = await response.json();
+      } catch {
+        // Response may not be JSON
+      }
 
       if (!response.ok) {
         throw new Error(
           typeof data.detail === "string"
             ? data.detail
+            : response.status === 500
+            ? "Database or server connection error. Please try again."
             : "Login failed. Check your credentials."
         );
       }
@@ -56,7 +87,7 @@ export default function Login({ onLogin }) {
       setError(
         err.message === "Failed to fetch"
           ? "Cannot connect to the server. Check that the backend is running."
-          : err.message || "Something went wrong. Please try again."
+          : err.message || "Invalid credentials. Please try again."
       );
     } finally {
       setLoading(false);
@@ -65,17 +96,25 @@ export default function Login({ onLogin }) {
 
   return (
     <div className="login-page">
-      <div className="login-card-wrapper">
-        {/* Top Security Status Indicator */}
-        <div className="login-telemetry-pill">
-          <span className="status-dot"></span>
-          <span>Enterprise Gate Terminal · 256-Bit TLS Encrypted</span>
-        </div>
+      {/* Top Theme Toggle */}
+      <div className="login-top-bar">
+        <button
+          type="button"
+          className="login-theme-btn"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to Light Theme" : "Switch to Dark Theme"}
+        >
+          {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+          <span>{theme === "dark" ? "Light" : "Dark"}</span>
+        </button>
+      </div>
 
+      <div className="login-card-wrapper">
         <div className="login-card">
+          {/* Brand Header */}
           <div className="login-brand">
-            <div className="login-logo">
-              <ShieldCheck size={28} strokeWidth={2.2} />
+            <div className="login-logo-ring">
+              <img src="/vms-logo.png" alt="VMS Logo" className="login-logo-img" />
             </div>
             <h1 className="login-title">Visitor Management System</h1>
             <p className="login-subtitle">Enterprise Physical &amp; Digital Access Control</p>
@@ -90,7 +129,7 @@ export default function Login({ onLogin }) {
             <div className="login-form-group">
               <label htmlFor="login-email">Email address</label>
               <div className="login-input-wrap">
-                <Mail size={17} className="login-input-icon" />
+                <Mail size={16} className="login-input-icon" />
                 <input
                   id="login-email"
                   type="email"
@@ -108,7 +147,7 @@ export default function Login({ onLogin }) {
                 <label htmlFor="login-password">Password</label>
               </div>
               <div className="login-input-wrap">
-                <LockKeyhole size={17} className="login-input-icon" />
+                <LockKeyhole size={16} className="login-input-icon" />
                 <input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
@@ -156,8 +195,8 @@ export default function Login({ onLogin }) {
           </form>
 
           <div className="login-footer">
-            <KeyRound size={13} />
-            <span>Authorized personnel only · ISO 27001 Security Protocol</span>
+            <ShieldCheck size={13} />
+            <span>Protected by Enterprise RBAC · Audit Logging Active</span>
           </div>
         </div>
       </div>

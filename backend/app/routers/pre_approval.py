@@ -1,8 +1,9 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -34,7 +35,7 @@ router = APIRouter(
 async def create_pre_approval(
     data: PreApprovalCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(require_roles("ADMIN")),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "MANAGEMENT")),
 ):
     pre_approval = PreApproval(
         visitor_id=data.visitor_id,
@@ -197,10 +198,12 @@ async def get_pre_approvals(
 async def approve_pre_approval(
     pre_approval_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(require_roles("ADMIN")),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "MANAGEMENT", "IT_COVERYOU", "IT")),
 ):
     result = await db.execute(
-        select(PreApproval).where(
+        select(PreApproval)
+        .options(selectinload(PreApproval.visitor), selectinload(PreApproval.host_employee))
+        .where(
             PreApproval.pre_approval_id == pre_approval_id
         )
     )
@@ -213,11 +216,11 @@ async def approve_pre_approval(
             detail="Pre-approval not found",
         )
 
-    if pre_approval.status not in ["PENDING", "WAITING"]:
+    if pre_approval.status not in ["PENDING", "WAITING", "RESCHEDULED"]:
         raise HTTPException(
             status_code=409,
             detail=(
-                "Only pending or waiting requests can be approved. "
+                "Only pending, waiting, or rescheduled requests can be approved. "
                 f"Current status: {pre_approval.status}"
             ),
         )
@@ -228,18 +231,21 @@ async def approve_pre_approval(
     visit_result = await db.execute(
         select(Visit).where(
             Visit.visitor_id == pre_approval.visitor_id,
-            Visit.status.in_(["PENDING", "WAITING"]),
+            Visit.status.in_(["PENDING", "WAITING", "RESCHEDULED"]),
         )
     )
     matching_visit = visit_result.scalars().first()
     if matching_visit:
         matching_visit.status = "APPROVED"
 
+    is_it = "[IT_VISIT]" in (matching_visit.purpose if matching_visit else "") or "[IT_VISIT]" in (pre_approval.purpose or "")
+    visitor_name = f"{pre_approval.visitor.first_name} {pre_approval.visitor.last_name}".strip() if pre_approval.visitor else "Visitor"
+
     db.add(
         AuditLog(
             visit_id=matching_visit.visit_id if matching_visit else None,
-            action="PRE_APPROVAL_APPROVED",
-            description=f"Visit request approved by {current_user.email}. Ready for gate security check-in.",
+            action="IT_PRE_APPROVAL_APPROVED" if is_it else "PRE_APPROVAL_APPROVED",
+            description=f"{'IT Technical visit' if is_it else 'Visit request'} for {visitor_name} approved by {current_user.email}. Ready for gate security check-in.",
             performed_by=f"{current_user.email} ({current_user.role})",
             created_at=datetime.utcnow(),
         )
@@ -251,12 +257,12 @@ async def approve_pre_approval(
     return {
         "pre_approval_id": str(pre_approval.pre_approval_id),
         "status": pre_approval.status,
-        "message": "Pre-approval approved successfully. Visitor ready for gate check-in.",
+        "message": f"{'IT Pre-approval' if is_it else 'Pre-approval'} approved successfully for {visitor_name}. Ready for gate check-in.",
     }
 
 
 # =========================================
-# ASK TO WAIT (HOST BUSY / ON HOLD - ADMIN ONLY)
+# ASK TO WAIT (HOST BUSY / ON HOLD - ADMIN & IT)
 # =========================================
 
 @router.post(
@@ -265,10 +271,12 @@ async def approve_pre_approval(
 async def ask_to_wait_pre_approval(
     pre_approval_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(require_roles("ADMIN")),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "MANAGEMENT", "IT_COVERYOU", "IT")),
 ):
     result = await db.execute(
-        select(PreApproval).where(
+        select(PreApproval)
+        .options(selectinload(PreApproval.visitor), selectinload(PreApproval.host_employee))
+        .where(
             PreApproval.pre_approval_id == pre_approval_id
         )
     )
@@ -281,11 +289,11 @@ async def ask_to_wait_pre_approval(
             detail="Pre-approval not found",
         )
 
-    if pre_approval.status not in ["PENDING", "WAITING"]:
+    if pre_approval.status not in ["PENDING", "WAITING", "RESCHEDULED"]:
         raise HTTPException(
             status_code=409,
             detail=(
-                "Only pending pre-approvals can be put on hold. "
+                "Only pending, waiting, or rescheduled pre-approvals can be put on hold. "
                 f"Current status: {pre_approval.status}"
             ),
         )
@@ -295,18 +303,21 @@ async def ask_to_wait_pre_approval(
     visit_result = await db.execute(
         select(Visit).where(
             Visit.visitor_id == pre_approval.visitor_id,
-            Visit.status.in_(["PENDING", "WAITING"]),
+            Visit.status.in_(["PENDING", "WAITING", "RESCHEDULED"]),
         )
     )
     matching_visit = visit_result.scalars().first()
     if matching_visit:
         matching_visit.status = "WAITING"
 
+    is_it = "[IT_VISIT]" in (matching_visit.purpose if matching_visit else "") or "[IT_VISIT]" in (pre_approval.purpose or "")
+    visitor_name = f"{pre_approval.visitor.first_name} {pre_approval.visitor.last_name}".strip() if pre_approval.visitor else "Visitor"
+
     db.add(
         AuditLog(
             visit_id=matching_visit.visit_id if matching_visit else None,
-            action="VISIT_REQUEST_ON_HOLD",
-            description=f"Host is busy. Visitor requested to wait in reception lobby by {current_user.email}.",
+            action="IT_VISIT_REQUEST_ON_HOLD" if is_it else "VISIT_REQUEST_ON_HOLD",
+            description=f"Host is busy. {'IT ' if is_it else ''}Visitor {visitor_name} requested to wait in reception lobby by {current_user.email}.",
             performed_by=f"{current_user.email} ({current_user.role})",
             created_at=datetime.utcnow(),
         )
@@ -318,24 +329,32 @@ async def ask_to_wait_pre_approval(
     return {
         "pre_approval_id": str(pre_approval.pre_approval_id),
         "status": pre_approval.status,
-        "message": "Host is currently busy. Visitor asked to wait in reception lobby.",
+        "message": f"Host is currently busy. {visitor_name} asked to wait in reception lobby.",
     }
 
 
 # =========================================
-# REJECT PRE-APPROVAL (ADMIN ONLY)
+# RESCHEDULE PRE-APPROVAL (HOST ABSENT / DATE-TIME)
 # =========================================
 
+class PreApprovalRescheduleRequest(BaseModel):
+    new_date_time: datetime
+    reason: str | None = None
+
+
 @router.post(
-    "/{pre_approval_id}/reject",
+    "/{pre_approval_id}/reschedule",
 )
-async def reject_pre_approval(
+async def reschedule_pre_approval(
     pre_approval_id: UUID,
+    data: PreApprovalRescheduleRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(require_roles("ADMIN")),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "MANAGEMENT", "IT_COVERYOU", "IT")),
 ):
     result = await db.execute(
-        select(PreApproval).where(
+        select(PreApproval)
+        .options(selectinload(PreApproval.visitor), selectinload(PreApproval.host_employee))
+        .where(
             PreApproval.pre_approval_id == pre_approval_id
         )
     )
@@ -348,32 +367,36 @@ async def reject_pre_approval(
             detail="Pre-approval not found",
         )
 
-    if pre_approval.status not in ["PENDING", "WAITING"]:
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                "Only pending or waiting requests can be rejected. "
-                f"Current status: {pre_approval.status}"
-            ),
-        )
-
-    pre_approval.status = "REJECTED"
+    naive_new_time = data.new_date_time.replace(tzinfo=None) if data.new_date_time.tzinfo else data.new_date_time
+    old_time = pre_approval.expected_in_time
+    pre_approval.expected_in_time = naive_new_time
+    pre_approval.status = "RESCHEDULED"
 
     visit_result = await db.execute(
         select(Visit).where(
             Visit.visitor_id == pre_approval.visitor_id,
-            Visit.status.in_(["PENDING", "WAITING", "APPROVED"]),
+            Visit.status.in_(["PENDING", "WAITING", "RESCHEDULED"]),
         )
     )
     matching_visit = visit_result.scalars().first()
     if matching_visit:
-        matching_visit.status = "REJECTED"
+        matching_visit.status = "RESCHEDULED"
+        matching_visit.expected_out_time = naive_new_time + timedelta(hours=8)
+
+    is_it = "[IT_VISIT]" in (matching_visit.purpose if matching_visit else "") or "[IT_VISIT]" in (pre_approval.purpose or "")
+    visitor_name = f"{pre_approval.visitor.first_name} {pre_approval.visitor.last_name}".strip() if pre_approval.visitor else "Visitor"
+
+    reason_str = data.reason or "Host absent today"
+    formatted_date = naive_new_time.strftime("%b %d, %Y at %I:%M %p")
 
     db.add(
         AuditLog(
             visit_id=matching_visit.visit_id if matching_visit else None,
-            action="PRE_APPROVAL_REJECTED",
-            description=f"Visit request rejected by {current_user.email}. Entry denied.",
+            action="IT_VISIT_RESCHEDULED" if is_it else "VISIT_RESCHEDULED",
+            description=(
+                f"Host is absent today. {'IT ' if is_it else ''}Visit for {visitor_name} rescheduled from {old_time.strftime('%b %d') if old_time else 'today'} to {formatted_date}. "
+                f"Reason: {reason_str}. Scheduled by {current_user.email}."
+            ),
             performed_by=f"{current_user.email} ({current_user.role})",
             created_at=datetime.utcnow(),
         )
@@ -385,7 +408,80 @@ async def reject_pre_approval(
     return {
         "pre_approval_id": str(pre_approval.pre_approval_id),
         "status": pre_approval.status,
-        "message": "Pre-approval rejected successfully. Entry denied.",
+        "expected_in_time": pre_approval.expected_in_time,
+        "message": f"Visit for {visitor_name} successfully rescheduled to {formatted_date} due to host absence.",
+    }
+
+
+# =========================================
+# REJECT PRE-APPROVAL (ADMIN & IT)
+# =========================================
+
+@router.post(
+    "/{pre_approval_id}/reject",
+)
+async def reject_pre_approval(
+    pre_approval_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "MANAGEMENT", "IT_COVERYOU", "IT")),
+):
+    result = await db.execute(
+        select(PreApproval)
+        .options(selectinload(PreApproval.visitor), selectinload(PreApproval.host_employee))
+        .where(
+            PreApproval.pre_approval_id == pre_approval_id
+        )
+    )
+
+    pre_approval = result.scalar_one_or_none()
+
+    if pre_approval is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Pre-approval not found",
+        )
+
+    if pre_approval.status not in ["PENDING", "WAITING", "RESCHEDULED"]:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Only pending, waiting, or rescheduled requests can be rejected. "
+                f"Current status: {pre_approval.status}"
+            ),
+        )
+
+    pre_approval.status = "REJECTED"
+
+    visit_result = await db.execute(
+        select(Visit).where(
+            Visit.visitor_id == pre_approval.visitor_id,
+            Visit.status.in_(["PENDING", "WAITING", "RESCHEDULED", "APPROVED"]),
+        )
+    )
+    matching_visit = visit_result.scalars().first()
+    if matching_visit:
+        matching_visit.status = "REJECTED"
+
+    is_it = "[IT_VISIT]" in (matching_visit.purpose if matching_visit else "") or "[IT_VISIT]" in (pre_approval.purpose or "")
+    visitor_name = f"{pre_approval.visitor.first_name} {pre_approval.visitor.last_name}".strip() if pre_approval.visitor else "Visitor"
+
+    db.add(
+        AuditLog(
+            visit_id=matching_visit.visit_id if matching_visit else None,
+            action="IT_PRE_APPROVAL_REJECTED" if is_it else "PRE_APPROVAL_REJECTED",
+            description=f"{'IT ' if is_it else ''}Visit request for {visitor_name} rejected by {current_user.email}. Access denied.",
+            performed_by=f"{current_user.email} ({current_user.role})",
+            created_at=datetime.utcnow(),
+        )
+    )
+
+    await db.commit()
+    await db.refresh(pre_approval)
+
+    return {
+        "pre_approval_id": str(pre_approval.pre_approval_id),
+        "status": pre_approval.status,
+        "message": f"{'IT Pre-approval' if is_it else 'Pre-approval'} for {visitor_name} rejected. Entry denied.",
     }
 
 
@@ -399,7 +495,7 @@ async def reject_pre_approval(
 async def check_in_pre_approved_visitor(
     pre_approval_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(require_roles("ADMIN", "SECURITY")),
+    current_user: SecurityUser = Depends(require_roles("ADMIN", "MANAGEMENT", "SECURITY")),
 ):
     result = await db.execute(
         select(PreApproval)

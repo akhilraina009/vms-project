@@ -14,7 +14,7 @@ import {
 
 import "./CreateVisit.css";
 
-const API_BASE_URL = "http://127.0.0.1:8000";
+const API_BASE_URL = "";
 const QR_BACKEND_URL = "http://192.168.20.182:8000";
 
 // Read the latest token for every request so this component uses the same
@@ -512,33 +512,289 @@ function CreateVisit({ onBack, onCreated, onNotification }) {
       }
 
       const objectUrl = URL.createObjectURL(blob);
+      const visitorObj = visitors.find((v) => String(v.visitor_id) === String(createdVisit.visitor_id));
+      const hostObj = hosts.find((h) => String(h.employee_id) === String(createdVisit.host_employee_id));
+      const visitorFullName = visitorObj ? `${visitorObj.first_name || ""} ${visitorObj.last_name || ""}`.trim() : "Authorized Visitor";
+      const visitorCompany = visitorObj?.company_name || "Independent";
+      const visitorPhone = visitorObj?.phone_number || "—";
+      const visitorEmail = visitorObj?.email || "—";
+      const hostFullName = hostObj?.name || "Official Host";
+      const hostDepartment = hostObj?.department || "General Administration";
+      const visitPurpose = createdVisit?.purpose || "Official Campus Visit";
+      const visitDate = new Date().toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+
       printWindow.document.open();
       printWindow.document.write(`
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Visitor QR Code</title>
+            <title>Visitor Pass - Visit #${createdVisit.visit_id}</title>
             <style>
-              body { margin: 0; padding: 40px; font-family: Arial, Helvetica, sans-serif; text-align: center; color: #101828; }
-              .container { max-width: 500px; margin: 0 auto; }
-              h1 { margin-bottom: 8px; font-size: 24px; }
-              p { color: #667085; font-size: 14px; }
-              img { width: 320px; height: 320px; margin: 25px auto; display: block; object-fit: contain; }
-              .visit-id { margin-top: 15px; padding: 12px; border: 1px solid #d0d5dd; border-radius: 8px; font-family: monospace; font-size: 12px; word-break: break-all; }
-              .status { margin-top: 12px; color: #039855; font-weight: bold; }
-              @media print { body { padding: 10px; } }
+              @page { size: A4 portrait; margin: 10mm; }
+              * { box-sizing: border-box; }
+              body {
+                margin: 0;
+                padding: 20px;
+                font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                background: #ffffff;
+                color: #0f172a;
+              }
+              .pass-sheet {
+                max-width: 620px;
+                margin: 0 auto;
+                border: 2px solid #0f172a;
+                border-radius: 14px;
+                padding: 22px 26px;
+                background: #ffffff;
+              }
+              .header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 2.5px solid #e43b24;
+                padding-bottom: 14px;
+                margin-bottom: 16px;
+              }
+              .logo-title {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+              }
+              .logo-badge {
+                width: 42px;
+                height: 42px;
+                background: #0f172a;
+                color: #ffffff;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 900;
+                font-size: 17px;
+                border: 1px solid #e43b24;
+              }
+              .title-group h1 {
+                margin: 0;
+                font-size: 17px;
+                font-weight: 800;
+                letter-spacing: -0.3px;
+                color: #0f172a;
+                text-transform: uppercase;
+              }
+              .title-group p {
+                margin: 2px 0 0 0;
+                font-size: 10px;
+                color: #64748b;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+                text-transform: uppercase;
+              }
+              .pass-badge-id {
+                text-align: right;
+              }
+              .pass-badge-id span {
+                display: block;
+                font-size: 8.5px;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+              }
+              .pass-badge-id strong {
+                font-size: 14px;
+                color: #e43b24;
+                font-family: monospace;
+              }
+              .meta-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+                margin-bottom: 14px;
+              }
+              .meta-cell {
+                background: #f8fafc;
+                border: 1px solid #e2e8f0;
+                border-radius: 8px;
+                padding: 8px 12px;
+              }
+              .meta-cell small {
+                display: block;
+                font-size: 8.5px;
+                font-weight: 700;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: 0.4px;
+                margin-bottom: 2px;
+              }
+              .meta-cell strong {
+                font-size: 12px;
+                color: #0f172a;
+              }
+              .qr-section {
+                text-align: center;
+                margin: 14px 0;
+                padding: 12px;
+                background: #fafafa;
+                border: 1.5px dashed #cbd5e1;
+                border-radius: 12px;
+              }
+              .qr-img {
+                width: 150px;
+                height: 150px;
+                object-fit: contain;
+                margin: 0 auto 6px;
+                display: block;
+              }
+              .qr-hint {
+                font-size: 10.5px;
+                color: #475569;
+                font-weight: 600;
+              }
+              .assets-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 14px 0;
+                font-size: 11px;
+              }
+              .assets-table th {
+                background: #0f172a;
+                color: #ffffff;
+                padding: 6px 9px;
+                text-align: left;
+                font-size: 9.5px;
+                text-transform: uppercase;
+              }
+              .assets-table td {
+                padding: 6px 9px;
+                border-bottom: 1px solid #e2e8f0;
+                color: #0f172a;
+              }
+              .signatures {
+                display: grid;
+                grid-template-columns: 1fr 1fr 1fr;
+                gap: 14px;
+                margin-top: 18px;
+                padding-top: 14px;
+                border-top: 1px dashed #cbd5e1;
+                text-align: center;
+              }
+              .sig-line {
+                border-bottom: 1px solid #0f172a;
+                margin-bottom: 5px;
+                height: 20px;
+              }
+              .sig-label {
+                font-size: 9px;
+                font-weight: 700;
+                color: #475569;
+                text-transform: uppercase;
+              }
+              .footer-disclaimer {
+                margin-top: 14px;
+                font-size: 8.5px;
+                color: #94a3b8;
+                text-align: center;
+                line-height: 1.35;
+              }
+              @media print {
+                body { padding: 0; }
+                .pass-sheet { border: 2px solid #0f172a; box-shadow: none; }
+              }
             </style>
           </head>
           <body>
-            <div class="container">
-              <h1>Visitor QR Code</h1>
-              <p>Scan this code at the security entrance.</p>
-              <img src="${objectUrl}" alt="Visitor QR Code" />
-              <div class="visit-id">Visit ID: ${createdVisit.visit_id}</div>
-              <div class="status">ACTIVE</div>
+            <div class="pass-sheet">
+              <div class="header">
+                <div class="logo-title">
+                  <div class="logo-badge">VMS</div>
+                  <div class="title-group">
+                    <h1>Visitor Access Pass</h1>
+                    <p>Enterprise Physical &amp; Digital Access Clearance</p>
+                  </div>
+                </div>
+                <div class="pass-badge-id">
+                  <span>Pass Token</span>
+                  <strong>#${createdVisit.visit_id}</strong>
+                </div>
+              </div>
+
+              <div class="meta-grid">
+                <div class="meta-cell">
+                  <small>Visitor Name</small>
+                  <strong>${visitorFullName}</strong>
+                </div>
+                <div class="meta-cell">
+                  <small>Organization / Firm</small>
+                  <strong>${visitorCompany}</strong>
+                </div>
+                <div class="meta-cell">
+                  <small>Host Official</small>
+                  <strong>${hostFullName}</strong> (${hostDepartment})
+                </div>
+                <div class="meta-cell">
+                  <small>Visit Purpose</small>
+                  <strong>${visitPurpose}</strong>
+                </div>
+                <div class="meta-cell">
+                  <small>Contact Phone</small>
+                  <strong>${visitorPhone}</strong>
+                </div>
+                <div class="meta-cell">
+                  <small>Validity Date</small>
+                  <strong>${visitDate}</strong>
+                </div>
+              </div>
+
+              <div class="qr-section">
+                <img class="qr-img" src="${objectUrl}" alt="Visitor QR Code" />
+                <div class="qr-hint">Scan this QR pass at the security gate turnstile or optical scanner.</div>
+              </div>
+
+              ${savedAssets && savedAssets.length > 0 ? `
+                <table class="assets-table">
+                  <thead>
+                    <tr>
+                      <th>Declared Asset</th>
+                      <th>Model</th>
+                      <th>Serial Number</th>
+                      <th>Clearance Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${savedAssets.map(a => `
+                      <tr>
+                        <td><strong>${a.asset_type || "Hardware"}</strong></td>
+                        <td>${a.brand_model || "—"}</td>
+                        <td><code>${a.serial_number || "—"}</code></td>
+                        <td>${a.is_cleared_for_exit ? "Cleared for Exit" : "Pending Inspection"}</td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              ` : ""}
+
+              <div class="signatures">
+                <div>
+                  <div class="sig-line"></div>
+                  <div class="sig-label">Visitor Signature</div>
+                </div>
+                <div>
+                  <div class="sig-line"></div>
+                  <div class="sig-label">Host Authorization</div>
+                </div>
+                <div>
+                  <div class="sig-line"></div>
+                  <div class="sig-label">Gate Security Stamp</div>
+                </div>
+              </div>
+
+              <div class="footer-disclaimer">
+                This pass is non-transferable and must be presented to security personnel upon request.
+                Official document issued by VMS Enterprise Security Management.
+              </div>
             </div>
+
             <script>
-              const qrImage = document.querySelector("img");
+              const qrImage = document.querySelector(".qr-img");
               qrImage.addEventListener("load", () => setTimeout(() => window.print(), 150));
               qrImage.addEventListener("error", () => document.body.insertAdjacentText("beforeend", "Unable to display QR image."));
               window.addEventListener("afterprint", () => { URL.revokeObjectURL(${JSON.stringify(objectUrl)}); window.close(); });
@@ -810,42 +1066,33 @@ function CreateVisit({ onBack, onCreated, onNotification }) {
   ========================================================= */
 
   return (
-    <main className="main-content create-page">
-      <header className="topbar">
-        <div>
-          <h2>Create Visit</h2>
-          <p>Register a new visitor visit</p>
-        </div>
-
-        <div className="topbar-actions">
-          <button
-            className="back-button"
-            onClick={onBack}
-          >
-            <ArrowLeft size={15} />
-            Back to Dashboard
-          </button>
-        </div>
-      </header>
-
-      <section className="welcome-banner">
-        <div>
-          <span className="banner-label">VISIT MANAGEMENT</span>
-          <h1>Create New Visit</h1>
-          <p>
-            Select a registered visitor and create an active visit with QR
-            verification.
+    <div className="create-page-container">
+      <div className="it-management-header">
+        <div className="it-header-title-box">
+          <div className="it-header-badge-row">
+            <span className="it-division-pill">VISIT MANAGEMENT</span>
+            <span className="it-telemetry-pill">
+              <span className="status-dot"></span>
+              Registration Terminal Active
+            </span>
+          </div>
+          <h2 className="it-page-title">Create New Visit</h2>
+          <p className="it-page-desc">
+            Select a registered visitor, assign host official, verify credentials, and generate active gate access pass
           </p>
         </div>
 
-        <button
-          className="hero-button"
-          onClick={onBack}
-        >
-          <ArrowLeft size={15} />
-          Back
-        </button>
-      </section>
+        <div className="it-header-controls">
+          <button
+            type="button"
+            className="it-qr-portal-btn"
+            onClick={onBack}
+          >
+            <ArrowLeft size={14} />
+            <span>Back to Dashboard</span>
+          </button>
+        </div>
+      </div>
 
       {error && (
         <div className="error-banner">
@@ -1113,7 +1360,7 @@ function CreateVisit({ onBack, onCreated, onNotification }) {
           </div>
         </form>
       </section>
-    </main>
+    </div>
   );
 }
 

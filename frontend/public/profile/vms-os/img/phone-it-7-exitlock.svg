@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 1688" width="780" height="1688" shape-rendering="geometricPrecision" text-rendering="geometricPrecision">
+  <defs>
+    <linearGradient id="bgG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="50%" stop-color="#0f1626"/>
+      <stop offset="100%" stop-color="#141c2e"/>
+    </linearGradient>
+    <linearGradient id="coralG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f05d49"/>
+      <stop offset="100%" stop-color="#ff8c69"/>
+    </linearGradient>
+    <linearGradient id="blueG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#60a5fa"/>
+    </linearGradient>
+    <linearGradient id="greenG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <linearGradient id="cardG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="rgba(30, 41, 59, 0.85)"/>
+      <stop offset="100%" stop-color="rgba(15, 23, 42, 0.95)"/>
+    </linearGradient>
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="780" height="1688" fill="url(#bgG)"/>
+
+  <!-- Subtle Ambient Glow -->
+  <circle cx="390" cy="180" r="300" fill="#3b82f6" opacity="0.08" filter="blur(40px)"/>
+
+  <!-- Status Bar -->
+  <g transform="translate(56, 50)">
+    <text x="0" y="24" fill="#ffffff" font-family="'Inter', -apple-system, sans-serif" font-weight="700" font-size="22" letter-spacing="0.5">09:21</text>
+    <g transform="translate(570, 8)">
+      <!-- Signal -->
+      <rect x="0" y="8" width="4" height="14" rx="2" fill="#fff"/>
+      <rect x="7" y="5" width="4" height="17" rx="2" fill="#fff"/>
+      <rect x="14" y="2" width="4" height="20" rx="2" fill="#fff"/>
+      <rect x="21" y="0" width="4" height="22" rx="2" fill="#fff"/>
+      <!-- Battery -->
+      <rect x="42" y="2" width="38" height="20" rx="6" fill="none" stroke="#fff" stroke-width="2.5"/>
+      <rect x="46" y="6" width="28" height="12" rx="3.5" fill="#22c55e"/>
+      <rect x="82" y="8" width="3" height="8" rx="1.5" fill="#fff"/>
+    </g>
+  </g>
+
+  <!-- App Header -->
+  <g transform="translate(56, 110)">
+    <rect width="52" height="52" rx="16" fill="#3b82f6" filter="url(#softShadow)"/>
+    <path d="M18 26 L23 32 L34 20" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="70" y="28" fill="#ffffff" font-family="'Inter Tight', 'Inter', sans-serif" font-weight="800" font-size="28" letter-spacing="-0.5">Asset Exit Lock</text>
+    <text x="70" y="48" fill="#3b82f6" font-family="'Inter', sans-serif" font-weight="700" font-size="13" letter-spacing="2">IT VISITOR &#183; STEP 7</text>
+  </g>
+
+  <!-- Content -->
+  
+  <g transform="translate(56, 190)">
+    <rect width="668" height="1400" rx="28" fill="url(#cardG)" stroke="rgba(255,255,255,0.12)" stroke-width="1.5" filter="url(#softShadow)"/>
+
+    <text x="40" y="60" fill="#ffffff" font-family="'Inter Tight', sans-serif" font-weight="800" font-size="32">Zero-Leakage Exit</text>
+    <text x="40" y="96" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="19">Strict exit gate reconciliation. 0 unaccounted assets before release.</text>
+
+    <!-- Reconciliation Card -->
+    <rect x="40" y="160" width="588" height="420" rx="24" fill="#0f172a" stroke="#10b981" stroke-width="2"/>
+    <text x="70" y="210" fill="#34d399" font-family="'Inter', sans-serif" font-weight="800" font-size="20">HARDWARE EGRESS RECONCILIATION</text>
+
+    <!-- Item 1 Reconciled -->
+    <rect x="70" y="240" width="528" height="90" rx="16" fill="#14532d" stroke="#22c55e"/>
+    <text x="95" y="278" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="19">ThinkPad P16 (SN: PF-3K9820-L)</text>
+    <text x="95" y="308" fill="#a7f3d0" font-family="'Inter', sans-serif" font-size="15">&#10003; Barcode Re-scanned &#183; Authorized for Egress</text>
+
+    <!-- Item 2 Reconciled -->
+    <rect x="70" y="350" width="528" height="90" rx="16" fill="#14532d" stroke="#22c55e"/>
+    <text x="95" y="388" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="19">Fluke DSX-8000 (SN: FLK-9920188-B)</text>
+    <text x="95" y="418" fill="#a7f3d0" font-family="'Inter', sans-serif" font-size="15">&#10003; Barcode Re-scanned &#183; Authorized for Egress</text>
+
+    <!-- Reconciled Stat -->
+    <rect x="70" y="460" width="528" height="90" rx="16" fill="#064e3b"/>
+    <text x="95" y="498" fill="#34d399" font-family="'Inter', sans-serif" font-weight="800" font-size="20">2 OF 2 ASSETS ACCOUNTED FOR</text>
+    <text x="95" y="528" fill="#ffffff" font-family="'Inter', sans-serif" font-size="16">0 Missing Assets &#183; 0 Uncleared Media &#183; ZERO DATA LEAKAGE</text>
+
+    <!-- Gate Release Action -->
+    <rect x="40" y="620" width="588" height="200" rx="24" fill="#0f172a" stroke="#22c55e"/>
+    <text x="70" y="670" fill="#ffffff" font-family="'Inter Tight', sans-serif" font-weight="800" font-size="24">Gate Exit Turnstile Released</text>
+    <text x="70" y="705" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="17">Contractor RFID clearance pass deactivated.</text>
+    <text x="70" y="740" fill="#38bdf8" font-family="'Inter', sans-serif" font-size="17">Full ISO 27001 audit dossier dispatched to CISO archive.</text>
+    <text x="70" y="780" fill="#34d399" font-family="'Inter', sans-serif" font-weight="700" font-size="16">&#10003; Gate Out Completed: 11:35 AM</text>
+
+    <rect x="40" y="1240" width="588" height="96" rx="28" fill="url(#greenG)"/>
+    <text x="170" y="1298" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="26">&#10003; Release Exit Barrier</text>
+  </g>
+
+
+  <!-- Home Indicator -->
+  <rect x="250" y="1650" width="280" height="6" rx="3" fill="#ffffff" opacity="0.35"/>
+</svg>

@@ -257,6 +257,7 @@ async def get_visitor_details(
             "is_cleared_for_exit": a.is_cleared_for_exit,
             "cleared_by": a.cleared_by,
             "cleared_at": a.cleared_at.isoformat() if a.cleared_at else None,
+            "disposition": a.disposition,
         }
         for a in (target_visit.assets or [])
     ] if target_visit else []
@@ -281,10 +282,30 @@ async def get_visitor_details(
         "country": visitor.country,
     }
 
+    visits_data = [
+        {
+            "visit_id": str(v.visit_id),
+            "status": v.status,
+            "purpose": v.purpose,
+            "check_in_time": v.check_in_time.isoformat() if v.check_in_time else None,
+            "check_out_time": v.check_out_time.isoformat() if v.check_out_time else None,
+            "expected_out_time": v.expected_out_time.isoformat() if v.expected_out_time else None,
+            "host_name": (
+                f"{v.host_employee.first_name} {v.host_employee.last_name}"
+                if v.host_employee
+                else "Unknown"
+            ),
+            "host_department": v.host_employee.department if v.host_employee else "General",
+            "assets_count": len(v.assets or []),
+        }
+        for v in visits
+    ]
+
     return {
         **visitor_profile,
         "visitor": visitor_profile,
         "assets": declared_assets,
+        "declared_assets": declared_assets,
         "is_inside": active_visit is not None,
         "active_visit": {
             "visit_id": str(active_visit.visit_id),
@@ -313,28 +334,13 @@ async def get_visitor_details(
                     "is_cleared_for_exit": a.is_cleared_for_exit,
                     "cleared_by": a.cleared_by,
                     "cleared_at": a.cleared_at.isoformat() if a.cleared_at else None,
+                    "disposition": a.disposition,
                 }
                 for a in (active_visit.assets or [])
             ]
         } if active_visit else None,
-        "visits": [
-            {
-                "visit_id": str(v.visit_id),
-                "status": v.status,
-                "purpose": v.purpose,
-                "check_in_time": v.check_in_time.isoformat() if v.check_in_time else None,
-                "check_out_time": v.check_out_time.isoformat() if v.check_out_time else None,
-                "expected_out_time": v.expected_out_time.isoformat() if v.expected_out_time else None,
-                "host_name": (
-                    f"{v.host_employee.first_name} {v.host_employee.last_name}"
-                    if v.host_employee
-                    else "Unknown"
-                ),
-                "host_department": v.host_employee.department if v.host_employee else "General",
-                "assets_count": len(v.assets or []),
-            }
-            for v in visits
-        ]
+        "visits": visits_data,
+        "history": visits_data,
     }
 
 

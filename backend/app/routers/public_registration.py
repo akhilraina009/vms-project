@@ -418,19 +418,22 @@ async def verify_visitor_pass(
         token_str.encode("utf-8")
     ).hexdigest()
 
+    # 1. Look up pass record by sha256(token_str) OR direct token_str (if already hash)
     result = await db.execute(
         select(VisitorPassToken).where(
-            VisitorPassToken.token_hash == token_hash,
+            (VisitorPassToken.token_hash == token_hash)
+            | (VisitorPassToken.token_hash == token_str),
             VisitorPassToken.revoked.is_(False),
         )
     )
 
-    pass_record = result.scalar_one_or_none()
+    pass_record = result.scalars().first()
 
-    # If not found by SHA-256 token hash, test if token is a direct visit UUID
+    # 2. If not found, check if token is a direct visit UUID or badge reference (e.g. VMS-UUID)
+    clean_uuid_str = token_str[4:] if token_str.upper().startswith("VMS-") else token_str
     if pass_record is None:
         try:
-            visit_uuid = UUID(token_str)
+            visit_uuid = UUID(clean_uuid_str)
             res_by_visit = await db.execute(
                 select(VisitorPassToken)
                 .where(
@@ -443,40 +446,47 @@ async def verify_visitor_pass(
         except (ValueError, TypeError):
             pass_record = None
 
-    if pass_record is None:
+    visit = None
+    if pass_record is not None:
+        visit_result = await db.execute(
+            select(Visit).where(
+                Visit.visit_id == pass_record.visit_id
+            )
+        )
+        visit = visit_result.scalar_one_or_none()
+    else:
+        # If no pass_record found, try finding the visit directly by UUID or badge prefix
+        try:
+            visit_uuid = UUID(clean_uuid_str)
+            visit_result = await db.execute(
+                select(Visit).where(Visit.visit_id == visit_uuid)
+            )
+            visit = visit_result.scalar_one_or_none()
+        except (ValueError, TypeError):
+            pass
+
+    if visit is None:
         raise HTTPException(
             status_code=404,
             detail="Visitor pass is invalid or has been revoked.",
         )
 
-    visit_result = await db.execute(
-        select(Visit).where(
-            Visit.visit_id == pass_record.visit_id
-        )
-    )
-
-    visit = visit_result.scalar_one_or_none()
-
-    if visit is None:
-        raise HTTPException(
-            status_code=404,
-            detail="The visit associated with this pass was not found.",
-        )
-
     now = datetime.utcnow()
 
     # Handle timezone-aware database timestamps safely.
-    expires_at = pass_record.expires_at
+    if pass_record and pass_record.expires_at:
+        expires_at = pass_record.expires_at
+        if expires_at.tzinfo is not None:
+            expires_at = expires_at.replace(tzinfo=None)
 
-    if expires_at.tzinfo is not None:
-        expires_at = expires_at.replace(tzinfo=None)
-
-    # Allow actively on-site visitors to verify their pass for gate departure check-out
-    if expires_at <= now and visit.status != "ACTIVE":
-        raise HTTPException(
-            status_code=410,
-            detail="Visitor pass has expired.",
-        )
+        # Allow actively on-site visitors to verify their pass for gate departure check-out
+        if expires_at <= now and visit.status != "ACTIVE":
+            raise HTTPException(
+                status_code=410,
+                detail="Visitor pass has expired.",
+            )
+    else:
+        expires_at = visit.expected_out_time or (datetime.utcnow() + timedelta(days=1))
 
     visitor_result = await db.execute(
         select(Visitor).where(
@@ -520,9 +530,27 @@ async def verify_visitor_pass(
                 else None
             ),
             "is_cleared_for_exit": asset.is_cleared_for_exit,
+            "cleared_by": asset.cleared_by,
+            "disposition": asset.disposition,
         }
         for asset in assets
     ]
+
+    # Look up latest pre-approval for expected_in_time and real-time host decision
+    pre_app_result = await db.execute(
+        select(PreApproval)
+        .where(PreApproval.visitor_id == visit.visitor_id)
+        .order_by(PreApproval.created_at.desc())
+    )
+    pre_app = pre_app_result.scalars().first()
+    expected_in_time = pre_app.expected_in_time if pre_app else None
+
+    # If the pre-approval has a specific decision (RESCHEDULED, WAITING, REJECTED, APPROVED),
+    # ensure it takes precedence unless the visitor is already ACTIVE or CHECKED_OUT.
+    live_status = visit.status
+    if pre_app and visit.status not in ["ACTIVE", "CHECKED_OUT"]:
+        if pre_app.status in ["RESCHEDULED", "WAITING", "REJECTED", "APPROVED"]:
+            live_status = pre_app.status
 
     # Return visitor details, including live status, address, check_in_time
     return {
@@ -541,7 +569,8 @@ async def verify_visitor_pass(
         ),
         "host_department": host.department if host else "General",
         "purpose": visit.purpose,
-        "status": visit.status,
+        "status": live_status,
+        "expected_in_time": expected_in_time,
         "check_in_time": visit.check_in_time,
         "expected_out_time": visit.expected_out_time,
         "photo_url": (
@@ -557,6 +586,6 @@ async def verify_visitor_pass(
             "postal_code": visitor.postal_code,
             "country": visitor.country,
         },
-        "expires_at": pass_record.expires_at,
+        "expires_at": expires_at,
         "assets": asset_details,
     }

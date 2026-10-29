@@ -5,7 +5,7 @@ from html import escape
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -119,7 +119,7 @@ async def get_visit_qr(
 @router.get("/dashboard")
 async def get_dashboard_data(
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(get_current_user),
+    current_user: SecurityUser | None = Depends(get_optional_current_user),
 ):
     """Return today's visitor statistics and current active visits."""
     result = await db.execute(
@@ -1220,17 +1220,18 @@ async def check_in_visit_by_id(
             detail="Visit record not found",
         )
 
-    if visit.status not in ["APPROVED", "PENDING"]:
+    if visit.status not in ["APPROVED", "PENDING", "CHECKED_OUT"]:
         raise HTTPException(
             status_code=409,
             detail=(
-                "Only approved or pending registered visitors can be checked in. "
+                "Only approved, pending, or checked-out visitors can be checked in. "
                 f"Current status: {visit.status}"
             ),
         )
 
     visit.status = "ACTIVE"
     visit.check_in_time = datetime.utcnow()
+    visit.check_out_time = None
 
     # Sync matching PreApproval if present
     pre_app_result = await db.execute(
@@ -1309,10 +1310,17 @@ async def checkout_visit(
             "message": "Visit is already checked out or inactive",
         }
 
-    # If requested or authorized, clear assets upon checkout
+    # If requested or authorized, clear remaining assets upon checkout without overwriting retained ones
     if clear_assets:
         for asset in (visit.assets or []):
-            asset.is_cleared_for_exit = True
+            if not asset.is_cleared_for_exit:
+                asset.is_cleared_for_exit = True
+                if not asset.cleared_by:
+                    asset.cleared_by = f"CARRIED_OUT: Cleared at checkout by {current_user.email if current_user else 'Security Officer'}"
+                    asset.cleared_at = datetime.utcnow()
+            elif not asset.cleared_by:
+                asset.cleared_by = f"CARRIED_OUT: Cleared at checkout by {current_user.email if current_user else 'Security Officer'}"
+                asset.cleared_at = datetime.utcnow()
 
     # Require security clearance for every registered asset.
     uncleared_assets = [
@@ -1340,6 +1348,20 @@ async def checkout_visit(
     checkout_time = datetime.utcnow()
     visit.check_out_time = checkout_time
     visit.status = "CHECKED_OUT"
+
+    # Close any other lingering active visits for this same visitor
+    await db.execute(
+        update(Visit)
+        .where(
+            Visit.visitor_id == visit.visitor_id,
+            Visit.status == "ACTIVE",
+            Visit.visit_id != visit.visit_id
+        )
+        .values(
+            status="CHECKED_OUT",
+            check_out_time=checkout_time
+        )
+    )
 
     performer = (
         f"{current_user.email} ({current_user.role})"
@@ -1372,15 +1394,17 @@ async def checkout_visit(
 
 @router.get("/checkouts/history")
 async def get_checkout_history(
-    limit: int = 50,
+    limit: int = 1000,
+    start_date: str | None = None,
+    end_date: str | None = None,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser = Depends(get_current_user),
+    current_user: SecurityUser | None = Depends(get_optional_current_user),
 ):
     """
     Retrieve recently checked out visits with full details on visitors,
-    hosts, and registered assets.
+    hosts, and registered assets, with optional date range filtering.
     """
-    result = await db.execute(
+    query = (
         select(Visit)
         .options(
             selectinload(Visit.visitor),
@@ -1388,9 +1412,24 @@ async def get_checkout_history(
             selectinload(Visit.assets)
         )
         .where(Visit.status == "CHECKED_OUT")
-        .order_by(desc(Visit.check_out_time))
-        .limit(limit)
     )
+
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            query = query.where(Visit.check_out_time >= start_dt)
+        except ValueError:
+            pass
+
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date)
+            query = query.where(Visit.check_out_time <= end_dt)
+        except ValueError:
+            pass
+
+    query = query.order_by(desc(Visit.check_out_time)).limit(limit)
+    result = await db.execute(query)
 
     visits = result.scalars().all()
 
@@ -1450,6 +1489,11 @@ async def get_checkout_history(
                         asset.cleared_at.isoformat()
                         if getattr(asset, "cleared_at", None) else None
                     ),
+                    "disposition": getattr(asset, "disposition", (
+                        "RETAINED_ON_PREMISES"
+                        if getattr(asset, "cleared_by", None) and "RETAINED" in asset.cleared_by
+                        else ("CARRIED_OUT" if asset.is_cleared_for_exit else "PENDING")
+                    )),
                 }
                 for asset in visit.assets
             ],

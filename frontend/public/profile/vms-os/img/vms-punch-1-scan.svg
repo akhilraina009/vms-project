@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 1688" width="780" height="1688">
+  <defs>
+    <linearGradient id="bgG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b0f19"/>
+      <stop offset="100%" stop-color="#141c2e"/>
+    </linearGradient>
+    <linearGradient id="indigoG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="emeraldG" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#059669"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+  </defs>
+  <rect width="780" height="1688" fill="url(#bgG)"/>
+
+  <!-- Status Bar -->
+  <g transform="translate(48, 40)">
+    <text x="0" y="24" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="600" font-size="20">09:21</text>
+    <g transform="translate(600, 10)">
+      <!-- Signal -->
+      <rect x="0" y="8" width="5" height="12" rx="2" fill="#fff"/>
+      <rect x="8" y="5" width="5" height="15" rx="2" fill="#fff"/>
+      <rect x="16" y="2" width="5" height="18" rx="2" fill="#fff"/>
+      <rect x="24" y="0" width="5" height="20" rx="2" fill="#fff"/>
+      <!-- Battery -->
+      <rect x="42" y="2" width="36" height="18" rx="5" fill="none" stroke="#fff" stroke-width="2"/>
+      <rect x="45" y="5" width="26" height="12" rx="3" fill="#10b981"/>
+      <rect x="79" y="7" width="3" height="8" rx="1" fill="#fff"/>
+    </g>
+  </g>
+
+  <!-- App Header -->
+  <g transform="translate(48, 100)">
+    <circle cx="24" cy="24" r="22" fill="#4f46e5"/>
+    <path d="M16 24 L22 30 L32 18" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="60" y="24" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="28" letter-spacing="-0.5">Lobby Check-In</text>
+    <text x="60" y="44" fill="#818cf8" font-family="'Inter', sans-serif" font-weight="600" font-size="14" letter-spacing="1.5">VMS ENTERPRISE</text>
+  </g>
+
+  <!-- Content -->
+  
+  <g transform="translate(48, 180)">
+    <rect width="684" height="1380" rx="32" fill="#151d2c" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
+    
+    <g transform="translate(44, 50)">
+      <text x="0" y="32" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="32">Lobby Self-Registration</text>
+      <text x="0" y="68" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="20">Scan QR on reception desk to begin</text>
+    </g>
+
+    <!-- Scan Finder Window -->
+    <g transform="translate(92, 200)">
+      <rect width="500" height="500" rx="36" fill="#0f1523" stroke="#4f46e5" stroke-width="3"/>
+      <!-- Target corners -->
+      <path d="M 40 100 L 40 40 L 100 40" stroke="#6366f1" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <path d="M 460 100 L 460 40 L 400 40" stroke="#6366f1" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <path d="M 40 400 L 40 460 L 100 460" stroke="#6366f1" stroke-width="8" stroke-linecap="round" fill="none"/>
+      <path d="M 460 400 L 460 460 L 400 460" stroke="#6366f1" stroke-width="8" stroke-linecap="round" fill="none"/>
+
+      <!-- QR in center -->
+      <g transform="translate(150, 150)">
+        <rect width="200" height="200" rx="16" fill="#ffffff"/>
+        <rect x="16" y="16" width="48" height="48" rx="8" fill="#0f172a"/>
+        <rect x="24" y="24" width="32" height="32" rx="4" fill="#ffffff"/>
+        <rect x="136" y="16" width="48" height="48" rx="8" fill="#0f172a"/>
+        <rect x="144" y="24" width="32" height="32" rx="4" fill="#ffffff"/>
+        <rect x="16" y="136" width="48" height="48" rx="8" fill="#0f172a"/>
+        <rect x="24" y="144" width="32" height="32" rx="4" fill="#ffffff"/>
+        <circle cx="100" cy="100" r="16" fill="#4f46e5"/>
+      </g>
+
+      <!-- Laser scan line -->
+      <line x1="30" y1="250" x2="470" y2="250" stroke="#10b981" stroke-width="4" stroke-dasharray="10 5"/>
+    </g>
+
+    <!-- Bottom info card -->
+    <g transform="translate(44, 760)">
+      <rect width="596" height="150" rx="24" fill="#1c2638"/>
+      <circle cx="50" cy="75" r="26" fill="#4f46e5"/>
+      <text x="50" y="83" fill="#fff" font-family="'Inter', sans-serif" font-size="24" text-anchor="middle">⚡</text>
+      <text x="96" y="60" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="24">Instant Gate Fast-Track</text>
+      <text x="96" y="94" fill="#94a3b8" font-family="'Inter', sans-serif" font-size="18">Takes under 30 seconds &#183; No app install required</text>
+    </g>
+
+    <!-- Tap button -->
+    <g transform="translate(44, 960)">
+      <rect width="596" height="84" rx="24" fill="#4f46e5"/>
+      <text x="298" y="52" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="26" text-anchor="middle">Tap to Scan Reception QR</text>
+    </g>
+  </g>
+
+
+  <!-- Home Indicator -->
+  <rect x="290" y="1640" width="200" height="6" rx="3" fill="#ffffff" opacity="0.3"/>
+</svg>

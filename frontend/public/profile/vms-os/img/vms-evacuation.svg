@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 1688" width="780" height="1688">
+  <defs>
+    <linearGradient id="bgG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0b0f19"/>
+      <stop offset="100%" stop-color="#141c2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="780" height="1688" fill="url(#bgG)"/>
+  <g transform="translate(48, 40)">
+    <text x="0" y="24" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="600" font-size="20">09:21</text>
+  </g>
+  <g transform="translate(48, 100)">
+    <circle cx="24" cy="24" r="22" fill="#4f46e5"/>
+    <path d="M16 24 L22 30 L32 18" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <text x="60" y="24" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="28">Evacuation Roster</text>
+    <text x="60" y="44" fill="#818cf8" font-family="'Inter', sans-serif" font-weight="600" font-size="14" letter-spacing="1.5">VMS ENTERPRISE</text>
+  </g>
+  
+  <g transform="translate(48, 180)">
+    <rect width="684" height="1380" rx="32" fill="#151d2c" stroke="rgba(255,255,255,0.06)" stroke-width="1.5"/>
+    <g transform="translate(44, 50)">
+      <text x="0" y="32" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="32">Emergency Evacuation</text>
+      <text x="0" y="68" fill="#f87171" font-family="'Inter', sans-serif" font-weight="600" font-size="20">Live Occupancy &amp; Fire Drill Roll-Call</text>
+    </g>
+
+    <!-- Headcount Banner -->
+    <g transform="translate(44, 150)">
+      <rect width="596" height="180" rx="26" fill="#2d1515" stroke="#ef4444" stroke-width="2"/>
+      <text x="50" y="65" fill="#fca5a5" font-family="'Inter', sans-serif" font-size="18">TOTAL VISITORS ON PREMISES</text>
+      <text x="50" y="125" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="800" font-size="56">14</text>
+      <text x="130" y="120" fill="#f87171" font-family="'Inter', sans-serif" font-weight="600" font-size="22">Active In Building</text>
+      
+      <rect x="380" y="55" width="180" height="70" rx="20" fill="#ef4444"/>
+      <text x="470" y="98" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="20" text-anchor="middle">Export PDF</text>
+    </g>
+
+    <!-- Floor Breakdown -->
+    <g transform="translate(44, 370)">
+      <rect width="596" height="280" rx="24" fill="#1c2638"/>
+      <text x="36" y="50" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="700" font-size="22">Occupancy by Zone / Floor</text>
+
+      <g transform="translate(36, 80)">
+        <text x="0" y="24" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="600" font-size="20">Floor 1 (Reception &amp; IT Labs)</text>
+        <text x="480" y="24" fill="#10b981" font-family="'Inter', sans-serif" font-weight="700" font-size="22">6 Guests</text>
+      </g>
+      <g transform="translate(36, 140)">
+        <text x="0" y="24" fill="#ffffff" font-family="'Inter', sans-serif" font-weight="600" font-size="20">Floor 2 (Executive Boardrooms)</text>
+        <text x="480" y="24" fill="#10b981" font-family="'Inter', sans-serif" font-weight="700" font-size="22">8 Guests</text>
+      </g>
+      <g transform="translate(36, 200)">
+        <rect width="524" height="50" rx="14" fill="#10b981" opacity="0.15"/>
+        <text x="262" y="32" fill="#10b981" font-family="'Inter', sans-serif" font-weight="700" font-size="18" text-anchor="middle">✓ Zero unaccounted visitors</text>
+      </g>
+    </g>
+  </g>
+
+  <rect x="290" y="1640" width="200" height="6" rx="3" fill="#ffffff" opacity="0.3"/>
+</svg>
