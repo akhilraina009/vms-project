@@ -8341,15 +8341,247 @@ body .stat-arrow {
     display: none !important;
   }
 
+  /* 8. Universal Responsive Modals on Mobile */
   body .modal-content,
+  body .vms-dossier-modal,
   body .it-dossier-modal,
   body .it-recovery-modal,
   body .checkout-modal,
-  body .vms-settings-modal {
-    width: 96% !important;
+  body .vms-settings-modal,
+  body .ch-modal,
+  body .it-asset-tracker-card,
+  body .verification-card,
+  body .checkout-panel,
+  body .checkout-history-details {
+    width: 96vw !important;
+    max-width: 100% !important;
     max-height: 94vh !important;
-    padding: 14px !important;
-    margin: 8px auto !important;
+    padding: 14px 12px !important;
+    margin: 6px auto !important;
+    box-sizing: border-box !important;
+    border-radius: 14px !important;
+  }
+
+  body .modal-overlay,
+  body .it-asset-modal-overlay,
+  body .ch-modal-overlay,
+  body .vms-dossier-overlay {
+    padding: 6px 4px !important;
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* 9. Interactive Departure Dossier & Dual Cards on Small Viewports */
+  body .it-asset-cards-wrapper {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body .it-asset-view-switcher-bar {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    justify-content: flex-start !important;
+    padding: 6px 8px !important;
+    border-radius: 20px !important;
+    margin-bottom: 12px !important;
+    scrollbar-width: none !important;
+  }
+  body .it-asset-view-switcher-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  body .it-asset-switcher-pill {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 5px 11px !important;
+    font-size: 11.5px !important;
+  }
+
+  body .it-asset-contractor-bar {
+    padding: 10px 12px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  body .it-asset-contractor-info,
+  body .it-asset-contractor-meta {
+    width: 100% !important;
+  }
+
+  body .it-asset-cat-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    padding: 8px 10px !important;
+  }
+
+  body .it-asset-cat-pill {
+    padding: 5px 3px !important;
+    font-size: 10.5px !important;
+  }
+
+  body .vms-dossier-profile-card {
+    padding: 12px 10px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 12px !important;
+  }
+
+  body .vms-dossier-avatar-col {
+    margin: 0 auto !important;
+  }
+
+  body .vms-dossier-avatar-box {
+    width: 90px !important;
+    height: 90px !important;
+  }
+
+  body .vms-dossier-info-col {
+    width: 100% !important;
+  }
+
+  body .vms-dossier-grid-details {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    text-align: left !important;
+  }
+
+  body .vms-active-visit-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Custody Reconciliation 4-box - 2x2 grid on mobile */
+  body .ch-recon-box {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    padding: 10px !important;
+  }
+
+  body .ch-recon-item {
+    padding: 8px 6px !important;
+  }
+
+  body .ch-recon-val {
+    font-size: 15px !important;
+  }
+
+  body .ch-recon-lbl {
+    font-size: 10px !important;
+  }
+
+  /* 10. Forms, Filter Bars & Touch Targets */
+  body .filter-bar,
+  body .search-box-wrap,
+  body .action-bar {
+    width: 100% !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  body .search-input,
+  body .filter-select {
+    width: 100% !important;
+    font-size: 13px !important;
+  }
+
+  body .btn,
+  body .action-btn,
+  body .submit-btn {
+    min-height: 40px !important;
+  }
+
+  /* Universal touch horizontal scroll containers */
+  body .table-wrap,
+  body .table-container,
+  body .table-responsive,
+  body .vms-table-container,
+  body .it-dossier-table-wrap,
+  body .ch-table-wrap {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin-bottom: 12px !important;
+  }
+}
+
+/* E. Compact Phone Screens (<= 420px) */
+@media (max-width: 420px) {
+  body .main-content {
+    padding-top: 68px !important;
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+    padding-bottom: 28px !important;
+  }
+
+  body .topbar,
+  body .it-management-header,
+  body .ch-header {
+    padding: 12px 10px !important;
+  }
+
+  body .ch-recon-box {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  body .it-asset-cat-grid {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+  }
+
+  body .ch-metrics-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  body .stats-grid,
+  body .stats-grid.stats-grid-5,
+  body .stats-grid.stats-grid-6 {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  body .modal-content,
+  body .vms-dossier-modal,
+  body .it-dossier-modal,
+  body .ch-modal {
+    width: 98vw !important;
+    padding: 10px 8px !important;
+  }
+}
+
+/* F. Ultra-Compact & Foldable Screens (<= 360px) */
+@media (max-width: 360px) {
+  body .mobile-brand-title {
+    font-size: 15px !important;
+  }
+
+  body .it-page-title,
+  body .ch-header-titles h2,
+  body .topbar h2 {
+    font-size: 16px !important;
+  }
+
+  body .it-asset-card-title {
+    font-size: 13px !important;
+  }
+
+  body .ch-date-field,
+  body .ch-dropdown,
+  body .ch-search-input {
+    font-size: 12px !important;
   }
 }
 

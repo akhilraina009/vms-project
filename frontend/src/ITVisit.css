@@ -1828,6 +1828,226 @@ html.dark .it-asset-btn-toggle.retained.active,
   color: #93c5fd !important;
 }
 
+/* =========================================================
+   IT VISITOR HARDWARE TRACKER & CLEARANCE MOBILE RESPONSIVENESS
+   (Screen Viewports: 0px to 991px)
+   ========================================================= */
+@media (max-width: 991px) {
+  .it-asset-modal-overlay {
+    padding: 12px 10px;
+  }
+
+  .it-asset-cards-wrapper {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .it-asset-modal-overlay {
+    padding: 6px 4px !important;
+    align-items: flex-start !important;
+    overflow-y: auto !important;
+  }
+
+  .it-asset-modal-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 4px auto !important;
+  }
+
+  /* View switcher bar - touch scrollable */
+  .it-asset-view-switcher-bar {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    -webkit-overflow-scrolling: touch !important;
+    justify-content: flex-start !important;
+    padding: 6px 8px !important;
+    border-radius: 16px !important;
+    margin-bottom: 12px !important;
+    scrollbar-width: none;
+  }
+  .it-asset-view-switcher-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .it-asset-switcher-pill {
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    padding: 5px 10px !important;
+    font-size: 11.5px !important;
+  }
+
+  /* Cards wrapper - vertical stack in dual view on mobile */
+  .it-asset-cards-wrapper {
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 16px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .it-asset-tracker-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 14px !important;
+  }
+
+  .it-asset-card-header {
+    padding: 12px 14px !important;
+  }
+
+  .it-asset-card-title {
+    font-size: 14px !important;
+  }
+
+  .it-asset-contractor-bar {
+    padding: 10px 14px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+  }
+
+  .it-asset-contractor-info {
+    width: 100% !important;
+  }
+
+  .it-asset-contractor-meta {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    border-top: 1px dashed rgba(148, 163, 184, 0.2) !important;
+    padding-top: 6px !important;
+  }
+
+  .it-asset-cat-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    padding: 8px 12px !important;
+  }
+
+  .it-asset-cat-pill {
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+    text-align: center !important;
+  }
+
+  .it-asset-card-body {
+    padding: 12px !important;
+    max-height: 52vh !important;
+  }
+
+  .it-asset-item-card {
+    padding: 10px !important;
+    gap: 8px !important;
+  }
+
+  .it-asset-card-footer {
+    padding: 12px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .it-asset-card-footer button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Full Dossier Modal in Checkout & IT */
+  .vms-dossier-modal,
+  .it-asset-modal-inner .vms-dossier-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 94vh !important;
+    border-radius: 14px !important;
+    overflow-y: auto !important;
+    padding: 0 !important;
+  }
+
+  .vms-dossier-header {
+    padding: 12px 14px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+  }
+
+  .vms-dossier-header-actions {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .vms-dossier-body {
+    padding: 12px !important;
+    gap: 14px !important;
+  }
+
+  .vms-dossier-profile-card {
+    padding: 14px 12px !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 12px !important;
+  }
+
+  .vms-dossier-profile-details {
+    width: 100% !important;
+  }
+
+  .vms-dossier-grid-details {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    text-align: left !important;
+  }
+
+  .vms-active-visit-banner {
+    padding: 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .vms-active-visit-grid {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Custody Reconciliation 4-box - 2x2 grid on mobile */
+  .ch-recon-box {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    padding: 10px !important;
+  }
+
+  .ch-recon-item {
+    padding: 10px 8px !important;
+  }
+
+  .ch-recon-val {
+    font-size: 16px !important;
+  }
+
+  .ch-recon-lbl {
+    font-size: 10.5px !important;
+  }
+
+  /* Signatures */
+  .ch-print-signatures,
+  .it-cert-signatures-row {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .ch-recon-box {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+}
+
 /* Master IT Visit Print Rules */
 @media print {
   @page {

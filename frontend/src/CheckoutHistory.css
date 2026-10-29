@@ -2932,6 +2932,318 @@ html.dark body select.ch-dropdown option {
 
 
 /* =========================================================
+   CHECKOUT HISTORY MOBILE RESPONSIVENESS (0px to 991px)
+   ========================================================= */
+@media (max-width: 991px) {
+  .ch-container {
+    padding: 0 4px;
+    gap: 16px;
+  }
+
+  .ch-header {
+    padding: 16px 18px;
+    gap: 14px;
+    border-radius: 14px;
+  }
+
+  .ch-header-titles h2 {
+    font-size: 19px;
+  }
+
+  .ch-header-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .ch-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ch-container {
+    padding: 0;
+    gap: 14px;
+  }
+
+  .ch-header {
+    padding: 14px 14px;
+    border-radius: 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .ch-header-titles {
+    width: 100%;
+  }
+
+  .ch-header-titles h2 {
+    font-size: 17px;
+    gap: 8px;
+  }
+
+  .ch-header-titles p {
+    font-size: 12px;
+  }
+
+  .ch-header-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .ch-btn-export,
+  .ch-btn-refresh,
+  .ch-btn-back {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  /* Scope pill row - smooth touch scrolling */
+  .ch-scope-bar {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px;
+    padding-bottom: 6px;
+    width: 100%;
+    scrollbar-width: none;
+  }
+  .ch-scope-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ch-scope-pill {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+
+  /* Date Control Card */
+  .ch-control-card {
+    padding: 14px 12px;
+    border-radius: 12px;
+    gap: 14px;
+  }
+
+  /* Date Presets - touch scrollable horizontal strip */
+  .ch-date-presets {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    gap: 6px;
+    padding-bottom: 8px;
+    width: 100%;
+    scrollbar-width: none;
+  }
+  .ch-date-presets::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ch-preset-label {
+    flex-shrink: 0;
+    font-size: 11px;
+  }
+
+  .ch-preset-btn {
+    white-space: nowrap;
+    flex-shrink: 0;
+    padding: 5px 10px;
+    font-size: 11.5px;
+  }
+
+  /* Date inputs row - stacks neatly */
+  .ch-date-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .ch-date-input-group {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .ch-date-input-label {
+    min-width: 45px;
+    font-size: 12px;
+  }
+
+  .ch-date-field {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    font-size: 12.5px;
+    padding: 7px 10px;
+  }
+
+  .ch-date-basis-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: stretch;
+  }
+
+  .ch-basis-btn {
+    flex: 1;
+    text-align: center;
+    padding: 6px 6px;
+    font-size: 11.5px;
+  }
+
+  .ch-btn-clear-date {
+    width: 100%;
+    justify-content: center;
+    padding: 7px 10px;
+    font-size: 12px;
+  }
+
+  /* Secondary Filter Bar (Search + Dropdowns) */
+  .ch-filter-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .ch-search-box {
+    width: 100%;
+    min-width: 0;
+    flex: none;
+  }
+
+  .ch-search-input {
+    width: 100% !important;
+    font-size: 13px !important;
+  }
+
+  .ch-dropdown {
+    width: 100% !important;
+    font-size: 12.5px !important;
+  }
+
+  /* Metrics grid */
+  .ch-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .ch-metric-card {
+    padding: 12px 14px;
+    border-radius: 12px;
+    gap: 10px;
+  }
+
+  .ch-metric-icon {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    border-radius: 9px;
+  }
+
+  .ch-metric-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .ch-metric-val {
+    font-size: 19px;
+  }
+
+  .ch-metric-lbl {
+    font-size: 11.5px;
+  }
+
+  .ch-metric-sublbl {
+    font-size: 10.5px;
+  }
+
+  /* Main Table Card */
+  .ch-table-card {
+    border-radius: 12px;
+  }
+
+  .ch-table-meta-bar {
+    padding: 10px 14px;
+    font-size: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .ch-table-wrap,
+  .ch-table-card div:has(> table.ch-table) {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    display: block !important;
+  }
+
+  .ch-table {
+    min-width: 680px;
+  }
+
+  .ch-table th,
+  .ch-table td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  /* Pagination Bar */
+  .ch-pagination {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .ch-pagination-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .ch-header-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .ch-metrics-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .ch-date-input-group {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ch-date-field {
+    width: 100%;
+  }
+
+  .ch-metric-card {
+    padding: 10px 12px;
+  }
+}
+
+/* =========================================================
    CHECKOUT HISTORY MASTER AUDIT REPORT & MODAL PRINT ENGINE
    ========================================================= */
 @media print {
