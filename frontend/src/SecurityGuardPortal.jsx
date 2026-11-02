@@ -26,6 +26,7 @@ import {
   PackageCheck,
   UserCheck,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   Maximize2,
   Radio,
@@ -87,6 +88,99 @@ const resolvePhotoUrl = (url) => {
   }
   return `/${clean}`;
 };
+
+// Mobile Custom Select Dropdown Component (replaces unstyled native selects)
+function MobileCustomSelect({ value, onChange, options, placeholder = "Select an option..." }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+  const selectId = useRef(Math.random().toString(36).slice(2));
+
+  // Close when other select opens
+  useEffect(() => {
+    const handleOtherOpen = (e) => {
+      if (e.detail !== selectId.current) {
+        setIsOpen(false);
+      }
+    };
+    window.addEventListener("vms-custom-select-open", handleOtherOpen);
+    return () => window.removeEventListener("vms-custom-select-open", handleOtherOpen);
+  }, []);
+
+  // Close when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+      document.addEventListener("touchstart", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [isOpen]);
+
+  const toggleDropdown = () => {
+    setIsOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        window.dispatchEvent(new CustomEvent("vms-custom-select-open", { detail: selectId.current }));
+      }
+      return next;
+    });
+  };
+
+  const selectedOpt = options.find((opt) => (typeof opt === "object" ? opt.value === value : opt === value));
+  const currentLabel = selectedOpt
+    ? typeof selectedOpt === "object"
+      ? selectedOpt.label
+      : selectedOpt
+    : (value || placeholder);
+
+  return (
+    <div className={`sgp-mob-custom-select-wrap ${isOpen ? "is-open" : ""}`} ref={containerRef}>
+      <button
+        type="button"
+        className={`sgp-mob-custom-select-trigger ${isOpen ? "active" : ""}`}
+        onClick={toggleDropdown}
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className="sgp-mob-custom-select-label-text">{currentLabel}</span>
+        <ChevronDown size={18} className={`sgp-mob-custom-select-chevron ${isOpen ? "open" : ""}`} />
+      </button>
+
+      {isOpen && (
+        <div className="sgp-mob-custom-select-dropdown" role="listbox">
+          {options.map((opt, i) => {
+            const optVal = typeof opt === "object" ? opt.value : opt;
+            const optLabel = typeof opt === "object" ? opt.label : opt;
+            const isSelected = optVal === value;
+
+            return (
+              <div
+                key={i}
+                role="option"
+                aria-selected={isSelected}
+                className={`sgp-mob-custom-select-option ${isSelected ? "selected" : ""}`}
+                onClick={() => {
+                  onChange(optVal);
+                  setIsOpen(false);
+                }}
+              >
+                <span className="sgp-mob-custom-select-option-text">{optLabel}</span>
+                {isSelected && <Check size={16} className="sgp-mob-custom-select-check-icon" />}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken }) {
   const [theme, setTheme] = useState(() => localStorage.getItem("vms-theme") || "dark");
@@ -4175,29 +4269,29 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
 
                       <div className="sgp-mob-field-group">
                         <label className="sgp-mob-field-label">Assigned Gate Station</label>
-                        <select
-                          className="sgp-mob-field-select"
+                        <MobileCustomSelect
                           value={guardProfile.gate}
-                          onChange={(e) => setGuardProfile({ ...guardProfile, gate: e.target.value })}
-                        >
-                          <option value="Main Reception (Gate 01)">Main Reception (Gate 01)</option>
-                          <option value="Gate 02 - IT & Staff Lane">Gate 02 - IT & Staff Lane</option>
-                          <option value="Gate 03 - Service & Delivery">Gate 03 - Service & Delivery</option>
-                          <option value="Gate 04 - VIP Entrance">Gate 04 - VIP Entrance</option>
-                        </select>
+                          onChange={(val) => setGuardProfile({ ...guardProfile, gate: val })}
+                          options={[
+                            "Main Reception (Gate 01)",
+                            "Gate 02 - IT & Staff Lane",
+                            "Gate 03 - Service & Delivery",
+                            "Gate 04 - VIP Entrance"
+                          ]}
+                        />
                       </div>
 
                       <div className="sgp-mob-field-group">
                         <label className="sgp-mob-field-label">Duty Shift Schedule</label>
-                        <select
-                          className="sgp-mob-field-select"
+                        <MobileCustomSelect
                           value={guardProfile.shift}
-                          onChange={(e) => setGuardProfile({ ...guardProfile, shift: e.target.value })}
-                        >
-                          <option value="Shift A (08:00 - 16:00)">Shift A (08:00 - 16:00) · Day Duty</option>
-                          <option value="Shift B (16:00 - 00:00)">Shift B (16:00 - 00:00) · Evening Duty</option>
-                          <option value="Shift C (00:00 - 08:00)">Shift C (00:00 - 08:00) · Night Duty</option>
-                        </select>
+                          onChange={(val) => setGuardProfile({ ...guardProfile, shift: val })}
+                          options={[
+                            { value: "Shift A (08:00 - 16:00)", label: "Shift A (08:00 - 16:00) · Day Duty" },
+                            { value: "Shift B (16:00 - 00:00)", label: "Shift B (16:00 - 00:00) · Evening Duty" },
+                            { value: "Shift C (00:00 - 08:00)", label: "Shift C (00:00 - 08:00) · Night Duty" }
+                          ]}
+                        />
                       </div>
 
                       <div className="sgp-mob-sheet-footer" style={{ padding: "14px 0 0", margin: 0 }}>
@@ -4244,16 +4338,16 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
 
                       <div className="sgp-mob-field-group">
                         <label className="sgp-mob-field-label">Active Terminal Gate</label>
-                        <select
-                          className="sgp-mob-field-select"
+                        <MobileCustomSelect
                           value={terminalSettings.gateLocation}
-                          onChange={(e) => setTerminalSettings({ ...terminalSettings, gateLocation: e.target.value })}
-                        >
-                          <option value="Main Reception (Gate 01)">Main Reception (Gate 01)</option>
-                          <option value="Gate 02 - IT & Staff Lane">Gate 02 - IT & Staff Lane</option>
-                          <option value="Gate 03 - Service & Delivery">Gate 03 - Service & Delivery</option>
-                          <option value="Gate 04 - VIP Entrance">Gate 04 - VIP Entrance</option>
-                        </select>
+                          onChange={(val) => setTerminalSettings({ ...terminalSettings, gateLocation: val })}
+                          options={[
+                            "Main Reception (Gate 01)",
+                            "Gate 02 - IT & Staff Lane",
+                            "Gate 03 - Service & Delivery",
+                            "Gate 04 - VIP Entrance"
+                          ]}
+                        />
                       </div>
 
                       <div className="sgp-mob-switch-row">
@@ -4594,17 +4688,17 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
 
                         <div className="sgp-mob-field-group">
                           <label className="sgp-mob-field-label">Issue Category</label>
-                          <select
-                            className="sgp-mob-field-select"
+                          <MobileCustomSelect
                             value={supportTicket.category}
-                            onChange={(e) => setSupportTicket({ ...supportTicket, category: e.target.value })}
-                          >
-                            <option value="Scanner Hardware Issue">Scanner Camera / Hardware Failure</option>
-                            <option value="Visitor Badge Discrepancy">Visitor QR Badge Verification Issue</option>
-                            <option value="Hardware Asset Tracking Dispute">IT Contractor Hardware Asset Mismatch</option>
-                            <option value="Printer & Pass Slip">Gate Printer / Pass Slip Malfunction</option>
-                            <option value="Network Connectivity">Terminal Network / Sync Lag</option>
-                          </select>
+                            onChange={(val) => setSupportTicket({ ...supportTicket, category: val })}
+                            options={[
+                              { value: "Scanner Hardware Issue", label: "Scanner Camera / Hardware Failure" },
+                              { value: "Visitor Badge Discrepancy", label: "Visitor QR Badge Verification Issue" },
+                              { value: "Hardware Asset Tracking Dispute", label: "IT Contractor Hardware Asset Mismatch" },
+                              { value: "Printer & Pass Slip", label: "Gate Printer / Pass Slip Malfunction" },
+                              { value: "Network Connectivity", label: "Terminal Network / Sync Lag" }
+                            ]}
+                          />
                         </div>
 
                         <div className="sgp-mob-field-group">
