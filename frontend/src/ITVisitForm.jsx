@@ -562,7 +562,8 @@ export default function ITVisitForm({ hosts = [] }) {
         throw new Error("Server response did not include a pass token.");
       }
 
-      window.location.assign(`/visitor-pass/${encodeURIComponent(result.qr_token)}`);
+      sessionStorage.setItem("vms_auto_download_pass", "true");
+      window.location.assign(`/visitor-pass/${encodeURIComponent(result.qr_token)}?autodownload=1`);
     } catch (err) {
       console.error("IT Registration error:", err);
       setError(err.message || "Unable to submit your registration. Please try again.");

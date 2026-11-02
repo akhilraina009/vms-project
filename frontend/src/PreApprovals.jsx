@@ -26,8 +26,17 @@ import {
   ShieldCheck,
   Check,
   AlertTriangle,
+  SlidersHorizontal,
+  MoreVertical,
+  CalendarPlus,
+  CalendarCheck,
+  Tag,
+  Calendar,
+  User,
+  FileEdit,
 } from "lucide-react";
 import { authStorage } from "./utils/authStorage";
+import { isITApproval } from "./utils/approvalFilters";
 
 const API_BASE_URL = "";
 const PHOTO_BASE_URL = "";
@@ -170,6 +179,7 @@ export default function PreApprovals({
   onVisitCheckedIn,
   filterToday = false,
   onShowAll,
+  onPreApprovalChange,
 }) {
   const [visitors, setVisitors] = useState([]);
   const [hosts, setHosts] = useState([]);
@@ -216,7 +226,7 @@ export default function PreApprovals({
       const generalApprovals = (Array.isArray(approvalData) ? approvalData : []).filter(
         (item) => {
           const purpose = String(item.purpose || "").toUpperCase();
-          const isIT = purpose.includes("[IT_VISIT]");
+          const isIT = isITApproval(item, visitorData, hostData);
           return !isIT;
         }
       );
@@ -257,9 +267,9 @@ export default function PreApprovals({
   };
 
   const todayKey = getTodayKey();
-  const baseApprovals = filterToday
+  const baseApprovals = (filterToday
     ? approvals.filter((item) => getDateKey(item.expected_in_time) === todayKey)
-    : approvals;
+    : approvals).filter((item) => !isITApproval(item, visitors, hosts));
 
   const totalCount = baseApprovals.length;
   const pendingCount = baseApprovals.filter(
@@ -392,6 +402,7 @@ export default function PreApprovals({
       const visitorName = getVisitorName(created);
       setForm(emptyForm);
       setSuccess("Pre-approval created successfully in PENDING status. Admin can review and approve.");
+      onPreApprovalChange?.();
 
       onNotification?.({
         title: "Pre-Approval Created",
@@ -475,6 +486,7 @@ export default function PreApprovals({
       setError(err.message || "Unable to update pre-approval.");
     } finally {
       setActionLoading("");
+      onPreApprovalChange?.();
     }
   };
 
@@ -932,7 +944,8 @@ export default function PreApprovals({
         </div>
       )}
 
-      {/* Main Page Header */}
+      <div className="vms-desktop-only">
+{/* Main Page Header */}
       <div className="it-management-header">
         <div className="it-header-title-box">
           <div className="it-header-badge-row">
@@ -1631,6 +1644,639 @@ export default function PreApprovals({
           </div>
         )}
       </section>
+      </div>
+
+      {/* =========================================================================
+          MOBILE VIEW ONLY (<= 768px) - Exact match for media_1793424032872_004ea4fc.jpg
+          ========================================================================= */}
+      <div className="vms-mobile-only mobile-preapprovals-container">
+        {/* 1. Executive Dark Navy Hero Card */}
+        <div className="mobile-preapproval-hero">
+          <div className="mobile-preapproval-hero-badges">
+            <span className="mobile-preapproval-badge-pill">
+              CORPORATE &amp; GENERAL VISITORS
+            </span>
+            <span className="mobile-preapproval-telemetry-pill">
+              <span className="status-dot"></span>
+              Admin Approval Desk Active
+            </span>
+          </div>
+
+          <h2 className="mobile-preapproval-hero-title">
+            General Visitor Pre-Approvals
+          </h2>
+          <p className="mobile-preapproval-hero-desc">
+            Review visitor requests, verify identity and visit details, and authorize gate entry.
+          </p>
+
+          <div className="mobile-preapproval-hero-controls">
+            <button
+              type="button"
+              className="mobile-preapproval-btn-outline"
+              onClick={() => window.open("/register-visitor", "_blank")}
+              title="Open Visitor Registration Form"
+            >
+              <FileEdit size={14} />
+              <span>Visitor Form</span>
+            </button>
+
+            <button
+              type="button"
+              className="mobile-preapproval-btn-outline"
+              onClick={() => window.open("/guard", "_blank")}
+              title="Open Gate Terminal"
+            >
+              <ExternalLink size={14} />
+              <span>Gate Terminal</span>
+            </button>
+
+            <button
+              type="button"
+              className="mobile-preapproval-btn-refresh"
+              onClick={fetchData}
+              disabled={loading}
+              title="Refresh pre-approvals"
+            >
+              <RefreshCw size={15} className={loading ? "spin" : ""} />
+            </button>
+          </div>
+        </div>
+
+        {/* 2. 5 KPI Metrics Cards (2x2 + 1) */}
+        <div className="mobile-preapproval-stats-grid">
+          {/* Card 1: Total Requests */}
+          <div
+            className={`mobile-preapproval-stat-card ${statusFilter === "all" ? "active" : ""}`}
+            onClick={() => setStatusFilter("all")}
+          >
+            <div className="mobile-preapproval-stat-icon blue">
+              <ClipboardList size={18} />
+            </div>
+            <div className="mobile-preapproval-stat-content">
+              <strong>{totalCount}</strong>
+              <span>Total Requests</span>
+            </div>
+            <ChevronRight size={14} className="mobile-preapproval-stat-arrow" />
+          </div>
+
+          {/* Card 2: Pending Review */}
+          <div
+            className={`mobile-preapproval-stat-card ${statusFilter === "PENDING" ? "active" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "PENDING" ? "all" : "PENDING")}
+          >
+            <div className="mobile-preapproval-stat-icon amber">
+              <Hourglass size={18} />
+            </div>
+            <div className="mobile-preapproval-stat-content">
+              <strong>{pendingCount}</strong>
+              <span>Pending Review</span>
+            </div>
+            <ChevronRight size={14} className="mobile-preapproval-stat-arrow" />
+          </div>
+
+          {/* Card 3: Host Busy (Waiting) */}
+          <div
+            className={`mobile-preapproval-stat-card ${statusFilter === "WAITING" ? "active" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "WAITING" ? "all" : "WAITING")}
+          >
+            <div className="mobile-preapproval-stat-icon orange">
+              <Clock size={18} />
+            </div>
+            <div className="mobile-preapproval-stat-content">
+              <strong>{waitingCount}</strong>
+              <span>Host Busy (Waiting)</span>
+            </div>
+            <ChevronRight size={14} className="mobile-preapproval-stat-arrow" />
+          </div>
+
+          {/* Card 4: Approved */}
+          <div
+            className={`mobile-preapproval-stat-card ${statusFilter === "APPROVED" ? "active" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "APPROVED" ? "all" : "APPROVED")}
+          >
+            <div className="mobile-preapproval-stat-icon green">
+              <CheckCircle2 size={18} />
+            </div>
+            <div className="mobile-preapproval-stat-content">
+              <strong>{approvedCount}</strong>
+              <span>Approved</span>
+            </div>
+            <ChevronRight size={14} className="mobile-preapproval-stat-arrow" />
+          </div>
+
+          {/* Card 5: Rejected */}
+          <div
+            className={`mobile-preapproval-stat-card ${statusFilter === "REJECTED" ? "active" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "REJECTED" ? "all" : "REJECTED")}
+          >
+            <div className="mobile-preapproval-stat-icon purple">
+              <XCircle size={18} />
+            </div>
+            <div className="mobile-preapproval-stat-content">
+              <strong>{rejectedCount}</strong>
+              <span>Rejected</span>
+            </div>
+            <ChevronRight size={14} className="mobile-preapproval-stat-arrow" />
+          </div>
+        </div>
+
+        {error && (
+          <div className="error-banner" role="alert">
+            <XCircle size={17} />
+            <span>{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div
+            role="status"
+            style={{
+              padding: "12px 14px",
+              borderRadius: "10px",
+              background: "rgba(16, 185, 129, 0.12)",
+              color: "#047857",
+              border: "1px solid rgba(16, 185, 129, 0.3)",
+              fontSize: "12.5px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <CheckCircle2 size={16} />
+            <span>{success}</span>
+          </div>
+        )}
+
+        {/* 3. Schedule New Expected Visitor Form Card */}
+        <section className="mobile-preapproval-form-card">
+          <div className="mobile-preapproval-form-header">
+            <div>
+              <h3 className="mobile-preapproval-form-title">Schedule New Expected Visitor</h3>
+              <p className="mobile-preapproval-form-sub">
+                Add a advance appointment or expected visitor to the pre-clearance register.
+              </p>
+            </div>
+            <CalendarCheck size={20} className="mobile-preapproval-form-icon" />
+          </div>
+
+          <form onSubmit={handleCreate} className="mobile-preapproval-form">
+            {/* Visitor Field */}
+            <div className="mobile-preapproval-field">
+              <label>Visitor <span className="req">*</span></label>
+              <div className="mobile-preapproval-visitor-select-row">
+                <select
+                  name="visitor_id"
+                  value={form.visitor_id}
+                  onChange={handleInput}
+                  required
+                  disabled={loading}
+                  className="mobile-preapproval-select"
+                >
+                  <option value="">Select visitor</option>
+                  {visitors.map((visitor) => (
+                    <option key={visitor.visitor_id} value={visitor.visitor_id}>
+                      {`${visitor.first_name || ""} ${visitor.last_name || ""}`.trim()}
+                      {visitor.company_name ? ` — ${visitor.company_name}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="mobile-preapproval-btn-reg"
+                  onClick={() => {
+                    setShowNewVisitor((prev) => !prev);
+                    setError("");
+                    setSuccess("");
+                  }}
+                  disabled={registeringVisitor}
+                >
+                  {showNewVisitor ? "Close" : "+ Register New Visitor"}
+                </button>
+              </div>
+            </div>
+
+            {/* Quick Register Visitor Modal/Form if expanded */}
+            {showNewVisitor && (
+              <div className="mobile-preapproval-new-vis-box">
+                <div style={{ marginBottom: "10px" }}>
+                  <h4 style={{ margin: "0 0 3px", fontSize: "14px", fontWeight: 700, color: "#0f172a" }}>
+                    Register New Visitor
+                  </h4>
+                  <p style={{ margin: 0, fontSize: "11px", color: "#64748b" }}>
+                    Enter contact and address details.
+                  </p>
+                </div>
+                {[
+                  ["first_name", "First Name *", "First name", true],
+                  ["last_name", "Last Name *", "Last name", true],
+                  ["phone_number", "Phone Number *", "Phone number", true],
+                  ["email", "Email Address", "Email address", false],
+                  ["company_name", "Company Name", "Company name", false],
+                ].map(([name, label, placeholder, required]) => (
+                  <div className="mobile-preapproval-field" key={name}>
+                    <label>{label}</label>
+                    <input
+                      name={name}
+                      value={newVisitor[name]}
+                      onChange={handleNewVisitorInput}
+                      placeholder={placeholder}
+                      required={required}
+                      type={name === "email" ? "email" : "text"}
+                      className="mobile-preapproval-input"
+                    />
+                  </div>
+                ))}
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "10px" }}>
+                  <button
+                    type="button"
+                    className="mobile-preapproval-btn-reset"
+                    onClick={() => setShowNewVisitor(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="mobile-preapproval-btn-submit"
+                    disabled={registeringVisitor}
+                    onClick={(event) => {
+                      const formElement = event.currentTarget.closest("form");
+                      if (!newVisitor.first_name.trim() || !newVisitor.last_name.trim() || !newVisitor.phone_number.trim()) {
+                        setError("First name, last name, and phone number are required.");
+                        return;
+                      }
+                      void handleRegisterVisitor({ preventDefault: () => {}, currentTarget: formElement });
+                    }}
+                  >
+                    {registeringVisitor ? "Saving..." : "Save & Select"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Host Field */}
+            <div className="mobile-preapproval-field">
+              <label>Host / Employee <span className="req">*</span></label>
+              <select
+                name="host_employee_id"
+                value={form.host_employee_id}
+                onChange={handleInput}
+                required
+                disabled={loading || hosts.length === 0}
+                className="mobile-preapproval-select"
+              >
+                <option value="">Select host</option>
+                {hosts.map((host) => (
+                  <option key={host.employee_id} value={host.employee_id}>
+                    {`${host.first_name || ""} ${host.last_name || ""}`.trim()}
+                    {host.department ? ` — ${host.department}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Expected Arrival & Departure Grid */}
+            <div className="mobile-preapproval-datetime-grid">
+              <div className="mobile-preapproval-field">
+                <label>Expected Arrival <span className="req">*</span></label>
+                <input
+                  type="datetime-local"
+                  name="expected_in_time"
+                  value={form.expected_in_time}
+                  onChange={handleInput}
+                  required
+                  className="mobile-preapproval-datetime-input"
+                />
+              </div>
+
+              <div className="mobile-preapproval-field">
+                <label>Expected Departure</label>
+                <input
+                  type="datetime-local"
+                  name="expected_out_time"
+                  value={form.expected_out_time}
+                  onChange={handleInput}
+                  min={form.expected_in_time || undefined}
+                  className="mobile-preapproval-datetime-input"
+                />
+              </div>
+            </div>
+
+            {/* Purpose of Visit */}
+            <div className="mobile-preapproval-field">
+              <label>Purpose of Visit <span className="req">*</span></label>
+              <textarea
+                name="purpose"
+                value={form.purpose}
+                onChange={handleInput}
+                placeholder="Enter official reason for this visit"
+                maxLength={500}
+                rows={2}
+                required
+                className="mobile-preapproval-textarea"
+              />
+            </div>
+
+            {/* Form Actions */}
+            <div className="mobile-preapproval-form-actions">
+              <button
+                type="button"
+                className="mobile-preapproval-btn-reset"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setError("");
+                  setSuccess("");
+                }}
+                disabled={submitting}
+              >
+                Reset
+              </button>
+
+              <button
+                type="submit"
+                className="mobile-preapproval-btn-submit"
+                disabled={submitting || loading || visitors.length === 0 || hosts.length === 0}
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw size={14} className="spin" />
+                    <span>Scheduling...</span>
+                  </>
+                ) : (
+                  <>
+                    <CalendarClock size={15} />
+                    <span>Schedule Pre-Approval</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        {/* 4. Queue Section Header */}
+        <div className="mobile-preapproval-queue-header">
+          <div>
+            <h3 className="mobile-preapproval-queue-title">
+              {filterToday ? "Today's General Visitors" : "General Visitor Pre-Approval Queue"}
+            </h3>
+            <p className="mobile-preapproval-queue-sub">
+              {visibleApprovals.length} request{visibleApprovals.length === 1 ? "" : "s"} found - Cross-check visitor details before granting gate clearance.
+            </p>
+          </div>
+        </div>
+
+        {/* 5. Search Bar & Filter Toggle */}
+        <div className="mobile-preapproval-search-row">
+          <div className="mobile-preapproval-input-wrap" style={{ position: "relative", display: "flex", alignItems: "center", flex: 1 }}>
+            <Search size={15} className="mobile-preapproval-search-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+            <input
+              type="text"
+              placeholder="Search visitor, host, company..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="mobile-preapproval-search-input"
+              style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                className="mobile-preapproval-search-clear"
+                onClick={() => setSearchQuery("")}
+                style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", zIndex: 3 }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          <button
+            type="button"
+            className="mobile-preapproval-filter-btn"
+            title="Filter options"
+          >
+            <SlidersHorizontal size={15} />
+          </button>
+        </div>
+
+        {/* 6. Filter Pills Row */}
+        <div className="mobile-preapproval-pills-row">
+          <button
+            type="button"
+            className={`mobile-preapproval-pill ${statusFilter === "all" ? "active" : ""}`}
+            onClick={() => setStatusFilter("all")}
+          >
+            All ({totalCount})
+          </button>
+          <button
+            type="button"
+            className={`mobile-preapproval-pill amber ${statusFilter === "PENDING" ? "active" : ""}`}
+            onClick={() => setStatusFilter("PENDING")}
+          >
+            ⏳ Pending ({pendingCount})
+          </button>
+          <button
+            type="button"
+            className={`mobile-preapproval-pill green ${statusFilter === "APPROVED" ? "active" : ""}`}
+            onClick={() => setStatusFilter("APPROVED")}
+          >
+            ✅ Approved ({approvedCount})
+          </button>
+          <button
+            type="button"
+            className={`mobile-preapproval-pill purple ${statusFilter === "REJECTED" ? "active" : ""}`}
+            onClick={() => setStatusFilter("REJECTED")}
+          >
+            ❌ Rejected ({rejectedCount})
+          </button>
+        </div>
+
+        {/* 7. Mobile Cards Queue */}
+        <div className="mobile-preapproval-cards-list">
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "30px", color: "#64748b", fontSize: "13px" }}>
+              <RefreshCw size={20} className="spin" style={{ marginBottom: "8px" }} />
+              <div>Loading pre-approvals...</div>
+            </div>
+          ) : visibleApprovals.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "30px", background: "#ffffff", borderRadius: "14px", border: "1px solid #e2e8f0", color: "#64748b" }}>
+              <CalendarClock size={28} color="#94a3b8" style={{ marginBottom: "8px" }} />
+              <div style={{ fontSize: "13px", fontWeight: 600 }}>No requests found for the selected filter.</div>
+            </div>
+          ) : (
+            visibleApprovals.map((approval, idx) => {
+              const currentStatus = String(approval.status || "").trim().toUpperCase();
+              const isActionLoading = actionLoading === approval.pre_approval_id;
+              const v = getVisitor(approval);
+              const h = getHost(approval);
+              const visitorFullName = getVisitorName(approval);
+              const hostFullName = getHostName(approval);
+
+              // Initials & Avatar Palette
+              const nameParts = visitorFullName.split(" ").filter(Boolean);
+              const initials = nameParts.length === 1
+                ? nameParts[0].slice(0, 2).toUpperCase()
+                : ((nameParts[0]?.[0] || "") + (nameParts[nameParts.length - 1]?.[0] || "")).toUpperCase() || "SS";
+
+              const palette = [
+                { bg: "#0f172a", text: "#ffffff" },
+                { bg: "#7c3aed", text: "#ffffff" },
+                { bg: "#2563eb", text: "#ffffff" },
+                { bg: "#059669", text: "#ffffff" },
+                { bg: "#ea580c", text: "#ffffff" },
+              ];
+              const avatarStyle = palette[idx % palette.length];
+
+              return (
+                <div className="mobile-preapproval-card" key={approval.pre_approval_id}>
+                  {/* Card Top: Avatar, Name, Company, ID, Status Badge & Menu */}
+                  <div className="mobile-preapproval-card-top">
+                    <div className="mobile-preapproval-card-identity">
+                      <div
+                        className="mobile-preapproval-avatar-box"
+                        style={{ background: avatarStyle.bg, color: avatarStyle.text }}
+                      >
+                        {initials}
+                      </div>
+                      <div className="mobile-preapproval-id-info">
+                        <div className="mobile-preapproval-name-row">
+                          <h4 className="mobile-preapproval-name">{visitorFullName}</h4>
+                        </div>
+                        <div className="mobile-preapproval-sub-row">
+                          <span>{v?.company_name || v?.department || "IT"}</span>
+                        </div>
+                        <div className="mobile-preapproval-id-badge">
+                          ID: {v?.phone_number || approval.pre_approval_id || "2345678987654"}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mobile-preapproval-status-wrap">
+                      {currentStatus === "APPROVED" && (
+                        <span className="mobile-preapproval-status-badge green">Approved for Entry</span>
+                      )}
+                      {currentStatus === "CHECKED_IN" && (
+                        <span className="mobile-preapproval-status-badge purple">Checked In</span>
+                      )}
+                      {currentStatus === "WAITING" && (
+                        <span className="mobile-preapproval-status-badge orange">Host Busy (Waiting)</span>
+                      )}
+                      {currentStatus === "PENDING" && (
+                        <span className="mobile-preapproval-status-badge amber">Pending Review</span>
+                      )}
+                      {currentStatus === "REJECTED" && (
+                        <span className="mobile-preapproval-status-badge red">Rejected</span>
+                      )}
+                      <button
+                        type="button"
+                        className="mobile-preapproval-menu-btn"
+                        onClick={() => setSelectedApproval(approval)}
+                        title="Options"
+                      >
+                        <MoreVertical size={15} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Card Middle: 3-column Grid (Host, Purpose, Expected Arrival) */}
+                  <div className="mobile-preapproval-grid-details">
+                    <div className="mobile-preapproval-detail-col">
+                      <span className="mobile-preapproval-lbl">
+                        <User size={11} /> Host
+                      </span>
+                      <strong className="mobile-preapproval-val">{hostFullName}</strong>
+                    </div>
+
+                    <div className="mobile-preapproval-detail-col">
+                      <span className="mobile-preapproval-lbl">
+                        <Tag size={11} /> Purpose
+                      </span>
+                      <strong className="mobile-preapproval-val" title={approval.purpose || "—"}>
+                        {approval.purpose || "General Visit"}
+                      </strong>
+                    </div>
+
+                    <div className="mobile-preapproval-detail-col">
+                      <span className="mobile-preapproval-lbl">
+                        <Calendar size={11} /> Expected Arrival
+                      </span>
+                      <strong className="mobile-preapproval-val">
+                        {formatDateTime(approval.expected_in_time)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Card Bottom: Action Buttons Row */}
+                  <div className="mobile-preapproval-actions-row">
+                    <button
+                      type="button"
+                      className="mobile-preapproval-btn-verify"
+                      onClick={() => setSelectedApproval(approval)}
+                      title="Cross-check all visitor details and pass"
+                    >
+                      <Eye size={13} />
+                      <span>Verify Details</span>
+                    </button>
+
+                    {currentStatus === "APPROVED" && (
+                      <button
+                        type="button"
+                        className="mobile-preapproval-btn-cleared"
+                      >
+                        <Check size={13} />
+                        <span>Cleared for Gate</span>
+                      </button>
+                    )}
+
+                    {currentStatus === "CHECKED_IN" && (
+                      <button
+                        type="button"
+                        className="mobile-preapproval-btn-onpremises"
+                      >
+                        <span className="status-dot-purple"></span>
+                        <span>On Premises</span>
+                      </button>
+                    )}
+
+                    {currentStatus === "PENDING" && (
+                      <button
+                        type="button"
+                        className="mobile-preapproval-btn-approve"
+                        disabled={isActionLoading}
+                        onClick={() => handleDecision(approval, "approve")}
+                      >
+                        <Check size={13} />
+                        <span>Approve Entry</span>
+                      </button>
+                    )}
+
+                    {currentStatus === "WAITING" && (
+                      <button
+                        type="button"
+                        className="mobile-preapproval-btn-approve"
+                        disabled={isActionLoading}
+                        onClick={() => handleDecision(approval, "approve")}
+                      >
+                        <Check size={13} />
+                        <span>Approve Now</span>
+                      </button>
+                    )}
+
+                    {currentStatus === "REJECTED" && (
+                      <button
+                        type="button"
+                        className="mobile-preapproval-btn-rejected"
+                      >
+                        <X size={13} />
+                        <span>Entry Denied</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
     </>
   );
 }

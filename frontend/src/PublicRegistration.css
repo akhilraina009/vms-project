@@ -1002,3 +1002,69 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* =========================================================
+   FORCE CLEAN LIGHT THEME ON PUBLIC REGISTRATION
+========================================================= */
+html body:has(.public-registration),
+html body:has(.public-card),
+.public-registration,
+.public-card,
+.public-grid {
+  color-scheme: light !important;
+}
+
+html body:has(.public-registration) input,
+html body:has(.public-registration) select,
+html body:has(.public-registration) textarea,
+html body:has(.public-card) input,
+html body:has(.public-card) select,
+html body:has(.public-card) textarea,
+html[data-theme="dark"] body .public-registration input,
+html[data-theme="dark"] body .public-registration select,
+html[data-theme="dark"] body .public-registration textarea,
+html.dark body .public-registration input,
+html.dark body .public-registration select,
+html.dark body .public-registration textarea,
+[data-theme="dark"] .public-registration input,
+[data-theme="dark"] .public-registration select,
+[data-theme="dark"] .public-registration textarea,
+.public-registration input,
+.public-registration select,
+.public-registration textarea,
+.public-card input,
+.public-card select,
+.public-card textarea,
+.public-grid input,
+.public-grid select,
+.public-grid textarea {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  font-size: 15px !important;
+}
+
+.public-page input::placeholder,
+.public-card input::placeholder,
+.public-grid input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.public-page input:focus,
+.public-page select:focus,
+.public-page textarea:focus,
+.public-card input:focus,
+.public-card select:focus,
+.public-card textarea:focus,
+.public-grid input:focus,
+.public-grid select:focus,
+.public-grid textarea:focus {
+  background: #ffffff !important;
+  border-color: #2563eb !important;
+  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.15) !important;
+  color: #0f172a !important;
+  outline: none !important;
+}

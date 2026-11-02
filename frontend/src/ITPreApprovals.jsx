@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import "./PremiumEnterprise.css";
 import "./App.css";
+import "./ITVisit.css";
 import {
   Laptop,
   CheckCircle2,
@@ -26,11 +27,48 @@ import {
   HardDrive,
   ExternalLink,
   CalendarClock,
+  Filter,
+  RotateCcw,
+  ChevronUp,
+  ChevronDown,
+  Calendar,
+  ArrowUpDown,
+  MoreVertical,
+  SlidersHorizontal,
 } from "lucide-react";
 import { authStorage } from "./utils/authStorage";
+import { isITApproval } from "./utils/approvalFilters";
 
 const API_BASE_URL = "";
 const PHOTO_BASE_URL = "";
+
+function resolvePhotoUrl(photoUrl) {
+  if (!photoUrl) return "";
+  const clean = String(photoUrl).trim().replace(/\\/g, "/");
+  if (
+    clean.startsWith("http://") ||
+    clean.startsWith("https://") ||
+    clean.startsWith("data:") ||
+    clean.startsWith("blob:")
+  ) {
+    return clean;
+  }
+  if (clean.includes("/uploads/")) {
+    const uploadIndex = clean.indexOf("/uploads/");
+    return clean.slice(uploadIndex);
+  }
+  if (clean.startsWith("uploads/")) {
+    return `/${clean}`;
+  }
+  return `${PHOTO_BASE_URL}${clean}`;
+}
+
+function getInitials(name) {
+  if (!name) return "IT";
+  const parts = String(name).trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
 
 async function apiFetch(url, options = {}) {
   const token = authStorage.getVmsToken();
@@ -127,7 +165,7 @@ function getStatusStyle(status) {
   };
 }
 
-export default function ITPreApprovals({ onBack, onNotification }) {
+export default function ITPreApprovals({ onBack, onNotification, onPreApprovalChange }) {
   const [approvals, setApprovals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState("");
@@ -135,6 +173,12 @@ export default function ITPreApprovals({ onBack, onNotification }) {
   const [success, setSuccess] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Mobile-specific filter states
+  const [mobileCompanyFilter, setMobileCompanyFilter] = useState("all");
+  const [mobileHostFilter, setMobileHostFilter] = useState("all");
+  const [mobileDateFilter, setMobileDateFilter] = useState("all");
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(true);
 
   // Detailed Modal State
   const [selectedApproval, setSelectedApproval] = useState(null);
@@ -231,7 +275,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
       // Only include entries submitted through the IT Visit form ([IT_VISIT] tag in purpose)
       const itWorkflowApprovals = (Array.isArray(data) ? data : []).filter((item) => {
         const purpose = String(item.purpose || "").toUpperCase();
-        return purpose.includes("[IT_VISIT]");
+        return isITApproval(item);
       });
 
       setApprovals(itWorkflowApprovals);
@@ -288,9 +332,14 @@ export default function ITPreApprovals({ onBack, onNotification }) {
     (item) => String(item.status || "").trim().toUpperCase() === "RESCHEDULED"
   ).length;
 
+  const uniqueCompanies = Array.from(new Set(approvals.map((a) => a.visitor?.company_name).filter(Boolean)));
+  const uniqueHosts = Array.from(new Set(approvals.map((a) => getITHostName(a)).filter(Boolean)));
+
   const visibleApprovals = approvals.filter((item) => {
     const status = String(item.status || "").trim().toUpperCase();
     if (statusFilter !== "all" && status !== statusFilter) return false;
+    if (mobileCompanyFilter !== "all" && item.visitor?.company_name !== mobileCompanyFilter) return false;
+    if (mobileHostFilter !== "all" && getITHostName(item) !== mobileHostFilter) return false;
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -845,7 +894,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
         <div className="it-header-controls">
           <button
             type="button"
-            className="it-qr-portal-btn"
+            className="it-qr-portal-btn it-portal-shortcut-btn"
             onClick={() => window.open("/it-visit", "_blank")}
             title="Open Public IT Registration Form in separate window"
           >
@@ -855,13 +904,20 @@ export default function ITPreApprovals({ onBack, onNotification }) {
 
           <button
             type="button"
-            className="it-qr-portal-btn"
+            className="it-qr-portal-btn it-portal-shortcut-btn"
             onClick={() => window.open("/guard", "_blank")}
             title="Open Gate Security Terminal in separate window"
           >
             <ExternalLink size={14} />
             <span>Gate Terminal</span>
           </button>
+
+          {onBack && (
+            <button type="button" className="it-qr-portal-btn it-back-dashboard-btn" onClick={onBack}>
+              <ArrowLeft size={14} />
+              <span>Back to Dashboard</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -872,13 +928,6 @@ export default function ITPreApprovals({ onBack, onNotification }) {
           >
             <RefreshCw size={15} className={loading ? "spin" : ""} />
           </button>
-
-          {onBack && (
-            <button type="button" className="it-qr-portal-btn" onClick={onBack}>
-              <ArrowLeft size={14} />
-              <span>Back to Dashboard</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -1021,6 +1070,233 @@ export default function ITPreApprovals({ onBack, onNotification }) {
         </div>
       )}
 
+      {/* Mobile View: Dedicated Filters Card & Queue Cards (Image 1 Match) */}
+      <div className="it-preapprovals-mobile-view">
+        {/* 1. Mobile Filters Card */}
+        <div className="it-mobile-filter-card">
+          <div className="it-mobile-filter-header">
+            <div className="it-mobile-filter-title">
+              <Filter size={15} color="#2563eb" />
+              <span>Filters</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {(searchQuery || statusFilter !== "all" || mobileCompanyFilter !== "all" || mobileHostFilter !== "all") && (
+                <button
+                  type="button"
+                  className="it-mobile-filter-reset"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStatusFilter("all");
+                    setMobileCompanyFilter("all");
+                    setMobileHostFilter("all");
+                    setMobileDateFilter("all");
+                  }}
+                >
+                  <RotateCcw size={12} />
+                  <span>Reset</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setMobileFiltersOpen((prev) => !prev)}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", display: "flex", alignItems: "center", padding: 2 }}
+                title="Toggle filter view"
+              >
+                {mobileFiltersOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {mobileFiltersOpen && (
+            <>
+              <div className="it-mobile-search-wrap" style={{ position: "relative", display: "flex", alignItems: "center", width: "100%" }}>
+                <Search size={15} className="it-mobile-search-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+                <input
+                  type="text"
+                  className="it-mobile-search-input"
+                  style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search technician, IT host, company..."
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className="it-mobile-filter-grid-2x2">
+                {/* Date Dropdown */}
+                <div className="it-mobile-select-wrap">
+                  <Calendar size={12} className="it-mobile-select-icon" />
+                  <select
+                    className="it-mobile-select"
+                    style={{ paddingLeft: "34px", paddingRight: "26px" }}
+                    value={mobileDateFilter}
+                    onChange={(e) => setMobileDateFilter(e.target.value)}
+                  >
+                    <option value="all">All Dates</option>
+                    <option value="today">Today</option>
+                    <option value="upcoming">Upcoming</option>
+                  </select>
+                  <ChevronDown size={12} className="it-mobile-select-arrow" />
+                </div>
+
+                {/* Company Dropdown */}
+                <div className="it-mobile-select-wrap">
+                  <Building2 size={12} className="it-mobile-select-icon" />
+                  <select
+                    className="it-mobile-select"
+                    style={{ paddingLeft: "34px", paddingRight: "26px" }}
+                    value={mobileCompanyFilter}
+                    onChange={(e) => setMobileCompanyFilter(e.target.value)}
+                  >
+                    <option value="all">All Companies</option>
+                    {uniqueCompanies.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} className="it-mobile-select-arrow" />
+                </div>
+
+                {/* Host Dropdown */}
+                <div className="it-mobile-select-wrap">
+                  <Users size={12} className="it-mobile-select-icon" />
+                  <select
+                    className="it-mobile-select"
+                    style={{ paddingLeft: "34px", paddingRight: "26px" }}
+                    value={mobileHostFilter}
+                    onChange={(e) => setMobileHostFilter(e.target.value)}
+                  >
+                    <option value="all">All Hosts</option>
+                    {uniqueHosts.map((h) => (
+                      <option key={h} value={h}>{h}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} className="it-mobile-select-arrow" />
+                </div>
+
+                {/* Status Dropdown */}
+                <div className="it-mobile-select-wrap">
+                  <Filter size={12} className="it-mobile-select-icon" />
+                  <select
+                    className="it-mobile-select"
+                    style={{ paddingLeft: "34px", paddingRight: "26px" }}
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="PENDING">Pending</option>
+                    <option value="WAITING">Host Busy</option>
+                    <option value="APPROVED">Approved for Gate</option>
+                    <option value="RESCHEDULED">Rescheduled</option>
+                    <option value="REJECTED">Rejected</option>
+                  </select>
+                  <ChevronDown size={12} className="it-mobile-select-arrow" />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* 2. Mobile Queue Header */}
+        <div className="it-mobile-queue-header">
+          <h3 className="it-mobile-queue-title">IT Visitor &amp; Technical Contractor Queue</h3>
+          <div className="it-mobile-queue-count">
+            <span>{visibleApprovals.length} request{visibleApprovals.length === 1 ? "" : "s"}</span>
+            <ArrowUpDown size={13} color="#64748b" />
+          </div>
+        </div>
+
+        {/* 3. Mobile Cards List */}
+        <div className="it-mobile-queue-cards">
+          {visibleApprovals.length === 0 ? (
+            <div style={{ padding: "24px 16px", textAlign: "center", background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", color: "#64748b", fontSize: "12.5px" }}>
+              No IT Department pre-approval requests found.
+            </div>
+          ) : (
+            visibleApprovals.map((approval) => {
+              const currentStatus = String(approval.status || "").trim().toUpperCase();
+              const v = approval.visitor;
+              const techName = getTechnicianName(approval);
+              const hostName = getITHostName(approval);
+              const cleanPurp = getCleanPurpose(approval.purpose);
+              const assetCount = approval.assets ? approval.assets.length : 0;
+              const isGreen = techName.startsWith("M") || techName.includes("Vance");
+
+              return (
+                <div key={approval.pre_approval_id} className="it-preapproval-card">
+                  <div className="it-preapproval-card-top">
+                    <div className={`it-preapproval-avatar ${isGreen ? "green" : "dark"}`}>
+                      {v?.photo_url ? (
+                        <img src={resolvePhotoUrl(v.photo_url)} alt="" style={{ width: "100%", height: "100%", borderRadius: "8px", objectFit: "cover" }} />
+                      ) : (
+                        <span>{getInitials(techName)}</span>
+                      )}
+                    </div>
+                    <div className="it-preapproval-info">
+                      <h4 className="it-preapproval-name">{techName}</h4>
+                      <div className="it-preapproval-phone">📞 {v?.phone_number || "—"}</div>
+                      <div className="it-preapproval-company">🏢 {v?.company_name || "IT"}</div>
+                    </div>
+                    <span className={`it-preapproval-status-badge ${currentStatus.toLowerCase()}`}>
+                      {currentStatus === "APPROVED" ? "Approved" : currentStatus === "WAITING" ? "Host Busy" : currentStatus === "CHECKED_IN" ? "Checked In" : getStatusStyle(currentStatus).label}
+                    </span>
+                  </div>
+
+                  <div className="it-preapproval-meta">
+                    <div className="it-preapproval-meta-row">
+                      <span>👤 Host: <strong>{hostName}</strong></span>
+                      <span>🕒 {formatDateTime(approval.expected_in_time)}</span>
+                    </div>
+                    <div className="it-preapproval-meta-row">
+                      <span style={{ maxWidth: "60%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        📄 {approval.pre_approval_id ? `ID: ${approval.pre_approval_id} | ${cleanPurp}` : cleanPurp}
+                      </span>
+                      {assetCount > 0 && (
+                        <span className="it-preapproval-asset-badge">
+                          💻 {assetCount} Hardware Item{assetCount > 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="it-preapproval-actions">
+                    <button
+                      type="button"
+                      className="it-preapproval-btn-verify"
+                      onClick={() => setSelectedApproval(approval)}
+                    >
+                      <Eye size={13} />
+                      <span>Verify Hardware</span>
+                    </button>
+                    <span className="it-preapproval-presence-tag">
+                      • Inside Premises
+                    </span>
+                    <button
+                      type="button"
+                      className="it-preapproval-btn-more"
+                      onClick={() => setSelectedApproval(approval)}
+                      title="More options"
+                    >
+                      <MoreVertical size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+
+      {/* Desktop View: Preserved 100% untouched */}
+      <div className="it-preapprovals-desktop-view">
       {/* Table Card */}
       <section className="table-card">
         <div className="table-toolbar">
@@ -1345,6 +1621,7 @@ export default function ITPreApprovals({ onBack, onNotification }) {
           </div>
         )}
       </section>
+      </div>
 
       {/* Host Absent / Reschedule Modal */}
       {rescheduleTarget && (

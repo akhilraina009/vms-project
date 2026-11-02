@@ -22,6 +22,7 @@ import {
   UserCheck,
   Copy,
   Check,
+  Download,
 } from "lucide-react";
 import QRCode from "qrcode";
 import "./PublicVisitorPass.css";
@@ -46,6 +47,343 @@ const resolvePhotoUrl = (url) => {
   return `/${clean}`;
 };
 
+
+const generateAndDownloadPass = async (passData, qrDataUrl, token) => {
+  try {
+    const canvas = document.createElement("canvas");
+    const width = 720;
+    const height = 1080;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+
+    // Rounded card background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+
+    const isIT = passData?.visit_type === "IT_VISIT" || 
+                 passData?.purpose?.includes("IT_VISIT") || 
+                 passData?.category === "IT" || 
+                 Boolean(passData?.assets?.length);
+
+    // 1. Executive Top Header (Gradient Dark Blue #0a1428 -> #1e3a8a)
+    const headerGrad = ctx.createLinearGradient(0, 0, width, 220);
+    headerGrad.addColorStop(0, "#09101d");
+    headerGrad.addColorStop(0.5, "#0f172a");
+    headerGrad.addColorStop(1, "#1e3a8a");
+    ctx.fillStyle = headerGrad;
+    ctx.fillRect(0, 0, width, 220);
+
+    // Grid pattern / subtle tech lines in header
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+    ctx.lineWidth = 1;
+    for (let x = 0; x < width; x += 30) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, 220);
+      ctx.stroke();
+    }
+    for (let y = 0; y < 220; y += 30) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(width, y);
+      ctx.stroke();
+    }
+
+    // Top Notch (lanyard slot)
+    ctx.fillStyle = "#334155";
+    ctx.beginPath();
+    ctx.roundRect(width / 2 - 40, 10, 80, 8, 4);
+    ctx.fill();
+
+    // Seal Pill: IT SECURITY CLEARANCE
+    ctx.fillStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.beginPath();
+    ctx.roundRect(30, 36, isIT ? 200 : 220, 26, 13);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+    ctx.fillText(isIT ? "🛡️ IT SECURITY CLEARANCE" : "🛡️ VMS ENTERPRISE SECURITY", 42, 53);
+
+    // Status Live Pill (Right)
+    const rawStatus = (passData?.status || "APPROVED").toUpperCase();
+    ctx.fillStyle = rawStatus === "ACTIVE" ? "#0284c7" : rawStatus === "APPROVED" ? "#059669" : "#d97706";
+    ctx.beginPath();
+    ctx.roundRect(width - 220, 36, 190, 26, 13);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 10px system-ui, -apple-system, sans-serif";
+    ctx.fillText(rawStatus === "ACTIVE" ? "● CHECKED IN · ON PREMISES" : rawStatus === "APPROVED" ? "● APPROVED FOR ENTRY" : "● AWAITING CLEARANCE", width - 210, 53);
+
+    // Title: IT CONTRACTOR PASS
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(isIT ? "IT CONTRACTOR PASS" : "OFFICIAL VISITOR PASS", width / 2, 115);
+
+    // Badge Ref Pill: BADGE REF: VMS-...
+    const passId = passData?.badge_id || passData?.pass_id || passData?.qr_token?.slice(0, 10).toUpperCase() || "VMS-PASS";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+    ctx.beginPath();
+    ctx.roundRect(width / 2 - 130, 135, 260, 28, 14);
+    ctx.fill();
+    ctx.fillStyle = "#93c5fd";
+    ctx.font = "bold 12px system-ui, -apple-system, sans-serif";
+    ctx.fillText(`BADGE REF: ${passId}`, width / 2, 154);
+    ctx.textAlign = "left";
+
+    // 2. Status Callout Banner
+    ctx.fillStyle = "#eff6ff";
+    ctx.fillRect(0, 220, width, 65);
+    ctx.strokeStyle = "#bfdbfe";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, 285);
+    ctx.lineTo(width, 285);
+    ctx.stroke();
+
+    ctx.fillStyle = "#1e40af";
+    ctx.font = "bold 13px system-ui, -apple-system, sans-serif";
+    ctx.fillText("🛡️ Gate Check-in Verified · Active Digital Visitor Pass", 35, 248);
+    ctx.fillStyle = "#3b82f6";
+    ctx.font = "12px system-ui, -apple-system, sans-serif";
+    ctx.fillText("Please keep this digital pass accessible on your phone until building departure.", 35, 268);
+
+    // 3. Visitor Profile Section
+    const photoX = 40;
+    const photoY = 310;
+    const photoSize = 100;
+
+    let photoDrawn = false;
+    const rawPhotoUrl = passData?.photo_url;
+    if (rawPhotoUrl) {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        const cleanUrl = rawPhotoUrl.startsWith("http") ? rawPhotoUrl : `${window.location.origin}/${rawPhotoUrl.replace(/^\//, "")}`;
+        await new Promise((resolve) => {
+          img.onload = () => {
+            ctx.save();
+            ctx.beginPath();
+            ctx.roundRect(photoX, photoY, photoSize, photoSize, 16);
+            ctx.clip();
+            ctx.drawImage(img, photoX, photoY, photoSize, photoSize);
+            ctx.restore();
+            ctx.strokeStyle = "#2563eb";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.roundRect(photoX, photoY, photoSize, photoSize, 16);
+            ctx.stroke();
+            photoDrawn = true;
+            resolve();
+          };
+          img.onerror = () => resolve();
+          img.src = cleanUrl;
+          setTimeout(resolve, 800);
+        });
+      } catch (e) {
+        photoDrawn = false;
+      }
+    }
+
+    if (!photoDrawn) {
+      ctx.fillStyle = "#eff6ff";
+      ctx.beginPath();
+      ctx.roundRect(photoX, photoY, photoSize, photoSize, 16);
+      ctx.fill();
+      ctx.strokeStyle = "#93c5fd";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      ctx.fillStyle = "#1e40af";
+      ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      const initials = (passData?.visitor_name || passData?.name || "V")
+        .split(" ")
+        .map((p) => p[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase();
+      ctx.fillText(initials, photoX + photoSize / 2, photoY + photoSize / 2 + 11);
+      ctx.textAlign = "left";
+    }
+
+    // Verified checkmark seal on photo
+    ctx.fillStyle = "#2563eb";
+    ctx.beginPath();
+    ctx.arc(photoX + photoSize - 6, photoY + photoSize - 6, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("✓", photoX + photoSize - 6, photoY + photoSize - 2);
+    ctx.textAlign = "left";
+
+    // Details next to photo
+    const detailsX = photoX + photoSize + 25;
+    ctx.fillStyle = "#f3e8ff";
+    ctx.beginPath();
+    ctx.roundRect(detailsX, photoY, isIT ? 160 : 130, 24, 6);
+    ctx.fill();
+    ctx.fillStyle = "#7c3aed";
+    ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+    ctx.fillText(isIT ? "IT Technical Specialist" : "Authorized Guest", detailsX + 10, photoY + 16);
+
+    const vName = passData?.visitor_name || passData?.name || "Visitor";
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+    ctx.fillText(vName, detailsX, photoY + 54);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "13px system-ui, -apple-system, sans-serif";
+    const comp = passData?.company_name || passData?.affiliated_organization || "IT Department";
+    ctx.fillText(`🏢 ${comp}`, detailsX, photoY + 76);
+
+    const phone = passData?.phone_number || passData?.phone || "";
+    const email = passData?.email || "";
+    ctx.font = "12px system-ui, -apple-system, sans-serif";
+    ctx.fillStyle = "#475569";
+    if (phone) ctx.fillText(`📞 ${phone}`, detailsX, photoY + 96);
+    if (email) ctx.fillText(`✉️ ${email}`, detailsX + (phone ? 140 : 0), photoY + 96);
+
+    // 4. QR Code Vault (Centered)
+    const qrBoxSize = 250;
+    const qrBoxX = (width - qrBoxSize) / 2;
+    const qrBoxY = 440;
+
+    // Viewfinder corner brackets
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 4;
+    const bLen = 24;
+
+    ctx.beginPath();
+    ctx.moveTo(qrBoxX, qrBoxY + bLen);
+    ctx.lineTo(qrBoxX, qrBoxY);
+    ctx.lineTo(qrBoxX + bLen, qrBoxY);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(qrBoxX + qrBoxSize - bLen, qrBoxY);
+    ctx.lineTo(qrBoxX + qrBoxSize, qrBoxY);
+    ctx.lineTo(qrBoxX + qrBoxSize, qrBoxY + bLen);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(qrBoxX, qrBoxY + qrBoxSize - bLen);
+    ctx.lineTo(qrBoxX, qrBoxY + qrBoxSize);
+    ctx.lineTo(qrBoxX + bLen, qrBoxY + qrBoxSize);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(qrBoxX + qrBoxSize - bLen, qrBoxY + qrBoxSize);
+    ctx.lineTo(qrBoxX + qrBoxSize, qrBoxY + qrBoxSize);
+    ctx.lineTo(qrBoxX + qrBoxSize, qrBoxY + qrBoxSize - bLen);
+    ctx.stroke();
+
+    if (qrDataUrl) {
+      const qrImg = new Image();
+      await new Promise((resolve) => {
+        qrImg.onload = () => {
+          ctx.drawImage(qrImg, qrBoxX + 15, qrBoxY + 15, qrBoxSize - 30, qrBoxSize - 30);
+          resolve();
+        };
+        qrImg.onerror = () => resolve();
+        qrImg.src = qrDataUrl;
+      });
+    }
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 15px system-ui, -apple-system, sans-serif";
+    ctx.fillText("PASS IS ACTIVE ON PREMISES", width / 2, qrBoxY + qrBoxSize + 30);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px system-ui, -apple-system, sans-serif";
+    ctx.fillText("Security gate officers scan this code for access control & exit clearance.", width / 2, qrBoxY + qrBoxSize + 50);
+
+    const tokenStr = passData?.qr_token || token || passId;
+    ctx.fillStyle = "#f8fafc";
+    ctx.beginPath();
+    ctx.roundRect(width / 2 - 140, qrBoxY + qrBoxSize + 65, 280, 26, 8);
+    ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "#2563eb";
+    ctx.font = "bold 11px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.fillText(`Token: ${String(tokenStr).slice(0, 16)}...`, width / 2, qrBoxY + qrBoxSize + 82);
+
+    // 5. Host & Gate Check-In Details Box (2 Columns)
+    const infoY = 825;
+    ctx.textAlign = "left";
+
+    ctx.fillStyle = "#f8fafc";
+    ctx.beginPath();
+    ctx.roundRect(35, infoY, (width - 90) / 2, 70, 12);
+    ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.stroke();
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+    ctx.fillText("👤 HOST OFFICER", 50, infoY + 28);
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 15px system-ui, -apple-system, sans-serif";
+    ctx.fillText(passData?.host_name || "IT Infrastructure Host", 50, infoY + 52);
+
+    const rightX = 35 + (width - 90) / 2 + 20;
+    ctx.fillStyle = "#f8fafc";
+    ctx.beginPath();
+    ctx.roundRect(rightX, infoY, (width - 90) / 2, 70, 12);
+    ctx.fill();
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.stroke();
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "bold 11px system-ui, -apple-system, sans-serif";
+    ctx.fillText("🕒 GATE CHECK-IN STATUS", rightX + 15, infoY + 28);
+    ctx.fillStyle = "#059669";
+    ctx.font = "bold 14px system-ui, -apple-system, sans-serif";
+    const dateFormatted = passData?.check_in_time
+      ? new Date(passData.check_in_time).toLocaleString([], { dateStyle: "short", timeStyle: "short" })
+      : "Active On Premises";
+    ctx.fillText(dateFormatted, rightX + 15, infoY + 52);
+
+    // 6. Security Footer
+    const footerY = 920;
+    ctx.strokeStyle = "#f1f5f9";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(35, footerY);
+    ctx.lineTo(width - 35, footerY);
+    ctx.stroke();
+
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#64748b";
+    ctx.font = "11px system-ui, -apple-system, sans-serif";
+    ctx.fillText("This pass remains valid only for designated premises during business hours.", width / 2, footerY + 25);
+
+    ctx.fillStyle = "#1e3a8a";
+    ctx.font = "bold 12px system-ui, -apple-system, sans-serif";
+    ctx.fillText("🛡️ Official VMS Enterprise Security • Verified Cryptographically", width / 2, footerY + 48);
+
+    const filename = `${isIT ? "VMS-IT-Contractor-Pass" : "VMS-Visitor-Pass"}-${passId}.png`;
+    const dataUrl = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    return true;
+  } catch (err) {
+    console.error("Pass image generation failed:", err);
+    return false;
+  }
+};
+
 export default function PublicVisitorPass({ token }) {
   const [pass, setPass] = useState(null);
   const [qrImage, setQrImage] = useState("");
@@ -54,6 +392,8 @@ export default function PublicVisitorPass({ token }) {
   const [lightboxImage, setLightboxImage] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [copiedBadge, setCopiedBadge] = useState(false);
+  const [downloadToast, setDownloadToast] = useState("");
+  const autoDownloadedRef = useRef(false);
 
   // Background polling ref
   const pollIntervalRef = useRef(null);
@@ -125,6 +465,27 @@ export default function PublicVisitorPass({ token }) {
     };
   }, [token]);
 
+  // Auto-download pass once if redirected from form submission or autodownload param
+  useEffect(() => {
+    if (!pass || !qrImage || autoDownloadedRef.current) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldAutoDownload =
+      urlParams.get("autodownload") === "1" ||
+      sessionStorage.getItem("vms_auto_download_pass") === "true";
+
+    if (shouldAutoDownload) {
+      autoDownloadedRef.current = true;
+      sessionStorage.removeItem("vms_auto_download_pass");
+      generateAndDownloadPass(pass, qrImage, token).then((success) => {
+        if (success) {
+          setDownloadToast("Digital Pass automatically downloaded to your device!");
+          setTimeout(() => setDownloadToast(""), 5000);
+        }
+      });
+    }
+  }, [pass, qrImage, token]);
+
   const copyBadgeRef = (badgeId) => {
     if (!badgeId) return;
     navigator.clipboard?.writeText(badgeId);
@@ -135,6 +496,12 @@ export default function PublicVisitorPass({ token }) {
   if (loading) {
     return (
       <main className="public-pass-page">
+      {downloadToast && (
+        <div className="pass-download-toast" role="status">
+          <CheckCircle2 size={16} />
+          <span>{downloadToast}</span>
+        </div>
+      )}
         <section className="public-pass-card pass-loading-card">
           <div className="pass-loading-spinner-wrap">
             <LoaderCircle size={44} className="pass-spinner" />
@@ -149,6 +516,12 @@ export default function PublicVisitorPass({ token }) {
   if (error) {
     return (
       <main className="public-pass-page">
+      {downloadToast && (
+        <div className="pass-download-toast" role="status">
+          <CheckCircle2 size={16} />
+          <span>{downloadToast}</span>
+        </div>
+      )}
         <section className="public-pass-card pass-error-card">
           <div className="pass-error-icon-wrap">
             <AlertCircle size={48} />
@@ -377,6 +750,12 @@ export default function PublicVisitorPass({ token }) {
 
   return (
     <main className="public-pass-page">
+      {downloadToast && (
+        <div className="pass-download-toast" role="status">
+          <CheckCircle2 size={16} />
+          <span>{downloadToast}</span>
+        </div>
+      )}
       {/* Lightbox photo preview */}
       {lightboxImage && (
         <div className="pass-lightbox-backdrop" onClick={() => setLightboxImage(null)}>
@@ -735,13 +1114,29 @@ export default function PublicVisitorPass({ token }) {
             This visitor pass is non-transferable and remains valid only for authorized designated premises during business hours.
           </p>
 
-          <button
-            type="button"
-            className="pass-action-print"
-            onClick={() => window.print()}
-          >
-            <Printer size={16} /> Print / Save as PDF
-          </button>
+          <div className="pass-actions-row">
+            <button
+              type="button"
+              className="pass-action-download"
+              onClick={() => {
+                generateAndDownloadPass(pass, qrImage, token).then((success) => {
+                  if (success) {
+                    setDownloadToast("Digital Pass downloaded successfully!");
+                    setTimeout(() => setDownloadToast(""), 4000);
+                  }
+                });
+              }}
+            >
+              <Download size={16} /> Download Pass (PNG)
+            </button>
+            <button
+              type="button"
+              className="pass-action-print"
+              onClick={() => window.print()}
+            >
+              <Printer size={16} /> Print / Save as PDF
+            </button>
+          </div>
 
           <div className="pass-footer-watermark">
             <ShieldCheck size={13} />

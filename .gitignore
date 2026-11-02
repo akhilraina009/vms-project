@@ -53,3 +53,15 @@ scratch/
 backup-before-internet-*/
 frontend-backup-*/
 ui-backup-*/
+
+# Local scratch and personal files
+*Resume*
+*resume*
+aayush_*
+mobile_test.png
+test_crop.jpg
+test_s6*
+test_slide*
+scratch_test*
+template_inventory.txt
+

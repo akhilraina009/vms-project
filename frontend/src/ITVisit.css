@@ -922,30 +922,34 @@
 
 /* Dual / Single Card Wrappers */
 .it-asset-cards-wrapper {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   justify-content: center;
-  gap: 24px;
+  gap: 16px;
   width: 100%;
-  max-width: 1020px;
+  max-width: 1200px;
   margin: 0 auto;
-  flex-wrap: wrap;
+  box-sizing: border-box;
 }
 
 .it-asset-cards-wrapper.single {
-  max-width: 480px;
+  display: flex;
+  max-width: 580px;
 }
 
 /* Individual Tracker Card */
 .it-asset-tracker-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 100%;
+  min-width: 0;
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 20px 45px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.06);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   box-sizing: border-box;
 }
 
@@ -1710,9 +1714,11 @@ html.dark .it-asset-add-box select,
 }
 
 /* Dossier Modal Expansion for Dual Hardware Cards */
-.it-asset-modal-inner .vms-dossier-modal {
-  max-width: 1060px;
-  width: 95vw;
+.it-asset-modal-inner,
+.it-asset-modal-inner .vms-dossier-modal,
+.it-dossier-modal {
+  max-width: 1200px;
+  width: 96vw;
 }
 
 /* Completed Checkout Banner Styles */
@@ -1855,8 +1861,8 @@ html.dark .it-asset-btn-toggle.retained.active,
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
+    width: 100% !important;
+    max-width: 100% !important;
     height: 100% !important;
     display: block !important;
     overflow-x: hidden !important;
@@ -2098,21 +2104,35 @@ html.dark .it-asset-btn-toggle.retained.active,
     gap: 6px !important;
   }
 
-  /* Footer Actions */
+  /* Footer Actions - Sticky & Safe from Phone Bottom Bar */
   .it-asset-card-footer {
-    padding: 12px !important;
+    padding: 10px 12px max(16px, env(safe-area-inset-bottom)) 12px !important;
     display: flex !important;
-    flex-direction: column !important;
+    flex-direction: row !important;
+    align-items: center !important;
     gap: 8px !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 45 !important;
+    box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.1) !important;
   }
 
   .it-asset-card-footer button {
-    width: 100% !important;
-    min-height: 42px !important;
+    min-height: 44px !important;
     justify-content: center !important;
-    font-size: 12.5px !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+  }
+
+  .it-asset-card-footer .it-asset-btn-cancel {
+    flex: 0 0 auto !important;
+    min-width: 80px !important;
+  }
+
+  .it-asset-card-footer .it-asset-btn-action {
+    flex: 1 1 auto !important;
   }
 
   /* Full Dossier Modal in Checkout & IT */
@@ -2444,4 +2464,3896 @@ html.dark .it-asset-btn-toggle.retained.active,
 /* Screen hidden, print visible */
 .no-screen {
   display: none !important;
+}
+
+
+/* =========================================================
+   DEDICATED MOBILE TECHNICIAN DOSSIER (PIXEL-PERFECT MATCH)
+   ========================================================= */
+.mobile-technician-dossier {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 540px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (min-width: 769px) {
+  .mobile-technician-dossier {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .it-dossier-desktop-view {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .mobile-technician-dossier {
+    display: none !important;
+  }
+
+  .it-asset-view-switcher-bar {
+    display: none !important;
+  }
+  
+  .it-asset-modal-overlay.has-mobile-dossier,
+  .it-asset-modal-overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 2000 !important;
+    background: rgba(15, 23, 42, 0.7) !important;
+    backdrop-filter: blur(4px) !important;
+    overflow-y: auto !important;
+    padding: 10px 8px 30px !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .it-asset-modal-overlay.has-mobile-dossier,
+  html.dark .it-asset-modal-overlay.has-mobile-dossier,
+  html[data-theme="dark"] .it-asset-modal-overlay,
+  html.dark .it-asset-modal-overlay {
+    background: rgba(0, 0, 0, 0.85) !important;
+  }
+  
+  .it-asset-modal-overlay.has-mobile-dossier .it-asset-modal-inner,
+  .it-asset-modal-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Full Dossier Modal Container on Mobile */
+  .vms-dossier-modal,
+  .it-asset-modal-inner .vms-dossier-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 14px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-modal,
+  html.dark .vms-dossier-modal,
+  html[data-theme="dark"] .it-asset-modal-inner .vms-dossier-modal,
+  html.dark .it-asset-modal-inner .vms-dossier-modal {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+  }
+
+  /* Dossier Header */
+  .vms-dossier-header {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 14px 12px !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-header,
+  html.dark .vms-dossier-header {
+    background: #0f172a !important;
+    border-bottom-color: #334155 !important;
+  }
+
+  .vms-dossier-header-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding-right: 36px !important;
+  }
+
+  .vms-dossier-header-title h3 {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+  }
+
+  .vms-dossier-header-title p {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+  }
+
+  .vms-dossier-header-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .btn-dossier-checkout,
+  .btn-dossier-checkin,
+  .vms-dossier-print-btn {
+    width: 100% !important;
+    height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    padding: 0 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  .btn-dossier-checkout {
+    background: #fef2f2 !important;
+    color: #dc2626 !important;
+    border: 1px solid #fecaca !important;
+  }
+
+  html[data-theme="dark"] .btn-dossier-checkout,
+  html.dark .btn-dossier-checkout {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border-color: rgba(239, 68, 68, 0.3) !important;
+  }
+
+  .vms-dossier-print-btn {
+    background: #eff6ff !important;
+    color: #2563eb !important;
+    border: 1px solid #bfdbfe !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-print-btn,
+  html.dark .vms-dossier-print-btn {
+    background: rgba(37, 99, 235, 0.15) !important;
+    color: #60a5fa !important;
+    border-color: rgba(37, 99, 235, 0.3) !important;
+  }
+
+  .vms-dossier-header-actions .vms-btn-text-desktop {
+    display: inline !important;
+  }
+
+  .vms-dossier-header-actions .vms-btn-text-mobile {
+    display: none !important;
+  }
+
+  .vms-dossier-close-btn {
+    position: absolute !important;
+    top: 14px !important;
+    right: 12px !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 6px !important;
+    cursor: pointer !important;
+    color: #64748b !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Dossier Body */
+  .vms-dossier-body {
+    padding: 12px 10px 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    max-height: calc(100vh - 120px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Profile Card */
+  .vms-dossier-profile-card {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    padding: 14px 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-profile-card,
+  html.dark .vms-dossier-profile-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .vms-dossier-avatar-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .vms-dossier-avatar-box {
+    width: 68px !important;
+    height: 68px !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+
+  .vms-dossier-avatar-box img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .vms-dossier-change-photo-btn {
+    margin-top: 6px !important;
+    font-size: 10px !important;
+    padding: 3px 6px !important;
+    border-radius: 6px !important;
+    background: #f1f5f9 !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #475569 !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-change-photo-btn,
+  html.dark .vms-dossier-change-photo-btn {
+    background: #334155 !important;
+    border-color: #475569 !important;
+    color: #cbd5e1 !important;
+  }
+
+  .vms-dossier-info-col {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .vms-dossier-name {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    margin: 0 0 4px !important;
+    color: #0f172a !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-name,
+  html.dark .vms-dossier-name {
+    color: #f8fafc !important;
+  }
+
+  .vms-dossier-badges {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  .vms-dossier-grid-details {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+    border-top: 1px solid #f1f5f9 !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-grid-details,
+  html.dark .vms-dossier-grid-details {
+    border-top-color: #334155 !important;
+  }
+
+  .vms-dossier-field-label {
+    font-size: 10px !important;
+    color: #64748b !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-field-label,
+  html.dark .vms-dossier-field-label {
+    color: #94a3b8 !important;
+  }
+
+  .vms-dossier-field-val {
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    word-break: break-word !important;
+    margin-top: 1px !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-field-val,
+  html.dark .vms-dossier-field-val {
+    color: #e2e8f0 !important;
+  }
+
+  /* Active Mission Banner */
+  .vms-active-visit-banner {
+    padding: 12px 10px !important;
+    border-radius: 12px !important;
+    margin-top: 0 !important;
+    background: #f0fdf4 !important;
+    border: 1.5px solid #86efac !important;
+  }
+
+  html[data-theme="dark"] .vms-active-visit-banner,
+  html.dark .vms-active-visit-banner {
+    background: rgba(22, 101, 52, 0.15) !important;
+    border-color: rgba(34, 197, 94, 0.4) !important;
+  }
+
+  .vms-active-visit-top {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .vms-active-visit-actions {
+    display: grid !important;
+    grid-template-columns: 1.2fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .vms-btn-checkout-prominent,
+  .vms-btn-it-pass {
+    width: 100% !important;
+    height: 36px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    padding: 0 6px !important;
+    box-sizing: border-box !important;
+  }
+
+  .vms-btn-checkout-prominent {
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border: none !important;
+  }
+
+  .vms-btn-it-pass {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    border: 1px solid #86efac !important;
+  }
+
+  html[data-theme="dark"] .vms-btn-it-pass,
+  html.dark .vms-btn-it-pass {
+    background: rgba(34, 197, 94, 0.2) !important;
+    color: #4ade80 !important;
+    border-color: rgba(34, 197, 94, 0.4) !important;
+  }
+
+  .vms-active-visit-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    font-size: 11.5px !important;
+  }
+
+  html[data-theme="dark"] .vms-active-visit-grid strong,
+  html.dark .vms-active-visit-grid strong {
+    color: #f8fafc !important;
+  }
+
+  /* Hardware Section */
+  .it-asset-cards-wrapper.it-dual-horizontal {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .it-asset-modal-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 12px !important;
+    border: 1px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .it-asset-modal-card,
+  html.dark .it-asset-modal-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .it-asset-card-header {
+    padding: 10px 12px !important;
+  }
+
+  .it-asset-summary-chips {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    padding: 8px 10px !important;
+  }
+
+  .it-asset-chip {
+    padding: 6px 4px !important;
+    font-size: 11px !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+  }
+
+  .it-asset-list-box {
+    padding: 8px 10px !important;
+  }
+
+  .it-asset-card-footer {
+    display: flex !important;
+    gap: 8px !important;
+    padding: 10px 12px !important;
+    background: #f8fafc !important;
+    border-top: 1px solid #e2e8f0 !important;
+  }
+
+  html[data-theme="dark"] .it-asset-card-footer,
+  html.dark .it-asset-card-footer {
+    background: #0f172a !important;
+    border-top-color: #334155 !important;
+  }
+
+  /* Custody Reconciliation Card */
+  .ch-dossier-section {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+    margin-top: 12px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #bbf7d0 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .ch-dossier-section,
+  html.dark .ch-dossier-section {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .ch-dossier-section-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .ch-dossier-section-title-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .ch-dossier-section-title {
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+  }
+
+  .ch-dossier-section-sub {
+    font-size: 10.5px !important;
+    color: #64748b !important;
+    margin-top: 2px !important;
+  }
+
+  html[data-theme="dark"] .ch-dossier-section-sub,
+  html.dark .ch-dossier-section-sub {
+    color: #94a3b8 !important;
+  }
+
+  .ch-recon-box {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
+    padding: 10px 8px !important;
+    border-radius: 10px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  html[data-theme="dark"] .ch-recon-box,
+  html.dark .ch-recon-box {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+  }
+
+  .ch-recon-box > div {
+    text-align: center !important;
+  }
+
+  .ch-recon-box span {
+    font-size: 9.5px !important;
+    display: block !important;
+    line-height: 1.2 !important;
+  }
+
+  .ch-recon-box > div > div {
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    margin-top: 4px !important;
+  }
+}
+
+.mobile-dossier-top-banner {
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.mobile-dossier-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.mobile-dossier-banner-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.mobile-dossier-banner-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #166534;
+}
+
+.mobile-dossier-banner-subtitle {
+  margin: 2px 0 0 0;
+  font-size: 11px;
+  color: #15803d;
+}
+
+.mobile-dossier-close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #166534;
+}
+
+.mobile-dossier-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.mobile-dossier-profile-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mobile-dossier-avatar-wrap {
+  flex-shrink: 0;
+}
+
+.mobile-dossier-avatar-img {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+}
+
+.mobile-dossier-avatar-initials {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-dossier-profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-dossier-name {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-dossier-company {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.mobile-status-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.mobile-status-badge.checked-out {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.mobile-status-badge.inside {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.mobile-dossier-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.mobile-meta-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.mobile-meta-icon {
+  color: #64748b;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.mobile-meta-content {
+  min-width: 0;
+}
+
+.mobile-meta-lbl {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.mobile-meta-val {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-top: 1px;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.mobile-meta-val.duration {
+  color: #2563eb !important;
+  font-weight: 800;
+}
+
+.mobile-btn-visitor-pass {
+  width: 100%;
+  margin-top: 12px;
+  background: #f0fdf4;
+  border: 1.5px solid #86efac;
+  border-radius: 8px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #166534;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mobile-btn-visitor-pass:hover {
+  background: #dcfce7;
+}
+
+.mobile-hero-asset-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mobile-hero-cube-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.mobile-hero-titles {
+  min-width: 0;
+}
+
+.mobile-hero-sub {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.mobile-hero-count {
+  margin: 2px 0 0 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.mobile-cat-pill-row {
+  display: flex;
+  gap: 8px;
+}
+
+.mobile-cat-box {
+  flex: 1;
+  border-radius: 8px;
+  padding: 7px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mobile-cat-box.laptop {
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  color: #1d4ed8;
+}
+
+.mobile-cat-box.mobile {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  color: #15803d;
+}
+
+.mobile-cat-box.other {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #b45309;
+}
+
+.mobile-cat-left {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mobile-cat-num {
+  font-size: 14.5px;
+  font-weight: 800;
+}
+
+.mobile-assets-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mobile-assets-sec-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+}
+
+.mobile-assets-sec-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mobile-assets-cleared-badge {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mobile-assets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.mobile-asset-item-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.mobile-asset-item-left {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  flex: 1;
+}
+
+.mobile-asset-icon-box {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mobile-asset-icon-box.laptop {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.mobile-asset-icon-box.other {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.mobile-asset-details {
+  min-width: 0;
+  flex: 1;
+}
+
+.mobile-asset-name {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-asset-sn {
+  display: block;
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 1px;
+  font-family: monospace;
+}
+
+.mobile-asset-item-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mobile-asset-cat-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 5px;
+}
+
+.mobile-asset-cat-tag.laptop {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.mobile-asset-cat-tag.other,
+.mobile-asset-cat-tag.others {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.mobile-disposition-pill {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mobile-disposition-pill.retained {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.mobile-disposition-pill.return {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+}
+
+.mobile-asset-arrow {
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+.mobile-exit-authorized-card {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 11px 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.mobile-exit-auth-icon {
+  color: #16a34a;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.mobile-exit-auth-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #15803d;
+  letter-spacing: 0.5px;
+}
+
+.mobile-exit-auth-subtitle {
+  font-size: 11px;
+  color: #334155;
+  margin-top: 2px;
+}
+
+.mobile-exit-auth-time {
+  font-size: 10.5px;
+  color: #64748b;
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mobile-source-card {
+  padding: 12px 14px;
+}
+
+.mobile-source-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.mobile-src-field {
+  min-width: 0;
+}
+
+.mobile-src-lbl {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.mobile-src-val {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.mobile-recon-card {
+  padding: 12px 14px;
+}
+
+.mobile-recon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mobile-recon-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #0f172a;
+}
+
+.mobile-recon-title {
+  margin: 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.mobile-recon-balanced-pill {
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  color: #166534;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.mobile-recon-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.mobile-recon-block {
+  border-radius: 8px;
+  padding: 8px 4px;
+  text-align: center;
+}
+
+.mobile-recon-block.checked-in {
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  color: #1d4ed8;
+}
+
+.mobile-recon-block.checked-out {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
+}
+
+.mobile-recon-block.departed {
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #b45309;
+}
+
+.mobile-recon-block.retained {
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #be123c;
+}
+
+.mobile-recon-number {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.mobile-recon-lbl {
+  font-size: 9.5px;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.mobile-dossier-actions-bar {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.mobile-btn-back {
+  flex: 1;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.mobile-btn-print-pass {
+  flex: 1.3;
+  background: #2563eb;
+  border: none;
+  color: #ffffff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+}
+
+
+/* =========================================================
+   COMPACT MOBILE & MASTER PRINT STYLES FOR TECHNICIAN DOSSIER
+   ========================================================= */
+
+/* Dark Mode Support for Mobile Technician Dossier on Screen */
+html[data-theme="dark"] .it-asset-modal-overlay.has-mobile-dossier,
+html.dark .it-asset-modal-overlay.has-mobile-dossier {
+  background: #090d16 !important;
+}
+
+html[data-theme="dark"] .mobile-dossier-card,
+html.dark .mobile-dossier-card {
+  background: #111827 !important;
+  border-color: #1f2937 !important;
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .mobile-dossier-name,
+html.dark .mobile-dossier-name {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .mobile-dossier-company,
+html.dark .mobile-dossier-company {
+  color: #9ca3af !important;
+}
+
+html[data-theme="dark"] .mobile-meta-lbl,
+html.dark .mobile-meta-lbl {
+  color: #9ca3af !important;
+}
+
+html[data-theme="dark"] .mobile-meta-val,
+html.dark .mobile-meta-val {
+  color: #f3f4f6 !important;
+}
+
+html[data-theme="dark"] .mobile-recon-card,
+html.dark .mobile-recon-card {
+  background: #111827 !important;
+  border-color: #1f2937 !important;
+}
+
+html[data-theme="dark"] .mobile-recon-title,
+html.dark .mobile-recon-title {
+  color: #f9fafb !important;
+}
+
+html[data-theme="dark"] .mobile-btn-back,
+html.dark .mobile-btn-back {
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #f3f4f6 !important;
+}
+
+/* Compact Mobile Screen Layout Adjustments */
+@media (max-width: 768px) {
+  .mobile-technician-dossier {
+    gap: 8px !important;
+  }
+
+  .mobile-dossier-top-banner {
+    padding: 8px 12px !important;
+    border-radius: 10px !important;
+  }
+
+  .mobile-dossier-banner-title {
+    font-size: 13px !important;
+  }
+
+  .mobile-dossier-banner-subtitle {
+    font-size: 10.5px !important;
+  }
+
+  .mobile-dossier-card {
+    padding: 10px 12px !important;
+    border-radius: 10px !important;
+  }
+
+  .mobile-dossier-profile-header {
+    margin-bottom: 8px !important;
+    gap: 8px !important;
+  }
+
+  .mobile-dossier-avatar-img,
+  .mobile-dossier-avatar-initials {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 13px !important;
+  }
+
+  .mobile-dossier-name {
+    font-size: 14px !important;
+  }
+
+  .mobile-dossier-company {
+    font-size: 11px !important;
+  }
+
+  .mobile-dossier-meta-grid {
+    gap: 8px !important;
+    padding-top: 8px !important;
+  }
+
+  .mobile-meta-lbl {
+    font-size: 10px !important;
+  }
+
+  .mobile-meta-val {
+    font-size: 11.5px !important;
+  }
+
+  .mobile-recon-grid-4 {
+    gap: 6px !important;
+  }
+
+  .mobile-recon-number {
+    font-size: 14px !important;
+  }
+
+  .mobile-recon-lbl {
+    font-size: 9px !important;
+  }
+}
+
+/* =========================================================
+   EXECUTIVE PRINT ENGINE FOR MOBILE TECHNICIAN DOSSIER
+   ========================================================= */
+@media print {
+  @page {
+    size: A4 portrait !important;
+    margin: 8mm 10mm !important;
+  }
+
+  /* Force pure white background on everything in print */
+  html,
+  body,
+  #root,
+  .it-asset-modal-overlay,
+  .it-asset-modal-overlay.has-mobile-dossier,
+  html[data-theme="dark"] .it-asset-modal-overlay.has-mobile-dossier,
+  html.dark .it-asset-modal-overlay.has-mobile-dossier,
+  .it-asset-modal-inner {
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Ensure Mobile Technician Dossier renders cleanly in print */
+  .mobile-technician-dossier,
+  body .mobile-technician-dossier {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    gap: 6px !important;
+  }
+
+  /* Show Print Certificate Header */
+  .no-screen.vms-dossier-print-header,
+  .vms-dossier-print-header {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    margin-bottom: 8px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Suppress screen action controls */
+  .mobile-dossier-close-btn,
+  .mobile-dossier-actions-bar,
+  .no-print,
+  button,
+  .sidebar,
+  .topbar,
+  .mobile-bottom-nav {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Clean Executive Cards in Print */
+  .mobile-dossier-card,
+  body .mobile-dossier-card,
+  html[data-theme="dark"] .mobile-dossier-card,
+  html.dark .mobile-dossier-card {
+    background: #ffffff !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 8px 12px !important;
+    margin-bottom: 6px !important;
+    box-shadow: none !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .mobile-dossier-top-banner,
+  body .mobile-dossier-top-banner {
+    background: #f0fdf4 !important;
+    border: 1px solid #86efac !important;
+    color: #166534 !important;
+    border-radius: 8px !important;
+    padding: 6px 10px !important;
+    margin-bottom: 6px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .mobile-dossier-name,
+  html[data-theme="dark"] .mobile-dossier-name,
+  html.dark .mobile-dossier-name {
+    color: #0f172a !important;
+  }
+
+  .mobile-dossier-company,
+  html[data-theme="dark"] .mobile-dossier-company,
+  html.dark .mobile-dossier-company {
+    color: #475569 !important;
+  }
+
+  .mobile-meta-lbl,
+  html[data-theme="dark"] .mobile-meta-lbl,
+  html.dark .mobile-meta-lbl {
+    color: #64748b !important;
+  }
+
+  .mobile-meta-val,
+  html[data-theme="dark"] .mobile-meta-val,
+  html.dark .mobile-meta-val {
+    color: #0f172a !important;
+  }
+
+  /* 4-Stat Custody Reconciliation Row */
+  .mobile-recon-grid-4,
+  body .mobile-recon-grid-4 {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .mobile-recon-block,
+  body .mobile-recon-block {
+    padding: 6px 4px !important;
+    border-radius: 6px !important;
+    border: 1px solid #cbd5e1 !important;
+    background: #f8fafc !important;
+  }
+
+  .mobile-recon-number {
+    font-size: 13pt !important;
+    color: #0f172a !important;
+  }
+
+  .mobile-recon-lbl {
+    color: #475569 !important;
+    font-size: 8pt !important;
+  }
+
+  /* 3-Column Formal Signatures */
+  .mobile-dossier-signatures,
+  body .mobile-dossier-signatures {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 16px !important;
+    margin-top: 12px !important;
+    padding-top: 8px !important;
+    border-top: 1.5px dashed #0f172a !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+
+/* =========================================================
+   MOBILE EXCLUSIVE: IT PRE-APPROVALS & IT VISITORS DIRECTORY
+   (Applied ONLY when viewport <= 768px, Desktop 100% untouched)
+   ========================================================= */
+
+@media (max-width: 768px) {
+  .it-preapprovals-desktop-view,
+  .it-visitors-desktop-view {
+    display: none !important;
+  }
+}
+
+@media (min-width: 769px) {
+  .it-preapprovals-mobile-view,
+  .it-visitors-mobile-view {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  body .stats-grid.stats-grid-6,
+  body .stats-grid.stats-grid-4 {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  
+  body .stats-grid.stats-grid-6 .stat-card,
+  body .stats-grid.stats-grid-4 .stat-card {
+    padding: 10px 12px !important;
+    min-height: auto !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+  
+  body .stats-grid.stats-grid-6 .stat-card .stat-icon,
+  body .stats-grid.stats-grid-4 .stat-card .stat-icon {
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 8px !important;
+  }
+  
+  body .stats-grid.stats-grid-6 .stat-card strong,
+  body .stats-grid.stats-grid-4 .stat-card strong {
+    font-size: 18px !important;
+  }
+  
+  body .stats-grid.stats-grid-6 .stat-card span,
+  body .stats-grid.stats-grid-4 .stat-card span {
+    font-size: 10.5px !important;
+  }
+}
+
+/* --- SCREEN 1: PRE-APPROVALS MOBILE CARD --- */
+.it-mobile-filter-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 13px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.it-mobile-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.it-mobile-filter-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.it-mobile-filter-reset {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.it-mobile-search-wrap {
+  position: relative;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.it-mobile-search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.it-mobile-search-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 30px 8px 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #0f172a;
+  outline: none;
+  background: #ffffff;
+}
+
+.it-mobile-filter-grid-2x2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.it-mobile-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.it-mobile-select-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+.it-mobile-select-arrow {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+.it-mobile-select {
+  width: 100%;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  box-sizing: border-box;
+  padding: 7px 22px 7px 28px !important;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #334155;
+  background: #ffffff;
+  outline: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.it-mobile-queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+
+.it-mobile-queue-title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.it-mobile-queue-count {
+  font-size: 12px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Pre-Approval Request Card */
+.it-preapproval-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 13px;
+  margin-bottom: 11px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.it-preapproval-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.it-preapproval-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.it-preapproval-avatar.dark {
+  background: #0f172a;
+  color: #ffffff;
+}
+
+.it-preapproval-avatar.green {
+  background: #bbf7d0;
+  color: #15803d;
+}
+
+.it-preapproval-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.it-preapproval-name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.it-preapproval-phone {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.it-preapproval-company {
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.it-preapproval-status-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.it-preapproval-status-badge.checked-in {
+  background: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+}
+
+.it-preapproval-status-badge.approved {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.it-preapproval-status-badge.pending {
+  background: #fffbeb;
+  color: #d97706;
+  border: 1px solid #fef3c7;
+}
+
+.it-preapproval-meta {
+  padding: 9px 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: #475569;
+}
+
+.it-preapproval-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.it-preapproval-asset-badge {
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #6d28d9;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.it-preapproval-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.it-preapproval-btn-verify {
+  flex: 1;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.it-preapproval-presence-tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #2563eb;
+  white-space: nowrap;
+}
+
+.it-preapproval-btn-more {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 5px 6px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* --- SCREEN 2: IT VISITORS DIRECTORY MOBILE CARDS --- */
+.it-directory-mobile-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 13px;
+  margin-bottom: 11px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+}
+
+.it-directory-card-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.it-directory-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.it-directory-avatar.dark {
+  background: #0f172a;
+}
+
+.it-directory-avatar.green {
+  background: #bbf7d0;
+  color: #15803d;
+}
+
+.it-directory-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.it-directory-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.it-directory-name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.it-directory-id-badge {
+  font-size: 10px;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.it-directory-phone {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+.it-directory-company {
+  font-size: 11px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.it-directory-status-badge {
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.it-directory-status-badge.checked-out {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.it-directory-status-badge.inside {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.it-directory-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 11px;
+}
+
+.it-directory-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.it-directory-col-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.it-directory-scope-text {
+  font-size: 11px;
+  color: #0f172a;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.it-directory-dept-badge {
+  font-size: 9.5px;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.it-directory-hardware-tag {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+}
+
+.it-directory-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.it-directory-btn-details {
+  flex: 1;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #0f172a;
+  border-radius: 8px;
+  padding: 7px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.it-directory-btn-more {
+  background: transparent;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 7px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+
+/* ==========================================================================
+   ENHANCED MOBILE TECHNICIAN DOSSIER & IT VISITORS MOBILE UI
+   Only and only applied on mobile view (max-width: 768px)
+   Supports Dark & Light Theme, Edge-to-Edge Fluidity, and Sticky Actions
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  /* Full-bleed native app modal overlay */
+  .it-asset-modal-overlay.has-mobile-dossier {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: #090e1a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    z-index: 99999 !important;
+    display: block !important;
+  }
+
+  html[data-theme="light"] .it-asset-modal-overlay.has-mobile-dossier {
+    background: #f1f5f9 !important;
+  }
+
+  .it-asset-modal-overlay.has-mobile-dossier .it-asset-modal-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 12px 14px 24px 14px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .mobile-technician-dossier {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    gap: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Cards in mobile dossier - Dark default with high contrast */
+  .mobile-dossier-card {
+    background: #0f172a !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 14px !important;
+    padding: 14px !important;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+    color: #f1f5f9 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #0f172a !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Top Banner */
+  .mobile-dossier-top-banner {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.12) 100%) !important;
+    border: 1px solid rgba(16, 185, 129, 0.4) !important;
+    border-radius: 14px !important;
+    padding: 12px 14px !important;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.1) !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-top-banner {
+    background: #dcfce7 !important;
+    border: 1px solid #86efac !important;
+  }
+
+  .mobile-dossier-banner-title {
+    color: #34d399 !important;
+    font-size: 14px !important;
+    font-weight: 800 !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-banner-title {
+    color: #166534 !important;
+  }
+
+  .mobile-dossier-banner-subtitle {
+    color: #a7f3d0 !important;
+    font-size: 11.5px !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-banner-subtitle {
+    color: #15803d !important;
+  }
+
+  .mobile-dossier-close-btn {
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #34d399 !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-close-btn {
+    background: rgba(22, 101, 52, 0.1) !important;
+    color: #166534 !important;
+    border-color: rgba(22, 101, 52, 0.2) !important;
+  }
+
+  /* Profile Details */
+  .mobile-dossier-name {
+    color: #f8fafc !important;
+    font-size: 15.5px !important;
+    font-weight: 800 !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-name {
+    color: #0f172a !important;
+  }
+
+  .mobile-dossier-company {
+    color: #94a3b8 !important;
+    font-size: 12px !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-company {
+    color: #64748b !important;
+  }
+
+  /* Meta Grid */
+  .mobile-dossier-meta-grid {
+    border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding-top: 12px !important;
+    gap: 12px 10px !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-meta-grid {
+    border-top: 1px solid #f1f5f9 !important;
+  }
+
+  .mobile-meta-lbl {
+    color: #94a3b8 !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  html[data-theme="light"] .mobile-meta-lbl {
+    color: #64748b !important;
+  }
+
+  .mobile-meta-val {
+    color: #f8fafc !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+  }
+
+  html[data-theme="light"] .mobile-meta-val {
+    color: #0f172a !important;
+  }
+
+  .mobile-meta-val.duration {
+    color: #38bdf8 !important;
+    font-weight: 800 !important;
+  }
+
+  html[data-theme="light"] .mobile-meta-val.duration {
+    color: #2563eb !important;
+  }
+
+  /* IT Visitor Pass button */
+  .mobile-btn-visitor-pass {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border: 1.5px solid rgba(16, 185, 129, 0.4) !important;
+    color: #34d399 !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    padding: 10px 14px !important;
+  }
+
+  html[data-theme="light"] .mobile-btn-visitor-pass {
+    background: #f0fdf4 !important;
+    border: 1.5px solid #86efac !important;
+    color: #166534 !important;
+  }
+
+  /* Asset Summary Box */
+  .mobile-hero-asset-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 10px !important;
+  }
+
+  html[data-theme="light"] .mobile-hero-asset-header {
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
+
+  .mobile-hero-sub {
+    color: #94a3b8 !important;
+  }
+
+  html[data-theme="light"] .mobile-hero-sub {
+    color: #64748b !important;
+  }
+
+  .mobile-hero-count {
+    color: #38bdf8 !important;
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+  }
+
+  html[data-theme="light"] .mobile-hero-count {
+    color: #1d4ed8 !important;
+  }
+
+  /* Category Counter Chips */
+  .mobile-cat-box.laptop {
+    background: rgba(56, 189, 248, 0.12) !important;
+    border: 1px solid rgba(56, 189, 248, 0.35) !important;
+    color: #7dd3fc !important;
+  }
+
+  html[data-theme="light"] .mobile-cat-box.laptop {
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+    color: #1e40af !important;
+  }
+
+  .mobile-cat-box.mobile {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+    color: #86efac !important;
+  }
+
+  html[data-theme="light"] .mobile-cat-box.mobile {
+    background: #f0fdf4 !important;
+    border: 1px solid #bbf7d0 !important;
+    color: #166534 !important;
+  }
+
+  .mobile-cat-box.other {
+    background: rgba(245, 158, 11, 0.12) !important;
+    border: 1px solid rgba(245, 158, 11, 0.35) !important;
+    color: #fde68a !important;
+  }
+
+  html[data-theme="light"] .mobile-cat-box.other {
+    background: #fffbeb !important;
+    border: 1px solid #fde68a !important;
+    color: #92400e !important;
+  }
+
+  /* Asset Items */
+  .mobile-asset-item-card {
+    background: rgba(30, 41, 59, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
+    padding: 10px 12px !important;
+  }
+
+  html[data-theme="light"] .mobile-asset-item-card {
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  .mobile-asset-name {
+    color: #f8fafc !important;
+    font-weight: 700 !important;
+  }
+
+  html[data-theme="light"] .mobile-asset-name {
+    color: #0f172a !important;
+  }
+
+  .mobile-asset-sn {
+    color: #94a3b8 !important;
+  }
+
+  html[data-theme="light"] .mobile-asset-sn {
+    color: #64748b !important;
+  }
+
+  /* Exit Authorized Banner */
+  .mobile-exit-authorized-card {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border: 1px solid rgba(16, 185, 129, 0.35) !important;
+    border-radius: 12px !important;
+    padding: 12px 14px !important;
+  }
+
+  html[data-theme="light"] .mobile-exit-authorized-card {
+    background: #f0fdf4 !important;
+    border: 1px solid #86efac !important;
+  }
+
+  .mobile-exit-auth-title {
+    color: #34d399 !important;
+    font-weight: 800 !important;
+  }
+
+  html[data-theme="light"] .mobile-exit-auth-title {
+    color: #166534 !important;
+  }
+
+  .mobile-exit-auth-subtitle {
+    color: #cbd5e1 !important;
+  }
+
+  html[data-theme="light"] .mobile-exit-auth-subtitle {
+    color: #475569 !important;
+  }
+
+  .mobile-exit-auth-time {
+    color: #94a3b8 !important;
+  }
+
+  html[data-theme="light"] .mobile-exit-auth-time {
+    color: #64748b !important;
+  }
+
+  /* Source & Company Info Card */
+  .mobile-src-lbl {
+    color: #94a3b8 !important;
+  }
+
+  html[data-theme="light"] .mobile-src-lbl {
+    color: #64748b !important;
+  }
+
+  .mobile-src-val {
+    color: #f8fafc !important;
+    font-weight: 700 !important;
+  }
+
+  html[data-theme="light"] .mobile-src-val {
+    color: #0f172a !important;
+  }
+
+  /* Custody Reconciliation Card */
+  .mobile-recon-title {
+    color: #f8fafc !important;
+    font-weight: 800 !important;
+  }
+
+  html[data-theme="light"] .mobile-recon-title {
+    color: #0f172a !important;
+  }
+
+  .mobile-recon-block {
+    border-radius: 10px !important;
+  }
+
+  .mobile-recon-block.checked-in {
+    background: rgba(56, 189, 248, 0.12) !important;
+    border: 1px solid rgba(56, 189, 248, 0.3) !important;
+  }
+
+  .mobile-recon-block.checked-out {
+    background: rgba(16, 185, 129, 0.12) !important;
+    border: 1px solid rgba(16, 185, 129, 0.3) !important;
+  }
+
+  .mobile-recon-block.departed {
+    background: rgba(245, 158, 11, 0.12) !important;
+    border: 1px solid rgba(245, 158, 11, 0.3) !important;
+  }
+
+  .mobile-recon-block.retained {
+    background: rgba(239, 68, 68, 0.12) !important;
+    border: 1px solid rgba(239, 68, 68, 0.3) !important;
+  }
+
+  /* Sticky Bottom Action Buttons Bar */
+  .mobile-dossier-actions-bar {
+    position: sticky !important;
+    bottom: 0 !important;
+    z-index: 100 !important;
+    display: flex !important;
+    gap: 10px !important;
+    margin: 14px -14px -24px -14px !important;
+    padding: 12px 14px 18px 14px !important;
+    background: rgba(15, 23, 42, 0.94) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.4) !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="light"] .mobile-dossier-actions-bar {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border-top: 1px solid #e2e8f0 !important;
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08) !important;
+  }
+
+  .mobile-btn-back {
+    flex: 1 !important;
+    height: 44px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: #f1f5f9 !important;
+    border-radius: 10px !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    transition: all 0.15s ease !important;
+  }
+
+  html[data-theme="light"] .mobile-btn-back {
+    background: #ffffff !important;
+    border: 1.5px solid #cbd5e1 !important;
+    color: #334155 !important;
+  }
+
+  .mobile-btn-print-pass {
+    flex: 1.6 !important;
+    height: 44px !important;
+    background: #2563eb !important;
+    border: 1px solid #3b82f6 !important;
+    color: #ffffff !important;
+    border-radius: 10px !important;
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+  }
+
+  /* 2x2 Stat Cards Label Fix (Prevent Ellipsis Truncation) */
+  .it-stat-card .it-stat-label,
+  .it-stat-label {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+    line-height: 1.25 !important;
+    font-size: 11px !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+  }
+}
+
+/* ==========================================================================
+   MOBILE IT PERSONNEL DOSSIER & HARDWARE CLEARANCE (Exact match for user ref)
+   ========================================================================== */
+@media (max-width: 768px) {
+  /* Hide the top view mode switcher pills entirely on mobile */
+  .it-asset-view-switcher-bar,
+  body .it-asset-view-switcher-bar,
+  .it-dossier-desktop-view .it-asset-view-switcher-bar {
+    display: none !important;
+  }
+
+  /* Full screen modal overlay */
+  .it-asset-modal-overlay,
+  .it-asset-modal-overlay.has-mobile-dossier {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(15, 23, 42, 0.75) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    z-index: 99999 !important;
+    padding: 12px 10px 40px !important;
+    display: block !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="light"] .it-asset-modal-overlay,
+  html[data-theme="light"] .it-asset-modal-overlay.has-mobile-dossier {
+    background: rgba(15, 23, 42, 0.6) !important;
+  }
+
+  .it-asset-modal-inner,
+  .it-asset-modal-overlay .it-asset-modal-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+  }
+
+  .it-dossier-desktop-view {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Main Dossier Card */
+  .vms-dossier-modal,
+  .it-asset-modal-inner .vms-dossier-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-modal,
+  html.dark .vms-dossier-modal,
+  html[data-theme="dark"] .it-asset-modal-inner .vms-dossier-modal,
+  html.dark .it-asset-modal-inner .vms-dossier-modal {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+  }
+
+  /* 1. Header (Icon + Title + Subtitle + Buttons Row + Close X) */
+  .vms-dossier-header {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 16px 14px 14px !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-header,
+  html.dark .vms-dossier-header {
+    background: #0f172a !important;
+    border-bottom-color: #334155 !important;
+  }
+
+  .vms-dossier-header-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding-right: 32px !important; /* space for close button */
+    min-width: 0 !important;
+  }
+
+  .vms-dossier-header-icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: #eff6ff !important;
+    border: 1px solid #dbeafe !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .vms-dossier-header-title h3 {
+    font-size: 14.5px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+    white-space: normal !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-header-title h3,
+  html.dark .vms-dossier-header-title h3 {
+    color: #f8fafc !important;
+  }
+
+  .vms-dossier-header-title p {
+    font-size: 11px !important;
+    color: #64748b !important;
+    line-height: 1.2 !important;
+    margin: 2px 0 0 !important;
+    white-space: normal !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-header-title p,
+  html.dark .vms-dossier-header-title p {
+    color: #94a3b8 !important;
+  }
+
+  .vms-dossier-header-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .btn-dossier-checkout,
+  .btn-dossier-checkin {
+    width: 100% !important;
+    height: 38px !important;
+    background: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+    color: #dc2626 !important;
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+
+  html[data-theme="dark"] .btn-dossier-checkout,
+  html.dark .btn-dossier-checkout {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.35) !important;
+    color: #f87171 !important;
+  }
+
+  .vms-dossier-print-btn {
+    width: 100% !important;
+    height: 38px !important;
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+    color: #2563eb !important;
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-print-btn,
+  html.dark .vms-dossier-print-btn {
+    background: rgba(37, 99, 235, 0.15) !important;
+    border-color: rgba(37, 99, 235, 0.35) !important;
+    color: #60a5fa !important;
+  }
+
+  .vms-dossier-header-actions .vms-btn-text-desktop {
+    display: inline !important;
+  }
+
+  .vms-dossier-header-actions .vms-btn-text-mobile {
+    display: none !important;
+  }
+
+  .vms-dossier-close-btn {
+    position: absolute !important;
+    top: 14px !important;
+    right: 12px !important;
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 8px !important;
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #64748b !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-close-btn,
+  html.dark .vms-dossier-close-btn {
+    background: #334155 !important;
+    border-color: #475569 !important;
+    color: #cbd5e1 !important;
+  }
+
+  /* 2. Dossier Body Scroll Container */
+  .vms-dossier-body {
+    padding: 14px 12px 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 3. Profile Card (Avatar on Left, Info on Right, 2x2 Details Grid Below) */
+  .vms-dossier-profile-card {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+    gap: 12px !important;
+    padding: 14px 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-profile-card,
+  html.dark .vms-dossier-profile-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .vms-dossier-avatar-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+    width: 74px !important;
+  }
+
+  .vms-dossier-avatar-box {
+    width: 70px !important;
+    height: 70px !important;
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    background: #e2e8f0 !important;
+  }
+
+  .vms-dossier-avatar-box img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .vms-dossier-change-photo-btn {
+    margin-top: 6px !important;
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    padding: 4px 6px !important;
+    border-radius: 6px !important;
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+    color: #2563eb !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .vms-dossier-info-col {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .vms-dossier-name {
+    font-size: 17px !important;
+    font-weight: 800 !important;
+    margin: 0 0 6px !important;
+    color: #0f172a !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-name,
+  html.dark .vms-dossier-name {
+    color: #f8fafc !important;
+  }
+
+  .vms-dossier-badges {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  .vms-dossier-badges .status-pill.active {
+    background: #ecfdf5 !important;
+    border: 1px solid #a7f3d0 !important;
+    color: #059669 !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 3px 8px !important;
+    border-radius: 10px !important;
+  }
+
+  .vms-dossier-grid-details {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+    padding-top: 10px !important;
+    border-top: 1px solid #f1f5f9 !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-grid-details,
+  html.dark .vms-dossier-grid-details {
+    border-top-color: #334155 !important;
+  }
+
+  .vms-dossier-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .vms-dossier-field-label {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    color: #64748b !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+
+  .vms-dossier-field-val {
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    word-break: break-word !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-field-val,
+  html.dark .vms-dossier-field-val {
+    color: #e2e8f0 !important;
+  }
+
+  /* 4. Active IT Mission in Progress Banner */
+  .vms-active-visit-banner {
+    background: #f0fdf4 !important;
+    border: 1.5px solid #86efac !important;
+    border-radius: 12px !important;
+    padding: 14px 12px !important;
+    margin-top: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-active-visit-banner,
+  html.dark .vms-active-visit-banner {
+    background: rgba(22, 101, 52, 0.15) !important;
+    border-color: rgba(34, 197, 94, 0.4) !important;
+  }
+
+  .vms-active-visit-top {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .vms-live-indicator-pill {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    padding: 3px 8px !important;
+    border-radius: 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  .vms-active-visit-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+    padding: 10px !important;
+    background: #ffffff !important;
+    border-radius: 10px !important;
+    border: 1px solid #dcfce7 !important;
+  }
+
+  html[data-theme="dark"] .vms-active-visit-grid,
+  html.dark .vms-active-visit-grid {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .vms-active-visit-actions {
+    display: grid !important;
+    grid-template-columns: 1.25fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .vms-btn-checkout-prominent {
+    width: 100% !important;
+    height: 38px !important;
+    background: #dc2626 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+    padding: 0 4px !important;
+  }
+
+  .vms-btn-it-pass {
+    width: 100% !important;
+    height: 38px !important;
+    background: #dcfce7 !important;
+    border: 1px solid #86efac !important;
+    color: #15803d !important;
+    border-radius: 8px !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+  }
+
+  /* 5. Registered Hardware Section (STACKED VERTICALLY 100% WIDTH) */
+  .vms-dossier-section {
+    border: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    margin-top: 4px !important;
+  }
+
+  .vms-dossier-section-title {
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-section-title,
+  html.dark .vms-dossier-section-title {
+    color: #f8fafc !important;
+  }
+
+  .it-asset-cards-wrapper,
+  .it-asset-cards-wrapper.it-dual-horizontal {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .it-asset-modal-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .it-asset-modal-card,
+  html.dark .it-asset-modal-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .it-asset-card-header {
+    padding: 12px 14px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .it-asset-header-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .it-asset-header-title {
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+  }
+
+  .it-asset-header-subtitle {
+    font-size: 11px !important;
+    margin: 2px 0 0 !important;
+    opacity: 0.9 !important;
+  }
+
+  .it-asset-contractor-bar {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 10px 12px !important;
+    background: #f8fafc !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
+
+  html[data-theme="dark"] .it-asset-contractor-bar,
+  html.dark .it-asset-contractor-bar {
+    background: #0f172a !important;
+    border-bottom-color: #334155 !important;
+  }
+
+  .it-asset-contractor-name {
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+  }
+
+  .it-asset-total-banner {
+    padding: 10px 12px !important;
+    border-radius: 8px !important;
+    margin: 10px 12px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .it-asset-summary-chips {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+    padding: 0 12px 10px !important;
+  }
+
+  .it-asset-summary-chip {
+    padding: 8px 4px !important;
+    border-radius: 8px !important;
+    text-align: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    font-size: 11.5px !important;
+    font-weight: 700 !important;
+  }
+
+  .it-asset-items-list-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 8px 12px !important;
+    border-top: 1px solid #f1f5f9 !important;
+  }
+
+  html[data-theme="dark"] .it-asset-items-list-header,
+  html.dark .it-asset-items-list-header {
+    border-top-color: #334155 !important;
+  }
+
+  .it-asset-card-footer {
+    display: flex !important;
+    gap: 8px !important;
+    padding: 12px 14px !important;
+    background: #f8fafc !important;
+    border-top: 1px solid #f1f5f9 !important;
+  }
+
+  html[data-theme="dark"] .it-asset-card-footer,
+  html.dark .it-asset-card-footer {
+    background: #0f172a !important;
+    border-top-color: #334155 !important;
+  }
+
+  .it-asset-card-footer button {
+    height: 38px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    border-radius: 8px !important;
+  }
+
+  /* 6. Custody Reconciliation & Chain-of-Custody Balance Card */
+  .ch-dossier-section {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+    margin-top: 4px !important;
+    background: #ffffff !important;
+    border: 1.5px solid #bbf7d0 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .ch-dossier-section,
+  html.dark .ch-dossier-section {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .ch-dossier-section-header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .ch-dossier-section-title-wrap {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+
+  .ch-dossier-section-title {
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+  }
+
+  .ch-dossier-section-sub {
+    font-size: 11px !important;
+    color: #64748b !important;
+    margin-top: 2px !important;
+  }
+
+  html[data-theme="dark"] .ch-dossier-section-sub,
+  html.dark .ch-dossier-section-sub {
+    color: #94a3b8 !important;
+  }
+
+  .ch-recon-box {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 6px !important;
+    padding: 12px 6px !important;
+    border-radius: 10px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  html[data-theme="dark"] .ch-recon-box,
+  html.dark .ch-recon-box {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+  }
+
+  .ch-recon-box > div {
+    text-align: center !important;
+  }
+
+  .ch-recon-box span {
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    display: block !important;
+    line-height: 1.2 !important;
+  }
+
+  .ch-recon-box > div > div {
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    margin-top: 4px !important;
+  }
+}
+
+
+/* ======================================================== */
+/* VMS IT DOSSIER & HARDWARE CLEARANCE - MOBILE WORKFLOW UI */
+/* Reference: Image 1 (Check-In) & Image 2 (Check-Out)     */
+/* ======================================================== */
+
+/* Desktop Defaults */
+.it-mob-workflow-tabs-container {
+  display: none;
+}
+.it-mob-single-workflow-view {
+  display: none;
+}
+.it-desktop-dual-workflow-view {
+  display: block;
+  width: 100%;
+}
+
+/* Mobile & Tablet Scoped Responsive View */
+@media (max-width: 768px) {
+  /* 1. Modal Overlay & Natural Single Scroll (Anti-Trap) */
+  .it-asset-modal-overlay,
+  .it-asset-modal-overlay.has-mobile-dossier {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(15, 23, 42, 0.75) !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    z-index: 99999 !important;
+    padding: 10px 8px 40px !important;
+    box-sizing: border-box !important;
+    display: block !important;
+  }
+
+  .it-asset-modal-inner,
+  .it-asset-modal-overlay .it-asset-modal-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .it-dossier-desktop-view {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .vms-dossier-modal,
+  .it-asset-modal-inner .vms-dossier-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-modal,
+  html.dark .vms-dossier-modal {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+  }
+
+  .vms-dossier-body {
+    padding: 12px 10px 20px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 2. Header Layout (Image 2 Match) */
+  .vms-dossier-header {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 14px 12px !important;
+    background: #ffffff !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-header,
+  html.dark .vms-dossier-header {
+    background: #0f172a !important;
+    border-bottom-color: #334155 !important;
+  }
+
+  .vms-dossier-header-top {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+
+  .vms-dossier-header-title {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  .vms-dossier-header-icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .vms-dossier-header-titles {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .vms-dossier-title-text {
+    font-size: 14px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-title-text,
+  html.dark .vms-dossier-title-text {
+    color: #f8fafc !important;
+  }
+
+  .vms-dossier-subtitle-text {
+    font-size: 10.5px !important;
+    color: #64748b !important;
+    line-height: 1.2 !important;
+    margin: 2px 0 0 !important;
+    white-space: normal !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-subtitle-text,
+  html.dark .vms-dossier-subtitle-text {
+    color: #94a3b8 !important;
+  }
+
+  .vms-dossier-close-btn {
+    position: static !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+    background: #f1f5f9 !important;
+    border: 1px solid #e2e8f0 !important;
+    color: #64748b !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    cursor: pointer !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-close-btn,
+  html.dark .vms-dossier-close-btn {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+  }
+
+  .vms-dossier-header-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .btn-dossier-checkout,
+  .btn-dossier-checkin {
+    width: 100% !important;
+    height: 38px !important;
+    background: #fef2f2 !important;
+    border: 1px solid #fecaca !important;
+    color: #dc2626 !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+  }
+
+  html[data-theme="dark"] .btn-dossier-checkout,
+  html.dark .btn-dossier-checkout {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.35) !important;
+    color: #f87171 !important;
+  }
+
+  .vms-dossier-print-btn {
+    width: 100% !important;
+    height: 38px !important;
+    background: #eff6ff !important;
+    border: 1px solid #bfdbfe !important;
+    color: #2563eb !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    cursor: pointer !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-print-btn,
+  html.dark .vms-dossier-print-btn {
+    background: rgba(37, 99, 235, 0.15) !important;
+    border-color: rgba(37, 99, 235, 0.35) !important;
+    color: #60a5fa !important;
+  }
+
+  /* 3. Technician Profile Card (Image 1 Match) */
+  .vms-dossier-profile-card {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 14px 12px !important;
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    gap: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-profile-card,
+  html.dark .vms-dossier-profile-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  .vms-dossier-profile-identity {
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .vms-dossier-avatar-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .vms-dossier-avatar-box {
+    width: 58px !important;
+    height: 58px !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    border: 1.5px solid #cbd5e1 !important;
+    background: #f1f5f9 !important;
+  }
+
+  .vms-dossier-avatar-box img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .vms-dossier-change-photo-btn {
+    font-size: 10px !important;
+    padding: 3px 6px !important;
+    border-radius: 6px !important;
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-change-photo-btn,
+  html.dark .vms-dossier-change-photo-btn {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+  }
+
+  .vms-dossier-info-col {
+    flex: 1 !important;
+    min-width: 0 !important;
+  }
+
+  .vms-dossier-name {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+    margin: 0 0 6px 0 !important;
+    line-height: 1.2 !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-name,
+  html.dark .vms-dossier-name {
+    color: #f8fafc !important;
+  }
+
+  .vms-dossier-badges {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .vms-dossier-badges .visitor-id-badge {
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+  }
+
+  .vms-dossier-badges .it-company-tag {
+    background: #f5f3ff !important;
+    color: #7c3aed !important;
+    border: 1px solid #ddd6fe !important;
+    border-radius: 6px !important;
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+  }
+
+  .vms-dossier-badges .status-pill.active {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    border: 1px solid #86efac !important;
+    border-radius: 6px !important;
+    padding: 2px 7px !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+  }
+
+  /* 2-Column Contact Details Grid (Image 1 Match) */
+  .vms-dossier-grid-details {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px 12px !important;
+    width: 100% !important;
+    border-top: 1px solid #f1f5f9 !important;
+    padding-top: 10px !important;
+    margin-top: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-grid-details,
+  html.dark .vms-dossier-grid-details {
+    border-top-color: #334155 !important;
+  }
+
+  .vms-dossier-field {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    min-width: 0 !important;
+  }
+
+  .vms-dossier-field-label {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    color: #64748b !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    text-transform: capitalize !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-field-label,
+  html.dark .vms-dossier-field-label {
+    color: #94a3b8 !important;
+  }
+
+  .vms-dossier-field-val {
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    line-height: 1.3 !important;
+  }
+
+  html[data-theme="dark"] .vms-dossier-field-val,
+  html.dark .vms-dossier-field-val {
+    color: #f1f5f9 !important;
+  }
+
+  /* 4. Active IT Mission Details (Image 1 2x2 Grid) */
+  .vms-active-visit-banner {
+    border-radius: 12px !important;
+    padding: 12px 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  .vms-active-visit-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    padding: 10px !important;
+    border-radius: 10px !important;
+  }
+
+  /* 5. Mobile Segmented Workflow Control Tabs (Image 1 Match) */
+  .it-mob-workflow-tabs-container {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .it-mob-single-workflow-view {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .it-desktop-dual-workflow-view {
+    display: none !important;
+  }
+
+  .it-mob-workflow-tabs {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .it-mob-workflow-tab {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+    border-radius: 12px !important;
+    border: 1.5px solid #e2e8f0 !important;
+    background: #ffffff !important;
+    color: #475569 !important;
+    cursor: pointer !important;
+    text-align: left !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+  }
+
+  .it-mob-workflow-tab .it-mob-tab-badge {
+    width: 24px !important;
+    height: 24px !important;
+    border-radius: 50% !important;
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    border: 1px solid #cbd5e1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .it-mob-workflow-tab .it-mob-tab-info {
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+  }
+
+  .it-mob-workflow-tab .it-mob-tab-title {
+    font-size: 13.5px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    color: #1e293b !important;
+  }
+
+  .it-mob-workflow-tab .it-mob-tab-sub {
+    font-size: 10.5px !important;
+    color: #64748b !important;
+    line-height: 1.2 !important;
+    margin-top: 2px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  /* Active Check-In Tab (Image 1 Blue) */
+  .it-mob-workflow-tab.active.checkin {
+    background: #2563eb !important;
+    border-color: #1d4ed8 !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25) !important;
+  }
+  .it-mob-workflow-tab.active.checkin .it-mob-tab-badge {
+    background: #ffffff !important;
+    color: #2563eb !important;
+    border-color: #ffffff !important;
+  }
+  .it-mob-workflow-tab.active.checkin .it-mob-tab-title {
+    color: #ffffff !important;
+  }
+  .it-mob-workflow-tab.active.checkin .it-mob-tab-sub {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  /* Active Check-Out Tab (Image 2 Green) */
+  .it-mob-workflow-tab.active.checkout {
+    background: #16a34a !important;
+    border-color: #15803d !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25) !important;
+  }
+  .it-mob-workflow-tab.active.checkout .it-mob-tab-badge {
+    background: #ffffff !important;
+    color: #16a34a !important;
+    border-color: #ffffff !important;
+  }
+  .it-mob-workflow-tab.active.checkout .it-mob-tab-title {
+    color: #ffffff !important;
+  }
+  .it-mob-workflow-tab.active.checkout .it-mob-tab-sub {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+
+  /* Dark mode for workflow tabs */
+  html[data-theme="dark"] .it-mob-workflow-tab,
+  html.dark .it-mob-workflow-tab {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+  html[data-theme="dark"] .it-mob-workflow-tab .it-mob-tab-badge,
+  html.dark .it-mob-workflow-tab .it-mob-tab-badge {
+    background: #0f172a !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+  }
+  html[data-theme="dark"] .it-mob-workflow-tab .it-mob-tab-title,
+  html.dark .it-mob-workflow-tab .it-mob-tab-title {
+    color: #f1f5f9 !important;
+  }
+  html[data-theme="dark"] .it-mob-workflow-tab .it-mob-tab-sub,
+  html.dark .it-mob-workflow-tab .it-mob-tab-sub {
+    color: #94a3b8 !important;
+  }
+  html[data-theme="dark"] .it-mob-workflow-tab.active.checkin,
+  html.dark .it-mob-workflow-tab.active.checkin {
+    background: #2563eb !important;
+    border-color: #3b82f6 !important;
+  }
+  html[data-theme="dark"] .it-mob-workflow-tab.active.checkout,
+  html.dark .it-mob-workflow-tab.active.checkout {
+    background: #16a34a !important;
+    border-color: #22c55e !important;
+  }
+
+  /* 6. Card & Asset List Refinements */
+  .it-asset-tracker-card {
+    border-radius: 14px !important;
+    overflow: hidden !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .it-asset-cat-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .it-asset-hero-box {
+    padding: 12px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .it-asset-hero-number {
+    font-size: 26px !important;
+  }
+
+  body .it-asset-card-footer,
+  .vms-dossier-modal .it-asset-card-footer {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 12px 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  body .it-asset-card-footer .it-asset-btn-action,
+  .vms-dossier-modal .it-asset-btn-action {
+    width: 100% !important;
+    height: 44px !important;
+    border-radius: 10px !important;
+    font-size: 13.5px !important;
+    font-weight: 700 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  body .it-asset-card-footer .it-asset-btn-cancel,
+  .vms-dossier-modal .it-asset-btn-cancel {
+    width: 100% !important;
+    height: 42px !important;
+    padding: 0 16px !important;
+    border-radius: 10px !important;
+    font-size: 13px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 7. Custody Reconciliation 2x2 Grid */
+  body .ch-recon-box,
+  .vms-dossier-modal .ch-recon-box {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    padding: 12px 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  body .ch-recon-box > div,
+  .vms-dossier-modal .ch-recon-box > div {
+    text-align: left !important;
+    background: #ffffff !important;
+    padding: 10px !important;
+    border-radius: 8px !important;
+    border: 1px solid #e2e8f0 !important;
+    box-sizing: border-box !important;
+  }
+  html[data-theme="dark"] body .ch-recon-box > div,
+  html.dark body .ch-recon-box > div,
+  [data-theme="dark"] .vms-dossier-modal .ch-recon-box > div {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+  }
+
+  /* 8. Footer Actions */
+  .vms-dossier-footer {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    padding: 14px 12px !important;
+    position: static !important;
+    border-radius: 0 0 16px 16px !important;
+  }
+
+  .vms-dossier-footer > div {
+    display: grid !important;
+    grid-template-columns: 1fr 1.3fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .vms-dossier-footer button {
+    width: 100% !important;
+    height: 40px !important;
+    border-radius: 8px !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+  }
 }

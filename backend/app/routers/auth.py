@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.models.security_user import SecurityUser
 from app.schemas.auth import (
+    ChangePasswordRequest,
     CurrentUserResponse,
     LoginRequest,
     TokenResponse,
@@ -13,6 +14,7 @@ from app.schemas.auth import (
 from app.services.auth_dependencies import get_current_user
 from app.services.auth_service import (
     create_access_token,
+    hash_password,
     verify_password,
 )
 
@@ -61,3 +63,27 @@ async def read_current_user(
         email=current_user.email,
         role=current_user.role,
     )
+
+
+@router.post("/change-password")
+async def change_password(
+    password_data: ChangePasswordRequest,
+    current_user: SecurityUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if not verify_password(password_data.current_password, current_user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect.",
+        )
+
+    if len(password_data.new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters.",
+        )
+
+    current_user.password_hash = hash_password(password_data.new_password)
+    await db.commit()
+
+    return {"message": "Password changed successfully."}

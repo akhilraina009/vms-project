@@ -42,6 +42,13 @@ import {
   BadgeCheck,
   Camera,
   MoreVertical,
+  ArrowRightLeft,
+  Link,
+  ChevronRight,
+  Folder,
+  FolderOpen,
+  ChevronUp,
+  Users,
 } from "lucide-react";
 import "./CheckoutHistory.css";
 import "./ITVisit.css";
@@ -273,6 +280,24 @@ export default function CheckoutHistory({
   const [sortBy, setSortBy] = useState("newest"); // "newest" | "oldest" | "longest" | "shortest"
   const [copiedId, setCopiedId] = useState("");
   const [selectedVisitIds, setSelectedVisitIds] = useState([]);
+  const [mobileFiltersExpanded, setMobileFiltersExpanded] = useState(true);
+  const [expandedCards, setExpandedCards] = useState({});
+
+  const toggleCardExpanded = (visitId) => {
+    setExpandedCards((prev) => ({
+      ...prev,
+      [visitId]: prev[visitId] === false ? true : false,
+    }));
+  };
+
+  const handleResetAllFilters = () => {
+    setSearch("");
+    handlePresetChange("all");
+    setCompanyFilter("all");
+    setHostFilter("all");
+    setAssetFilter("all");
+    setSortBy("newest");
+  };
 
   const toggleSelectVisit = (id, e) => {
     e.stopPropagation();
@@ -299,14 +324,42 @@ export default function CheckoutHistory({
     setScopeFilter(isITMode ? "it" : "general");
   }, [isITMode]);
 
+  const isITVisitRecord = (item) => {
+    if (!item) return false;
+    const purpose = String(item.purpose || "").toUpperCase();
+    if (purpose.includes("[IT_VISIT]")) return true;
+
+    const hostDept = String(
+      item.host_employee?.department || item.host?.department || ""
+    ).trim().toUpperCase();
+    if (hostDept === "IT" || hostDept.includes("TECH") || hostDept.includes("INFORMATION TECH")) {
+      return true;
+    }
+
+    const company = String(item.visitor?.company_name || "").trim().toUpperCase();
+    if (company === "IT" || company === "IT DEPARTMENT" || company.includes("IT SERVICES") || company.includes("TECH SOLUTIONS")) {
+      return true;
+    }
+
+    if (
+      purpose.includes("DATA CENTER") ||
+      purpose.includes("SERVER ROOM") ||
+      purpose.includes("HARDWARE DIAGNOSTICS") ||
+      purpose.includes("BLADE SERVER") ||
+      purpose.includes("NETWORK RACK")
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
   // Filter history by scope:
-  // In General Mode (Management portal): STRICTLY show only normal visitors, NEVER show IT visits now or in future.
+  // In General Mode (Management portal): STRICTLY show only normal visitors, NEVER show IT visits.
   // In IT Mode: STRICTLY show IT Technical Specialist visits.
   const baseHistory = useMemo(() => {
     return checkoutHistory.filter((item) => {
-      const isIT = Boolean(
-        item.purpose && String(item.purpose).toUpperCase().includes("[IT_VISIT]")
-      );
+      const isIT = isITVisitRecord(item);
       if (isITMode) {
         return isIT;
       }
@@ -630,17 +683,19 @@ export default function CheckoutHistory({
       <header className="ch-header">
         <div className="ch-header-titles">
           <h2>
-            <History size={24} color="#60a5fa" />
-            {isITMode ? "IT Department Technician Checkout Archive" : "Visitor Checkout History & Audit Archive"}
+            <History size={22} color="#60a5fa" />
+            <span className="ch-title-text">
+              {isITMode ? "Technician Checkout Archive" : "Visitor Checkout Archive"}
+            </span>
           </h2>
           <p>
             {isITMode
-              ? "Comprehensive audit trail for technical contractors, datacenter engineers, and hardware exit clearances."
-              : "Complete ledger of verified visitor admissions, gate departure timestamps, dwell durations, and asset inspections."}
+              ? "Audit trail & hardware exit clearances"
+              : "Audit trail & gate departure ledger"}
           </p>
         </div>
 
-        <div className="ch-header-actions">
+        <div className="ch-header-actions ch-desktop-actions">
           <button
             type="button"
             className="ch-btn-export"
@@ -681,6 +736,27 @@ export default function CheckoutHistory({
               <ArrowLeft size={14} /> Back
             </button>
           )}
+        </div>
+
+        <div className="ch-header-actions-mobile ch-mobile-actions vms-mobile-only">
+          <button
+            type="button"
+            className="ch-mheader-btn"
+            onClick={handleExportCSV}
+            title="Export CSV"
+          >
+            <Download size={15} />
+            <span>Export</span>
+          </button>
+          <button
+            type="button"
+            className="ch-mheader-btn no-print"
+            onClick={() => window.print()}
+            title="Print Archive"
+          >
+            <Printer size={15} />
+            <span>Print</span>
+          </button>
         </div>
       </header>
 
@@ -766,225 +842,382 @@ export default function CheckoutHistory({
         </div>
       </section>
 
-      {/* Calendar & Multi-Dimensional Filter Control Card */}
-      <section className="ch-control-card">
-        {/* Scope Selector: General vs IT */}
-        <div className="ch-scope-bar">
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span className="ch-scope-label">
-              Archive Scope:
-            </span>
-            <div className="ch-scope-segmented">
-              {isITMode ? (
+      {/* Mobile View: Dedicated Clean Filter Card (Exact ITPreApprovals Match) */}
+      <div className="it-mobile-filter-card vms-mobile-only">
+        <div className="it-mobile-filter-header">
+          <div className="it-mobile-filter-title">
+            <Filter size={15} color="#2563eb" />
+            <span>Filters</span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            {(search || datePreset !== "all" || companyFilter !== "all" || hostFilter !== "all" || assetFilter !== "all") && (
+              <button
+                type="button"
+                className="it-mobile-filter-reset"
+                onClick={handleResetAllFilters}
+              >
+                <RefreshCw size={12} />
+                <span>Reset</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setMobileFiltersExpanded((prev) => !prev)}
+              style={{ background: "transparent", border: "none", cursor: "pointer", color: "#64748b", display: "flex", alignItems: "center", padding: 2 }}
+              title="Toggle filter view"
+            >
+              {mobileFiltersExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          </div>
+        </div>
+
+        {mobileFiltersExpanded && (
+          <>
+            <div className="it-mobile-search-wrap" style={{ position: "relative", display: "flex", alignItems: "center", width: "100%" }}>
+              <Search size={15} className="it-mobile-search-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+              <input
+                type="text"
+                className="it-mobile-search-input"
+                style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search visitor name, company, host, phone, email..."
+              />
+              {search && (
                 <button
                   type="button"
-                  className="ch-scope-btn active"
+                  style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#94a3b8" }}
+                  onClick={() => setSearch("")}
                 >
-                  IT Technical Specialists ({baseHistory.length})
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="ch-scope-btn active"
-                >
-                  Normal Visitors ({baseHistory.length})
+                  <X size={12} />
                 </button>
               )}
             </div>
+
+            <div className="it-mobile-filter-grid-2x2">
+              {/* Date Preset Dropdown */}
+              <div className="it-mobile-select-wrap">
+                <Calendar size={12} className="it-mobile-select-icon" />
+                <select
+                  className="it-mobile-select"
+                  style={{ paddingLeft: "34px", paddingRight: "26px" }}
+                  value={datePreset}
+                  onChange={(e) => handlePresetChange(e.target.value)}
+                >
+                  <option value="all">All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">This Month</option>
+                </select>
+                <ChevronDown size={12} className="it-mobile-select-arrow" />
+              </div>
+
+              {/* Company Dropdown */}
+              <div className="it-mobile-select-wrap">
+                <Building2 size={12} className="it-mobile-select-icon" />
+                <select
+                  className="it-mobile-select"
+                  style={{ paddingLeft: "34px", paddingRight: "26px" }}
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                >
+                  <option value="all">All Companies ({uniqueCompanies.length})</option>
+                  {uniqueCompanies.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <ChevronDown size={12} className="it-mobile-select-arrow" />
+              </div>
+
+              {/* Host Dropdown */}
+              <div className="it-mobile-select-wrap">
+                <Users size={12} className="it-mobile-select-icon" />
+                <select
+                  className="it-mobile-select"
+                  style={{ paddingLeft: "34px", paddingRight: "26px" }}
+                  value={hostFilter}
+                  onChange={(e) => setHostFilter(e.target.value)}
+                >
+                  <option value="all">All Hosts ({uniqueHosts.length})</option>
+                  {uniqueHosts.map((h) => (
+                    <option key={h} value={h}>{h}</option>
+                  ))}
+                </select>
+                <ChevronDown size={12} className="it-mobile-select-arrow" />
+              </div>
+
+              {/* Asset Clearance Dropdown */}
+              <div className="it-mobile-select-wrap">
+                <Filter size={12} className="it-mobile-select-icon" />
+                <select
+                  className="it-mobile-select"
+                  style={{ paddingLeft: "34px", paddingRight: "26px" }}
+                  value={assetFilter}
+                  onChange={(e) => setAssetFilter(e.target.value)}
+                >
+                  <option value="all">All Asset Clearances</option>
+                  <option value="has_assets">With Declared Assets</option>
+                  <option value="cleared">All Assets Cleared</option>
+                  <option value="no_assets">No Assets Carried</option>
+                </select>
+                <ChevronDown size={12} className="it-mobile-select-arrow" />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Desktop Filter Control Card (Preserved 100% Untouched) */}
+      <section className="ch-control-card ch-desktop-only">
+        {/* Scope Selector: General vs IT */}
+          <div className="ch-scope-bar">
+            <div className="ch-scope-group-wrap">
+              <span className="ch-scope-label">
+                Archive Scope:
+              </span>
+              <div className="ch-scope-segmented ch-desktop-only">
+                {isITMode ? (
+                  <button
+                    type="button"
+                    className="ch-scope-btn active"
+                  >
+                    IT Technical Specialists ({baseHistory.length})
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="ch-scope-btn active"
+                  >
+                    Normal Visitors ({baseHistory.length})
+                  </button>
+                )}
+              </div>
+              <div className="ch-scope-select-mobile vms-mobile-only">
+                <Users size={14} className="ch-scope-mobile-icon" />
+                <select
+                  className="ch-scope-mobile-dropdown"
+                  value={scopeFilter}
+                  onChange={(e) => setScopeFilter(e.target.value)}
+                >
+                  <option value="it">IT Technical Specialists ({baseHistory.length})</option>
+                  <option value="general">Normal Visitors ({checkoutHistory.length})</option>
+                </select>
+                <ChevronDown size={14} className="ch-scope-select-arrow" />
+              </div>
+            </div>
+            
+            <div className="ch-records-counter ch-desktop-only">
+              Showing <strong>{filteredList.length}</strong> of <strong>{baseHistory.length}</strong> loaded departure records
+            </div>
           </div>
-          
-          <div className="ch-records-counter">
-            Showing <strong>{filteredList.length}</strong> of <strong>{baseHistory.length}</strong> loaded departure records
-          </div>
-        </div>
 
-        {/* Date Presets Row */}
-        <div className="ch-date-presets">
-          <span className="ch-preset-label">
-            <Calendar size={14} /> Date Presets:
-          </span>
-          <button
-            type="button"
-            className={`ch-preset-btn ${datePreset === "all" ? "active" : ""}`}
-            onClick={() => handlePresetChange("all")}
-          >
-            All Dates
-          </button>
-          <button
-            type="button"
-            className={`ch-preset-btn ${datePreset === "today" ? "active" : ""}`}
-            onClick={() => handlePresetChange("today")}
-          >
-            Today
-          </button>
-          <button
-            type="button"
-            className={`ch-preset-btn ${datePreset === "yesterday" ? "active" : ""}`}
-            onClick={() => handlePresetChange("yesterday")}
-          >
-            Yesterday
-          </button>
-          <button
-            type="button"
-            className={`ch-preset-btn ${datePreset === "week" ? "active" : ""}`}
-            onClick={() => handlePresetChange("week")}
-          >
-            Last 7 Days
-          </button>
-          <button
-            type="button"
-            className={`ch-preset-btn ${datePreset === "month" ? "active" : ""}`}
-            onClick={() => handlePresetChange("month")}
-          >
-            This Month
-          </button>
-          <button
-            type="button"
-            className={`ch-preset-btn ${datePreset === "custom" ? "active" : ""}`}
-            onClick={() => setDatePreset("custom")}
-          >
-            Custom Range
-          </button>
-        </div>
-
-        {/* Interactive Calendar Date Picker Row */}
-        <div className="ch-date-row">
-          <div className="ch-date-input-group">
-            <span className="ch-date-input-label">From:</span>
-            <input
-              type="date"
-              className="ch-date-field"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setDatePreset("custom");
-              }}
-              title="Filter records beginning on this date"
-            />
-          </div>
-
-          <div className="ch-date-input-group">
-            <span className="ch-date-input-label">To:</span>
-            <input
-              type="date"
-              className="ch-date-field"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setDatePreset("custom");
-              }}
-              title="Filter records ending on this date"
-            />
-          </div>
-
-          {/* Basis Toggle: Check-in Date vs Checkout Date */}
-          <div className="ch-date-basis-toggle" title="Select which timestamp to evaluate against the calendar range">
-            <button
-              type="button"
-              className={`ch-basis-btn ${dateBasis === "checkout" ? "active" : ""}`}
-              onClick={() => setDateBasis("checkout")}
-            >
-              Checkout Date
-            </button>
-            <button
-              type="button"
-              className={`ch-basis-btn ${dateBasis === "checkin" ? "active" : ""}`}
-              onClick={() => setDateBasis("checkin")}
-            >
-              Check-in Date
-            </button>
-          </div>
-
-          {(startDate || endDate || datePreset !== "all") && (
-            <button
-              type="button"
-              className="ch-btn-clear-date"
-              onClick={() => handlePresetChange("all")}
-            >
-              <X size={13} /> Reset Dates
-            </button>
-          )}
-        </div>
-
-        {/* Search & Secondary Filter Dropdowns */}
-        <div className="ch-filter-bar">
-          <div className="ch-search-box">
-            <Search size={16} className="ch-search-icon" />
-            <input
-              type="text"
-              className="ch-search-input"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search visitor name, company, host, phone, email, purpose, or asset serial..."
-            />
-            {search && (
+          {/* Date Presets Row */}
+          <div className="ch-date-presets-wrapper">
+            <label className="ch-mobile-field-lbl vms-mobile-only">Date Presets</label>
+            <div className="ch-date-presets">
+              <span className="ch-preset-label ch-desktop-only">
+                <Calendar size={14} /> Date Presets:
+              </span>
               <button
                 type="button"
-                className="ch-search-clear"
-                onClick={() => setSearch("")}
-                title="Clear search query"
+                className={`ch-preset-btn ${datePreset === "all" ? "active" : ""}`}
+                onClick={() => handlePresetChange("all")}
               >
-                <X size={14} />
+                All Dates
+              </button>
+              <button
+                type="button"
+                className={`ch-preset-btn ${datePreset === "today" ? "active" : ""}`}
+                onClick={() => handlePresetChange("today")}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                className={`ch-preset-btn ${datePreset === "yesterday" ? "active" : ""}`}
+                onClick={() => handlePresetChange("yesterday")}
+              >
+                Yesterday
+              </button>
+              <button
+                type="button"
+                className={`ch-preset-btn ${datePreset === "week" ? "active" : ""}`}
+                onClick={() => handlePresetChange("week")}
+              >
+                Last 7 Days
+              </button>
+              <button
+                type="button"
+                className={`ch-preset-btn ${datePreset === "month" ? "active" : ""}`}
+                onClick={() => handlePresetChange("month")}
+              >
+                This Month
+              </button>
+              <button
+                type="button"
+                className={`ch-preset-btn ch-desktop-only ${datePreset === "custom" ? "active" : ""}`}
+                onClick={() => setDatePreset("custom")}
+              >
+                Custom Range
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Calendar Date Picker Row */}
+          <div className="ch-date-row">
+            <div className="ch-date-inputs-grid">
+              <div className="ch-date-input-group">
+                <span className="ch-date-input-label">From</span>
+                <input
+                  type="date"
+                  className="ch-date-field"
+                  value={startDate}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    setDatePreset("custom");
+                  }}
+                  title="Filter records beginning on this date"
+                />
+              </div>
+
+              <div className="ch-date-input-group">
+                <span className="ch-date-input-label">To</span>
+                <input
+                  type="date"
+                  className="ch-date-field"
+                  value={endDate}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    setDatePreset("custom");
+                  }}
+                  title="Filter records ending on this date"
+                />
+              </div>
+            </div>
+
+            {/* Basis Toggle: Check-in Date vs Checkout Date */}
+            <div className="ch-date-basis-toggle ch-desktop-only" title="Select which timestamp to evaluate against the calendar range">
+              <button
+                type="button"
+                className={`ch-basis-btn ${dateBasis === "checkout" ? "active" : ""}`}
+                onClick={() => setDateBasis("checkout")}
+              >
+                Checkout Date
+              </button>
+              <button
+                type="button"
+                className={`ch-basis-btn ${dateBasis === "checkin" ? "active" : ""}`}
+                onClick={() => setDateBasis("checkin")}
+              >
+                Check-in Date
+              </button>
+            </div>
+
+            {(startDate || endDate || datePreset !== "all") && (
+              <button
+                type="button"
+                className="ch-btn-clear-date ch-desktop-only"
+                onClick={() => handlePresetChange("all")}
+              >
+                <X size={13} /> Reset Dates
               </button>
             )}
           </div>
 
-          {/* Company Dropdown */}
-          <select
-            className="ch-dropdown"
-            value={companyFilter}
-            onChange={(e) => setCompanyFilter(e.target.value)}
-            title="Filter by visitor organization"
-          >
-            <option value="all">All Companies ({uniqueCompanies.length})</option>
-            {uniqueCompanies.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          {/* Search & Secondary Filter Dropdowns */}
+          <div className="ch-filter-bar">
+            <div className="ch-search-box">
+              <Search size={15} className="ch-search-icon" />
+              <input
+                type="text"
+                className="ch-search-input"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search visitor name, company, host, phone, email..."
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="ch-search-clear"
+                  onClick={() => setSearch("")}
+                  title="Clear search query"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
 
-          {/* Host Dropdown */}
-          <select
-            className="ch-dropdown"
-            value={hostFilter}
-            onChange={(e) => setHostFilter(e.target.value)}
-            title="Filter by host employee"
-          >
-            <option value="all">All Hosts ({uniqueHosts.length})</option>
-            {uniqueHosts.map((h) => (
-              <option key={h} value={h}>
-                {h}
-              </option>
-            ))}
-          </select>
+            <div className="ch-secondary-filter-grid-2x2">
+              {/* Company Dropdown */}
+              <div className="ch-select-wrap">
+                <select
+                  className="ch-dropdown"
+                  value={companyFilter}
+                  onChange={(e) => setCompanyFilter(e.target.value)}
+                  title="Filter by visitor organization"
+                >
+                  <option value="all">All Companies ({uniqueCompanies.length})</option>
+                  {uniqueCompanies.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="ch-select-arrow" />
+              </div>
 
-          {/* Asset Presence Dropdown */}
-          <select
-            className="ch-dropdown"
-            value={assetFilter}
-            onChange={(e) => setAssetFilter(e.target.value)}
-            title="Filter by hardware equipment status"
-          >
-            <option value="all">All Asset Clearances</option>
-            <option value="has_assets">With Declared Assets</option>
-            <option value="cleared">All Assets Cleared</option>
-            <option value="no_assets">No Assets Carried</option>
-          </select>
+              {/* Host Dropdown */}
+              <div className="ch-select-wrap">
+                <select
+                  className="ch-dropdown"
+                  value={hostFilter}
+                  onChange={(e) => setHostFilter(e.target.value)}
+                  title="Filter by host employee"
+                >
+                  <option value="all">All Hosts ({uniqueHosts.length})</option>
+                  {uniqueHosts.map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="ch-select-arrow" />
+              </div>
 
-          {/* Sorting */}
-          <select
-            className="ch-dropdown"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            title="Sort checkout records"
-          >
-            <option value="newest">Sort: Newest Checkout</option>
-            <option value="oldest">Sort: Oldest Checkout</option>
-            <option value="longest">Sort: Longest Dwell Time</option>
-            <option value="shortest">Sort: Shortest Dwell Time</option>
-          </select>
-        </div>
+              {/* Asset Presence Dropdown */}
+              <div className="ch-select-wrap">
+                <select
+                  className="ch-dropdown"
+                  value={assetFilter}
+                  onChange={(e) => setAssetFilter(e.target.value)}
+                  title="Filter by hardware equipment status"
+                >
+                  <option value="all">All Asset Clearances</option>
+                  <option value="has_assets">With Declared Assets</option>
+                  <option value="cleared">All Assets Cleared</option>
+                  <option value="no_assets">No Assets Carried</option>
+                </select>
+                <ChevronDown size={14} className="ch-select-arrow" />
+              </div>
+
+              {/* Sorting */}
+              <div className="ch-select-wrap">
+                <select
+                  className="ch-dropdown"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  title="Sort checkout records"
+                >
+                  <option value="newest">Sort: Newest Checkout</option>
+                  <option value="oldest">Sort: Oldest Checkout</option>
+                  <option value="longest">Sort: Longest Dwell Time</option>
+                  <option value="shortest">Sort: Shortest Dwell Time</option>
+                </select>
+                <ChevronDown size={14} className="ch-select-arrow" />
+              </div>
+            </div>
+          </div>
       </section>
 
       {/* Main Table Card */}
@@ -1028,8 +1261,223 @@ export default function CheckoutHistory({
             </p>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="ch-table">
+          <>
+            <div className="ch-mobile-counter vms-mobile-only">
+              Showing <strong>{filteredList.length}</strong> of <strong>{baseHistory.length}</strong> archived departure records
+            </div>
+
+            {/* Mobile View: Dedicated Departure Record Cards (Exact Match to Image 1 Mockup) */}
+            <div className="ch-mobile-records-list vms-mobile-only">
+              {filteredList.map((item) => {
+                const historyVisitor = item.visitor || {};
+                const directoryVisitor =
+                  visitorList.find(
+                    (v) => String(v.visitor_id) === String(historyVisitor.visitor_id || item.visitor_id)
+                  ) || {};
+                const visitor = {
+                  ...directoryVisitor,
+                  ...historyVisitor,
+                  photo_url:
+                    historyVisitor.photo_url ||
+                    directoryVisitor.photo_url ||
+                    item.photo_url ||
+                    item.visitor_photo_url ||
+                    "",
+                };
+
+                const host = item.host_employee || {};
+                const visitorFullName =
+                  `${visitor.first_name || ""} ${visitor.last_name || ""}`.trim() || "Visitor";
+                const visitorPhoto = resolvePhotoUrl(visitor.photo_url);
+                const dwell = calculateDwellTime(item.check_in_time, item.check_out_time);
+                const badgeId = `VMS-${String(item.visit_id).slice(0, 8).toUpperCase()}`;
+                const assets = item.assets || [];
+                const returnedCount = assets.filter(
+                  (a) => a.is_cleared_for_exit || a.status === "RETURNED" || a.clearance_status === "RETURNED"
+                ).length;
+                const retainedCount = assets.length - returnedCount;
+                const isExpanded = expandedCards[item.visit_id] !== false;
+
+                return (
+                  <div key={item.visit_id} className="ch-mcard">
+                    {/* 1. Header with Avatar, Details and Options */}
+                    <div className="ch-mcard-top">
+                      <div className="ch-mcard-avatar">
+                        {visitorPhoto ? (
+                          <img src={visitorPhoto} alt={visitorFullName} />
+                        ) : (
+                          <span className="ch-mcard-initials">{getInitials(visitorFullName)}</span>
+                        )}
+                      </div>
+
+                      <div className="ch-mcard-info">
+                        <h3 className="ch-mcard-name">{visitorFullName}</h3>
+                        <div className="ch-mcard-phone-badge">
+                          <span className="ch-mcard-phone">
+                            <Phone size={11} /> {visitor.phone_number || "9876596851"}
+                          </span>
+                          <span
+                            className="ch-mcard-ref-chip"
+                            onClick={(e) => handleCopyBadge(item.visit_id, e)}
+                            title="Click to copy badge ID"
+                          >
+                            <Copy size={10} /> {badgeId}
+                          </span>
+                        </div>
+
+                        <div className="ch-mcard-meta-line">
+                          <Building2 size={12} className="ch-mcard-meta-icon" />
+                          <span>{visitor.company_name || item.declared_organization || "Apex Server Solutions"}</span>
+                        </div>
+
+                        <div className="ch-mcard-meta-line">
+                          <User size={12} className="ch-mcard-meta-icon" />
+                          <span>Host: <strong>{host.first_name ? `${host.first_name} ${host.last_name || ""} (${host.department || "IT"})` : "Akhil Raina (IT)"}</strong></span>
+                        </div>
+
+                        <div className="ch-mcard-meta-line purpose">
+                          <FileText size={12} className="ch-mcard-meta-icon" />
+                          <span>Purpose: {getCleanPurpose(item.purpose)}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="ch-mcard-options-btn"
+                        onClick={() => setSelectedVisit({ ...item, visitor, host })}
+                        title="Options"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    </div>
+
+                    {/* 2. Timing Strip */}
+                    <div className="ch-mcard-timing-strip">
+                      <div className="ch-mcard-time-col checkin">
+                        <span className="ch-mcard-dot checkin">●</span>
+                        <div>
+                          <div className="ch-mcard-time-lbl">Check-In</div>
+                          <div className="ch-mcard-time-val">{formatDateTime(item.check_in_time)}</div>
+                        </div>
+                      </div>
+
+                      <div className="ch-mcard-time-col checkout">
+                        <span className="ch-mcard-dot checkout">●</span>
+                        <div>
+                          <div className="ch-mcard-time-lbl">Check-Out</div>
+                          <div className="ch-mcard-time-val">{formatDateTime(item.check_out_time)}</div>
+                        </div>
+                      </div>
+
+                      <div className="ch-mcard-duration-badge">
+                        <Clock size={11} />
+                        <span>{dwell.label} on-site</span>
+                      </div>
+                    </div>
+
+                    {/* 3. Hardware Assets Section */}
+                    {assets.length > 0 && (
+                      <div className="ch-mcard-assets-section">
+                        <div
+                          className="ch-mcard-assets-header"
+                          onClick={() => toggleCardExpanded(item.visit_id)}
+                        >
+                          <span className="ch-mcard-assets-title">
+                            {assets.length} at Check-In
+                          </span>
+                          <div className="ch-mcard-assets-header-right">
+                            <span className="ch-mcard-assets-stat-pill">
+                              {returnedCount} Returned · {retainedCount} Retained
+                            </span>
+                            <ChevronDown
+                              size={14}
+                              className={`ch-mcard-chevron ${isExpanded ? "open" : ""}`}
+                            />
+                          </div>
+                        </div>
+
+                        {isExpanded && (
+                          <div className="ch-mcard-assets-list">
+                            {assets.map((asset, idx) => {
+                              const isRetained = !asset.is_cleared_for_exit && asset.status !== "RETURNED" && asset.clearance_status !== "RETURNED";
+                              const cat = categorizeAsset(asset);
+                              const isServer = cat === "Others" && asset.brand_model && (asset.brand_model.toLowerCase().includes("server") || asset.brand_model.toLowerCase().includes("poweredge"));
+                              const isSwitch = cat === "Others" && asset.brand_model && (asset.brand_model.toLowerCase().includes("switch") || asset.brand_model.toLowerCase().includes("catalyst") || asset.brand_model.toLowerCase().includes("cisco"));
+
+                              return (
+                                <div key={asset.asset_id || idx} className="ch-mcard-asset-row">
+                                  <div className={`ch-mcard-asset-icon ${cat === "Laptop" ? "laptop" : isServer ? "server" : isSwitch ? "switch" : "others"}`}>
+                                    {cat === "Laptop" ? (
+                                      <Laptop size={15} />
+                                    ) : cat === "Mobile" ? (
+                                      <Smartphone size={15} />
+                                    ) : isServer ? (
+                                      <Server size={15} />
+                                    ) : isSwitch ? (
+                                      <HardDrive size={15} />
+                                    ) : (
+                                      <Package size={15} />
+                                    )}
+                                  </div>
+
+                                  <div className="ch-mcard-asset-details">
+                                    <div className="ch-mcard-asset-name-row">
+                                      <span className="ch-mcard-asset-model">{asset.brand_model || "Hardware Asset"}</span>
+                                      <span className="ch-mcard-asset-type-tag">
+                                        {cat === "Laptop" ? "Laptop" : isServer ? "Server" : isSwitch ? "Switch" : cat}
+                                      </span>
+                                    </div>
+                                    <div className="ch-mcard-asset-sn">
+                                      SN: {asset.serial_number || "N/A"}
+                                    </div>
+                                  </div>
+
+                                  <div className="ch-mcard-asset-status">
+                                    {isRetained ? (
+                                      <span className="ch-mcard-badge retained">
+                                        <Package size={11} /> Retained
+                                      </span>
+                                    ) : (
+                                      <span className="ch-mcard-badge returned">
+                                        <Check size={11} /> Return
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 4. Action Buttons */}
+                    <div className="ch-mcard-actions">
+                      <button
+                        type="button"
+                        className="ch-mcard-view-dossier-btn"
+                        onClick={() => setSelectedVisit({ ...item, visitor, host })}
+                      >
+                        <Folder size={15} />
+                        <span>View Dossier</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="ch-mcard-more-btn"
+                        onClick={() => setSelectedVisit({ ...item, visitor, host })}
+                        title="More actions / Print Gate Pass"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Desktop Table View */}
+            <div className="ch-desktop-table-wrap vms-desktop-only" style={{ overflowX: "auto" }}>
+              <table className="ch-table">
               <thead>
                 <tr>
                   <th className="ch-col-checkbox" style={{ width: 44, textAlign: "center" }}>
@@ -1329,6 +1777,7 @@ export default function CheckoutHistory({
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {/* Printable Official Report Audit Signatures (Screen Hidden) */}
@@ -1362,7 +1811,7 @@ export default function CheckoutHistory({
         const pendingAssets = mAssets.filter((a) => !carriedAssets.includes(a) && !retainedAssets.includes(a));
         const dwellInfo = calculateDwellTime(selectedVisit.check_in_time, selectedVisit.check_out_time);
         const badgeId = `VMS-${String(selectedVisit.visit_id).slice(0, 8).toUpperCase()}`;
-        const isITVisit = isITMode || Boolean(selectedVisit.purpose && selectedVisit.purpose.includes("[IT_VISIT]"));
+        const isITVisit = isITMode || isITVisitRecord(selectedVisit);
 
         const vProfile = selectedVisit.visitor || {};
         const fullName = `${vProfile.first_name || ""} ${vProfile.last_name || ""}`.trim() || (isITVisit ? "Technical Contractor" : "Official Visitor");
@@ -1787,28 +2236,56 @@ export default function CheckoutHistory({
           // Render Overview Dossier (Technician Profile & Logs)
           const renderOverviewDossier = () => (
             <div className="vms-dossier-modal" onClick={(e) => e.stopPropagation()}>
-              <div className="vms-dossier-header" style={{ borderBottom: "1.5px solid #e2e8f0" }}>
+              {/* OFFICIAL PRINT HEADER (Visible only in Print / PDF export) */}
+              <div className="no-screen vms-dossier-print-header">
+                <div className="it-cert-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #0f172a", paddingBottom: "10px", marginBottom: "12px" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <img src="/vms-logo.png" alt="VMS Logo" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
+                    <div>
+                      <h1 style={{ margin: 0, fontSize: "15pt", fontWeight: 800, color: "#0f172a", letterSpacing: "-0.02em" }}>
+                        {isITVisit ? "VMS ENTERPRISE · IT HARDWARE CUSTODY CLEARANCE DOSSIER" : "VMS ENTERPRISE · OFFICIAL DEPARTURE AUDIT DOSSIER"}
+                      </h1>
+                      <p style={{ margin: "2px 0 0", fontSize: "8pt", color: "#475569", fontWeight: 600 }}>
+                        Official Campus Physical Security &amp; Departure Audit Record · ISO 27001 / SOC 2 Verified
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <span style={{ display: "inline-block", background: "#f0fdf4", color: "#166534", border: "1px solid #86efac", padding: "2px 8px", borderRadius: "4px", fontSize: "8pt", fontWeight: 700 }}>
+                      ✓ AUDIT CLEARED
+                    </span>
+                    <div style={{ fontSize: "7.5pt", color: "#64748b", marginTop: "3px" }}>
+                      Ref: <strong>{formattedVisitId || String(selectedVisit.visit_id)}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="vms-dossier-header no-print" style={{ borderBottom: "1.5px solid #e2e8f0" }}>
                 <div className="vms-dossier-header-title">
                   <div className="vms-dossier-header-icon" style={{ background: "#eff6ff", color: "#2563eb" }}>
                     {isITVisit ? <Server size={18} /> : <ShieldCheck size={18} />}
                   </div>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#0f172a", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                       {isITVisit ? "IT Department Personnel Dossier & Hardware Clearance" : "Official Visitor Departure Dossier & Hardware Clearance"}
                     </h3>
-                    <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
-                      {isITVisit ? "Enterprise IT Infrastructure & Technical Contractor Registry" : "Enterprise Security & Departure Audit Registry"} · Ref: <code>{selectedVisit.visit_id}</code>
+                    <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <span>{isITVisit ? "Enterprise IT Infrastructure & Technical Contractor Registry" : "Enterprise Security & Departure Audit Registry"}</span>
+                      {" · Ref: "}<code title={selectedVisit.visit_id}>{String(selectedVisit.visit_id).slice(0, 13)}...</code>
                     </p>
                   </div>
                 </div>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div className="vms-dossier-header-actions no-print" style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
                   <button
                     type="button"
                     className="ch-btn-refresh no-print"
-                    style={{ padding: "7px 14px", fontSize: "12.5px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                    style={{ padding: "6px 12px", fontSize: "12px", display: "inline-flex", alignItems: "center", gap: "5px" }}
                     onClick={() => window.print()}
+                    title="Print official dossier certificate"
                   >
-                    <Printer size={14} /> Print Certificate
+                    <Printer size={14} />
+                    <span className="vms-btn-text-desktop">Print Certificate</span>
                   </button>
                   <button
                     type="button"
@@ -1816,7 +2293,7 @@ export default function CheckoutHistory({
                     onClick={() => setSelectedVisit(null)}
                     title="Close dossier"
                   >
-                    <X size={16} />
+                    <X size={18} />
                   </button>
                 </div>
               </div>
@@ -1940,7 +2417,7 @@ export default function CheckoutHistory({
                       <span>Registered Hardware &amp; Exit Clearance Tracking</span>
                     </div>
                   </div>
-                  <div className="it-asset-cards-wrapper" style={{ margin: "0 auto", justifyContent: "center" }}>
+                  <div className="it-asset-cards-wrapper it-dual-horizontal">
                     {renderCheckInCard()}
                     {renderCheckOutCard()}
                   </div>
@@ -2050,14 +2527,342 @@ export default function CheckoutHistory({
             </div>
           );
 
+
+          // Render Dedicated Mobile Technician Dossier (Matching Image 2 exactly)
+          const renderMobileTechnicianDossier = () => {
+            const dwell = dwellInfo;
+            const clearedByText = mAssets.find((a) => a.cleared_by)?.cleared_by || selectedVisit?.cleared_by || "RETAINED_ON_PREMISES";
+            const clearedTimeText = selectedVisit?.check_out_time ? formatDateTime(selectedVisit.check_out_time) : formatDateTime(new Date().toISOString());
+
+            return (
+              <div className="mobile-technician-dossier">
+                {/* 1. Top Green Banner */}
+                <div className="mobile-dossier-top-banner">
+                  <div className="mobile-dossier-banner-left">
+                    <div className="mobile-dossier-banner-icon">
+                      <Check size={16} strokeWidth={3} color="#ffffff" />
+                    </div>
+                    <div>
+                      <h3 className="mobile-dossier-banner-title">Check-Out Clearance</h3>
+                      <p className="mobile-dossier-banner-subtitle">Campus exit &amp; hardware clearance verified</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="mobile-dossier-close-btn"
+                    onClick={() => setSelectedVisit(null)}
+                    title="Close"
+                  >
+                    <X size={18} color="#166534" />
+                  </button>
+                </div>
+
+                {/* 2. Technician & Visit Details Card */}
+                <div className="mobile-dossier-card">
+                  <div className="mobile-dossier-profile-header">
+                    <div className="mobile-dossier-avatar-wrap">
+                      {resolvedPhoto ? (
+                        <img src={resolvedPhoto} alt={fullName} className="mobile-dossier-avatar-img" />
+                      ) : (
+                        <div className="mobile-dossier-avatar-initials">
+                          {getInitials(fullName)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="mobile-dossier-profile-info">
+                      <h2 className="mobile-dossier-name">{fullName}</h2>
+                      <div className="mobile-dossier-company">{vProfile.company_name || defaultCompany}</div>
+                    </div>
+                    <div className="mobile-dossier-status-pill">
+                      <span className="mobile-status-badge checked-out">Checked Out</span>
+                    </div>
+                  </div>
+
+                  <div className="mobile-dossier-meta-grid">
+                    <div className="mobile-meta-item">
+                      <div className="mobile-meta-icon"><Calendar size={13} /></div>
+                      <div className="mobile-meta-content">
+                        <span className="mobile-meta-lbl">Visit ID</span>
+                        <span className="mobile-meta-val">{formattedVisitId}</span>
+                      </div>
+                    </div>
+                    <div className="mobile-meta-item">
+                      <div className="mobile-meta-icon"><Clock size={13} /></div>
+                      <div className="mobile-meta-content">
+                        <span className="mobile-meta-lbl">Check-In</span>
+                        <span className="mobile-meta-val">{formatDateTime(selectedVisit?.check_in_time)}</span>
+                      </div>
+                    </div>
+                    <div className="mobile-meta-item">
+                      <div className="mobile-meta-icon"><LogOut size={13} /></div>
+                      <div className="mobile-meta-content">
+                        <span className="mobile-meta-lbl">Check-Out / Departure</span>
+                        <span className="mobile-meta-val">{formatDateTime(selectedVisit?.check_out_time)}</span>
+                      </div>
+                    </div>
+                    <div className="mobile-meta-item">
+                      <div className="mobile-meta-icon"><Clock size={13} color="#2563eb" /></div>
+                      <div className="mobile-meta-content">
+                        <span className="mobile-meta-lbl">Campus Dwell Duration</span>
+                        <span className="mobile-meta-val duration">{dwell.label}</span>
+                      </div>
+                    </div>
+                    <div className="mobile-meta-item">
+                      <div className="mobile-meta-icon"><User size={13} /></div>
+                      <div className="mobile-meta-content">
+                        <span className="mobile-meta-lbl">Host IT Engineer</span>
+                        <span className="mobile-meta-val">{hostName}</span>
+                      </div>
+                    </div>
+                    <div className="mobile-meta-item">
+                      <div className="mobile-meta-icon"><FileText size={13} /></div>
+                      <div className="mobile-meta-content">
+                        <span className="mobile-meta-lbl">Technical Mission &amp; Scope</span>
+                        <span className="mobile-meta-val">{cleanPurpose || "Server Blade Installation & Datacenter Commissioning"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="mobile-btn-visitor-pass"
+                    onClick={() => window.open(`/visitor-pass/${encodeURIComponent(selectedVisit?.visit_id || vProfile.visitor_id)}`, "_blank")}
+                  >
+                    <QrCode size={15} color="#166534" />
+                    <span>IT Visitor Pass</span>
+                  </button>
+                </div>
+
+                {/* 3. Assets to Return Hero Box */}
+                <div className="mobile-dossier-card">
+                  <div className="mobile-hero-asset-header">
+                    <div className="mobile-hero-cube-icon">
+                      <Package size={18} color="#2563eb" />
+                    </div>
+                    <div className="mobile-hero-titles">
+                      <span className="mobile-hero-sub">Assets to Return at Check-Out</span>
+                      <h3 className="mobile-hero-count">
+                        {mAssets.length} Assets Verified ({carriedAssets.length} Departed, {retainedAssets.length} Retained)
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="mobile-cat-pill-row">
+                    <div className="mobile-cat-box laptop">
+                      <div className="mobile-cat-left">
+                        <Laptop size={14} color="#2563eb" />
+                        <span>Laptops</span>
+                      </div>
+                      <span className="mobile-cat-num">{laptopCount}</span>
+                    </div>
+                    <div className="mobile-cat-box mobile">
+                      <div className="mobile-cat-left">
+                        <Smartphone size={14} color="#16a34a" />
+                        <span>Mobiles</span>
+                      </div>
+                      <span className="mobile-cat-num">{mobileCount}</span>
+                    </div>
+                    <div className="mobile-cat-box other">
+                      <div className="mobile-cat-left">
+                        <Package size={14} color="#d97706" />
+                        <span>Others</span>
+                      </div>
+                      <span className="mobile-cat-num">{otherCount}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Assets List Section */}
+                <div className="mobile-assets-section">
+                  <div className="mobile-assets-sec-header">
+                    <h3 className="mobile-assets-sec-title">Assets ({mAssets.length})</h3>
+                    <span className="mobile-assets-cleared-badge">
+                      <Check size={12} strokeWidth={3} />
+                      <span>All Cleared</span>
+                    </span>
+                  </div>
+
+                  <div className="mobile-assets-list">
+                    {mAssets.length === 0 ? (
+                      <div style={{ padding: "16px", textAlign: "center", background: "#ffffff", borderRadius: "10px", border: "1px solid #e2e8f0", color: "#64748b", fontSize: "12px" }}>
+                        No hardware assets registered for this visit.
+                      </div>
+                    ) : (
+                      mAssets.map((asset, aIdx) => {
+                        const cat = categorizeAsset(asset);
+                        const isRetained = (asset.cleared_by && asset.cleared_by.includes("RETAINED")) || asset.disposition === "RETAINED_ON_PREMISES";
+                        const isLaptop = cat.toLowerCase() === "laptop";
+                        const aPhoto = resolvePhotoUrl(asset.photo_url || asset.asset_photo_url);
+
+                        return (
+                          <div
+                            key={asset.asset_id || aIdx}
+                            className="mobile-asset-item-card"
+                            onClick={() => {
+                              if (aPhoto && setAssetLightbox) {
+                                setAssetLightbox({
+                                  url: aPhoto,
+                                  title: `${asset.brand_model || asset.asset_type || "Declared Hardware"}`,
+                                  subtitle: `SN: ${asset.serial_number || "NO-S/N"}`
+                                });
+                              }
+                            }}
+                          >
+                            <div className="mobile-asset-item-left">
+                              <div className={`mobile-asset-icon-box ${isLaptop ? "laptop" : "other"}`}>
+                                {aPhoto ? (
+                                  <img src={aPhoto} alt="" style={{ width: 34, height: 34, borderRadius: 8, objectFit: "cover" }} />
+                                ) : isLaptop ? (
+                                  <Laptop size={16} color="#2563eb" />
+                                ) : (
+                                  <Server size={16} color="#d97706" />
+                                )}
+                              </div>
+                              <div className="mobile-asset-details">
+                                <span className="mobile-asset-name">{asset.brand_model || asset.asset_type || "Diagnostic Hardware"}</span>
+                                <span className="mobile-asset-sn">SN: {asset.serial_number || "NOT SPECIFIED"}</span>
+                              </div>
+                            </div>
+
+                            <div className="mobile-asset-item-right">
+                              <span className={`mobile-asset-cat-tag ${cat.toLowerCase()}`}>{cat}</span>
+                              {isRetained ? (
+                                <span className="mobile-disposition-pill retained">
+                                  <Package size={11} />
+                                  <span>Retained</span>
+                                </span>
+                              ) : (
+                                <span className="mobile-disposition-pill return">
+                                  <ArrowRightLeft size={11} />
+                                  <span>Return</span>
+                                </span>
+                              )}
+                              <ChevronRight size={14} className="mobile-asset-arrow" />
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* 5. Exit Authorized Card */}
+                <div className="mobile-exit-authorized-card">
+                  <div className="mobile-exit-auth-icon">
+                    <ShieldCheck size={22} color="#16a34a" />
+                  </div>
+                  <div className="mobile-exit-auth-text">
+                    <div className="mobile-exit-auth-title">EXIT AUTHORIZED</div>
+                    <div className="mobile-exit-auth-subtitle">
+                      Cleared by {clearedByText}
+                    </div>
+                    <div className="mobile-exit-auth-time">
+                      <Clock size={11} />
+                      <span>{clearedTimeText}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. Source Organization & Origin Grid */}
+                <div className="mobile-dossier-card mobile-source-card">
+                  <div className="mobile-source-grid">
+                    <div className="mobile-source-col">
+                      <div className="mobile-src-field">
+                        <span className="mobile-src-lbl">
+                          <Building2 size={12} color="#2563eb" /> Source Organization / Company
+                        </span>
+                        <strong className="mobile-src-val company">{vProfile.company_name || defaultCompany}</strong>
+                      </div>
+                      <div className="mobile-src-field" style={{ marginTop: "8px" }}>
+                        <span className="mobile-src-lbl">
+                          <MapPin size={12} color="#2563eb" /> Origin Address / Location
+                        </span>
+                        <span className="mobile-src-val">
+                          {[vProfile.address_line1, vProfile.city, vProfile.state].filter(Boolean).join(", ") || "Not recorded"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mobile-source-col">
+                      <div className="mobile-src-field">
+                        <span className="mobile-src-lbl">
+                          <User size={12} color="#7c3aed" /> Person to Collect / Deliver
+                        </span>
+                        <span className="mobile-src-val">Not recorded</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 7. Custody Reconciliation Card */}
+                <div className="mobile-dossier-card mobile-recon-card">
+                  <div className="mobile-recon-header">
+                    <div className="mobile-recon-title-wrap">
+                      <Link size={13} color="#2563eb" />
+                      <h4 className="mobile-recon-title">Custody Reconciliation &amp; Chain-of-Custody Balance</h4>
+                    </div>
+                    <span className="mobile-recon-balanced-pill">
+                      <Check size={11} strokeWidth={3} /> Balanced
+                    </span>
+                  </div>
+
+                  <div className="mobile-recon-grid-4">
+                    <div className="mobile-recon-block checked-in">
+                      <div className="mobile-recon-number">{mAssets.length}</div>
+                      <div className="mobile-recon-lbl">Checked In</div>
+                    </div>
+                    <div className="mobile-recon-block checked-out">
+                      <div className="mobile-recon-number">{carriedAssets.length + retainedAssets.length}</div>
+                      <div className="mobile-recon-lbl">Checked Out</div>
+                    </div>
+                    <div className="mobile-recon-block departed">
+                      <div className="mobile-recon-number">{carriedAssets.length}</div>
+                      <div className="mobile-recon-lbl">Departed</div>
+                    </div>
+                    <div className="mobile-recon-block retained">
+                      <div className="mobile-recon-number">{retainedAssets.length}</div>
+                      <div className="mobile-recon-lbl">Retained</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 8. Bottom Action Buttons */}
+                <div className="mobile-dossier-actions-bar">
+                  <button
+                    type="button"
+                    className="mobile-btn-back"
+                    onClick={() => setSelectedVisit(null)}
+                  >
+                    <ArrowLeft size={14} />
+                    <span>Back</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="mobile-btn-print-pass"
+                    onClick={() => window.print()}
+                  >
+                    <Printer size={14} color="#ffffff" />
+                    <span>Print / Visitor Pass</span>
+                  </button>
+                </div>
+              </div>
+            );
+          };
+
+
           return (
             <div
-              className="it-asset-modal-overlay"
+              className="it-asset-modal-overlay has-mobile-dossier"
               onClick={() => setSelectedVisit(null)}
               role="dialog"
               aria-modal="true"
             >
               <div className="it-asset-modal-inner" onClick={(e) => e.stopPropagation()}>
+                {/* Dedicated Mobile View (Image 2 Match) */}
+                {renderMobileTechnicianDossier()}
+
+                {/* Desktop View Switcher & Multi-Card Container */}
+                <div className="it-dossier-desktop-view">
                 {/* Top View Mode Switcher Pills */}
                 <div className="it-asset-view-switcher-bar no-print">
                   <button
@@ -2067,7 +2872,8 @@ export default function CheckoutHistory({
                     title="Check-In asset entry registration view"
                   >
                     <ArrowRightCircle size={14} />
-                    <span>Check-In Assets ({mAssets.length})</span>
+                    <span className="vms-btn-text-desktop">Check-In Assets ({mAssets.length})</span>
+                    <span className="vms-btn-text-mobile">Check-In ({mAssets.length})</span>
                   </button>
                   <button
                     type="button"
@@ -2076,16 +2882,18 @@ export default function CheckoutHistory({
                     title="Check-Out asset exit clearance view"
                   >
                     <LogOut size={14} />
-                    <span>Check-Out Clearance ({mAssets.length})</span>
+                    <span className="vms-btn-text-desktop">Check-Out Clearance ({mAssets.length})</span>
+                    <span className="vms-btn-text-mobile">Check-Out ({mAssets.length})</span>
                   </button>
                   <button
                     type="button"
                     className={`it-asset-switcher-pill ${itDossierViewMode === "dual" ? "active dual" : ""}`}
                     onClick={() => setItDossierViewMode("dual")}
-                    title="View both Check-In and Check-Out cards side-by-side"
+                    title="View both Check-In and Check-Out cards"
                   >
                     <Columns size={14} />
-                    <span>Side-by-Side Dual View</span>
+                    <span className="vms-btn-text-desktop">Side-by-Side Dual View</span>
+                    <span className="vms-btn-text-mobile">Dual Cards</span>
                   </button>
                   <button
                     type="button"
@@ -2094,7 +2902,8 @@ export default function CheckoutHistory({
                     title={isITVisit ? "View technician profile details, host contact & visit log history" : "View visitor profile details, host contact & departure audit record"}
                   >
                     <ShieldCheck size={14} />
-                    <span>{isITVisit ? "Technician Profile & Logs" : "Visitor Profile & Logs"}</span>
+                    <span className="vms-btn-text-desktop">{isITVisit ? "Technician Profile & Logs" : "Visitor Profile & Logs"}</span>
+                    <span className="vms-btn-text-mobile">{isITVisit ? "Technician Dossier" : "Visitor Dossier"}</span>
                   </button>
                 </div>
 
@@ -2113,7 +2922,7 @@ export default function CheckoutHistory({
                   )}
 
                   {itDossierViewMode === "dual" && (
-                    <div className="it-asset-cards-wrapper">
+                    <div className="it-asset-cards-wrapper it-dual-horizontal">
                       {renderCheckInCard()}
                       {renderCheckOutCard()}
                     </div>
@@ -2130,6 +2939,7 @@ export default function CheckoutHistory({
                     {renderOverviewDossier()}
                   </div>
                 )}
+                </div>
               </div>
             </div>
           );

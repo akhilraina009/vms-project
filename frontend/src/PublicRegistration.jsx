@@ -268,6 +268,17 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
 
 
 export default function PublicRegistration() {
+  useEffect(() => {
+    const prevTheme = document.documentElement.getAttribute('data-theme');
+    const hadDarkClass = document.documentElement.classList.contains('dark');
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.classList.remove('dark');
+    return () => {
+      if (prevTheme) document.documentElement.setAttribute('data-theme', prevTheme);
+      if (hadDarkClass) document.documentElement.classList.add('dark');
+    };
+  }, []);
+
   const [hosts, setHosts] = useState([]);
   const [loadingHosts, setLoadingHosts] = useState(true);
   const [error, setError] = useState("");
@@ -537,8 +548,9 @@ export default function PublicRegistration() {
         );
       }
 
-      window.location.assign(
-        `/visitor-pass/${encodeURIComponent(result.qr_token)}`
+      sessionStorage.setItem("vms_auto_download_pass", "true");
+      window.location.assign(
+        `/visitor-pass/${encodeURIComponent(result.qr_token)}?autodownload=1`
       );
     } catch (err) {
       setError(

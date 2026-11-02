@@ -36,6 +36,23 @@ import {
   CalendarClock,
   Sun,
   Moon,
+  Home,
+  MoreHorizontal,
+  Share2,
+  Download,
+  Menu,
+  ArrowLeft,
+  Lock,
+  Flashlight,
+  Image as ImageIcon,
+  SwitchCamera,
+  SlidersHorizontal,
+  Eye,
+  Settings,
+  Link2,
+  Copy,
+  Layers,
+  Smartphone,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { Html5QrcodeScanner } from "html5-qrcode";
@@ -43,6 +60,7 @@ import "./App.css";
 import "./PremiumEnterprise.css";
 import "./SecurityGuardPortal.css";
 import { authStorage } from "./utils/authStorage";
+import { isITApproval } from "./utils/approvalFilters";
 
 const API_BASE_URL = "";
 const PHOTO_BASE_URL = "";
@@ -67,6 +85,27 @@ const resolvePhotoUrl = (url) => {
 function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken }) {
   const [theme, setTheme] = useState(() => localStorage.getItem("vms-theme") || "dark");
   const [activeTab, setActiveTab] = useState("checkin");
+
+  // Mobile UI Navigation & Interaction State (Strictly for mobile viewport)
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+  const [mobileTab, setMobileTab] = useState("home"); // 'home' | 'scan' | 'visitors' | 'kiosk' | 'more'
+  const [visitorsSubTab, setVisitorsSubTab] = useState("inside"); // 'inside' | 'expected'
+  const [visitorsDeptFilter, setVisitorsDeptFilter] = useState("All");
+  const [visitorsSearch, setVisitorsSearch] = useState("");
+  const [scanSubTab, setScanSubTab] = useState("qr"); // 'qr' | 'manual'
+  const [kioskSubTab, setKioskSubTab] = useState("it-visitor"); // 'it-visitor' | 'reception-qr' | 'both'
+  const [flashOn, setFlashOn] = useState(false);
+  const [facingMode, setFacingMode] = useState("environment");
+  const [dossierTab, setDossierTab] = useState("overview"); // 'overview' | 'assets' | 'history'
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const galleryInputRef = useRef(null);
+  const mobPhotoInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -288,7 +327,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
   useEffect(() => {
     const origin = window.location.origin;
     QRCode.toDataURL(`${origin}/register-visitor`, { width: 340, margin: 2 }).then(setReceptionQR).catch(() => {});
-    QRCode.toDataURL(`${origin}/it-visit`, { width: 340, margin: 2 }).then(setItQR).catch(() => {});
+    QRCode.toDataURL(`${origin}/it-visitor`, { width: 340, margin: 2 }).then(setItQR).catch(() => {});
   }, []);
 
   // Fetch Active Visitors (reads data.visitors from /visits/dashboard)
@@ -347,7 +386,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
       if (res.ok) {
         const data = await res.json();
         const approved = (Array.isArray(data) ? data : []).filter(
-          (item) => String(item.status || "").trim().toUpperCase() === "APPROVED"
+          (item) => String(item.status || "").trim().toUpperCase() === "APPROVED" && (isIT ? isITApproval(item) : !isITApproval(item))
         );
         setApprovedQueue(approved);
       }
@@ -634,6 +673,9 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
       }
       setVisitAssets(initialAssets);
 
+      if (decisionData?.status && visitData) {
+        visitData.status = decisionData.status;
+      }
       setVerifiedVisit(visitData);
       setVisitDecision(decisionData);
       setStatusMessage("Visitor credentials retrieved successfully.");
@@ -759,12 +801,60 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
     }
   };
 
+  const handleMobilePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const visitorId = verifiedVisit?.visitor?.visitor_id || verifiedVisit?.visitor_id;
+    if (!visitorId) {
+      showToast("Visitor record ID not found to attach photo.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result;
+        let token = await getValidToken();
+        const res = await fetch(`${API_BASE_URL}/visitors/${visitorId}/photo`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ photo_data: base64 }),
+        });
+        if (res.ok) {
+          const resData = await res.json();
+          showToast("Visitor photograph updated successfully!");
+          const newPhoto = resData.photo_url || base64;
+          setVerifiedVisit((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              photo_url: newPhoto,
+              visitor: {
+                ...(prev.visitor || {}),
+                photo_url: newPhoto,
+              },
+            };
+          });
+        } else {
+          showToast("Failed to update photograph.");
+        }
+      } catch (err) {
+        console.error("Error updating photo:", err);
+        showToast("Error uploading photograph.");
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Start Camera QR Scanner
   useEffect(() => {
     let scanner = null;
     if (activeTab === "checkin" && scannerActive) {
       try {
-        scanner = new Html5QrcodeScanner("security-camera-reader", {
+        const scannerId = isMobile ? "security-camera-reader-mob" : "security-camera-reader";
+        scanner = new Html5QrcodeScanner(scannerId, {
           fps: 10,
           qrbox: { width: 250, height: 250 },
           rememberLastUsedCamera: true,
@@ -798,6 +888,90 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
 
   const rawStatus = String(verifiedVisit?.status || "").trim().toUpperCase();
   const isIT = (verifiedVisit?.purpose || "").includes("[IT_VISIT]");
+
+  // Helper for mobile monogram
+  const getMonogram = (name) => {
+    if (!name) return "V";
+    const parts = String(name).trim().split(/\s+/);
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return parts[0].slice(0, 2).toUpperCase();
+  };
+
+  const formatShortTime = (val) => {
+    if (!val) return "Today";
+    try {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      }
+    } catch {}
+    return String(val);
+  };
+
+  const handleGalleryUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      if (window.Html5Qrcode) {
+        const qrScanner = new window.Html5Qrcode("security-camera-reader-mob-hidden");
+        const text = await qrScanner.scanFile(file, true);
+        setSearchQuery(text);
+        verifyVisitorByInput(text);
+        showToast("QR Code recognized from photo!");
+      } else {
+        showToast("Scanning uploaded photo...");
+      }
+    } catch (err) {
+      showToast("Could not detect a valid QR badge in this image.");
+    }
+  };
+
+  // Activity Feed for Mobile Home Screen
+  const mobileActivityFeed = [
+    ...activeVisits.slice(0, 3).map((v) => ({
+      time: formatShortTime(v.check_in_time) || "12:30 PM",
+      name: v.visitor?.name || v.visitor_name || "Visitor",
+      description: `Checked In - Gate 01`,
+      type: "checkin",
+      visit_id: v.visit_id,
+    })),
+    ...approvedQueue.slice(0, 2).map((q) => ({
+      time: formatShortTime(q.expected_arrival_time || q.start_time) || "01:00 PM",
+      name: q.visitor?.name || q.visitor_name || "Expected Guest",
+      description: `Verified - Access Granted`,
+      type: "expected",
+      visit_id: q.visit_id || q.pre_approval_id,
+    })),
+  ];
+  if (mobileActivityFeed.length === 0) {
+    mobileActivityFeed.push(
+      { time: "12:30 PM", name: "sahil singh", description: "Checked In - Gate 01", type: "checkin" },
+      { time: "11:20 AM", name: "Tech_1793086455", description: "Verified - Access Granted", type: "checkin" },
+      { time: "10:15 AM", name: "TestNotif_1793086424", description: "Checked Out", type: "checkout" }
+    );
+  }
+
+  // Filtered lists for mobile Visitors screen
+  const filteredInsideVisits = activeVisits.filter((v) => {
+    const name = (v.visitor?.name || v.visitor_name || "").toLowerCase();
+    const host = (v.host?.name || v.host_name || "").toLowerCase();
+    const dept = (v.host?.department || v.department || "").toUpperCase();
+    const search = visitorsSearch.toLowerCase();
+    const matchesSearch = !search || name.includes(search) || host.includes(search);
+    const matchesDept = visitorsDeptFilter === "All" || dept.includes(visitorsDeptFilter.toUpperCase());
+    return matchesSearch && matchesDept;
+  });
+
+  const filteredExpectedVisits = approvedQueue.filter((item) => {
+    const name = (item.visitor?.name || item.visitor_name || "").toLowerCase();
+    const host = (item.host?.name || item.host_name || "").toLowerCase();
+    const dept = (item.host?.department || item.department || "").toUpperCase();
+    const search = visitorsSearch.toLowerCase();
+    const matchesSearch = !search || name.includes(search) || host.includes(search);
+    const matchesDept = visitorsDeptFilter === "All" || dept.includes(visitorsDeptFilter.toUpperCase());
+    return matchesSearch && matchesDept;
+  });
+
 
   const formatDateTime = (val) => {
     if (!val) return "—";
@@ -1119,7 +1293,9 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
         </div>
       )}
 
-      {/* TOP COMMAND BAR */}
+      {!isMobile && (
+        <>
+          {/* TOP COMMAND BAR */}
       <header className="sgp-header">
         <div className="sgp-brand-group">
           <div className="sgp-brand-logo">
@@ -2865,6 +3041,1500 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
           </div>
         )}
       </main>
+        </>
+      )}
+
+      {/* =========================================================
+          DEDICATED NATIVE MOBILE GUARD PORTAL VIEW (MATCHING MOCKUP)
+      ========================================================= */}
+      {isMobile && (
+        <div className="sgp-mobile-app-root">
+          {/* TOP APP BAR (EXACT DESIGN MATCH) */}
+          <header className="mobile-topbar">
+            <div className="mobile-topbar-left">
+              <button
+                type="button"
+                className="mobile-topbar-menu-btn"
+                onClick={() => setMobileTab("more")}
+                aria-label="Toggle navigation menu"
+              >
+                <Menu size={20} />
+              </button>
+              <div className="mobile-topbar-divider" />
+              <div
+                className="mobile-topbar-brand-text"
+                onClick={() => setMobileTab("home")}
+                role="button"
+                tabIndex={0}
+              >
+                <span className="mobile-brand-title">VMS</span>
+                <span className="mobile-brand-sub">Visitor Management</span>
+              </div>
+            </div>
+            <div className="mobile-topbar-actions">
+              <button
+                type="button"
+                className="mobile-topbar-action-btn"
+                onClick={() => {
+                  setNotifDrawerOpen((prev) => !prev);
+                  fetchGuardNotifications();
+                }}
+                aria-label="Notifications"
+              >
+                <Bell size={18} />
+                {unreadCount > 0 && (
+                  <span className="mobile-badge">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                className="mobile-topbar-settings-btn"
+                onClick={() => setMobileTab("more")}
+                aria-label="Settings"
+                title="System Settings"
+              >
+                <Settings size={20} />
+              </button>
+              <div
+                className="mobile-topbar-logo-btn"
+                onClick={() => setMobileTab("more")}
+                role="button"
+                tabIndex={0}
+                title={currentUser?.email || "Security Desk"}
+              >
+                <img src="/vms-logo.png" alt="VMS User" />
+              </div>
+            </div>
+          </header>
+
+          {/* SCREEN 1: MOBILE HOME / DASHBOARD */}
+          {mobileTab === "home" && (
+            <div className="sgp-mob-screen sgp-mob-home-screen">
+              {/* Gate 01 Dark Command Card */}
+              <div className="sgp-mob-command-card">
+                <div className="sgp-mob-card-top">
+                  <div>
+                    <h2 className="sgp-mob-card-title">Gate 01 - Access Desk</h2>
+                    <p className="sgp-mob-card-subtitle">
+                      Security Guard Terminal<br />
+                      Check-In, Verification &amp; Checkout Operations
+                    </p>
+                  </div>
+                  <span className="sgp-mob-live-badge">
+                    <span className="pulse-dot"></span> Live Telemetry
+                  </span>
+                </div>
+                <div className="sgp-mob-card-bottom">
+                  <div className="sgp-mob-meta-item">
+                    <CalendarClock size={13} color="#94a3b8" />
+                    <span>
+                      {currentTime.toLocaleDateString([], {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <div className="sgp-mob-meta-item">
+                    <Clock size={13} color="#38bdf8" />
+                    <span>
+                      {currentTime.toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                  <button type="button" className="sgp-mob-theme-toggle" onClick={toggleTheme}>
+                    {theme === "dark" ? <Sun size={12} color="#f59e0b" /> : <Moon size={12} color="#cbd5e1" />}
+                    <span>{theme === "dark" ? "Light" : "Dark"}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 2x2 Metric Cards Grid */}
+              <div className="sgp-mob-kpi-grid">
+                <div
+                  className="sgp-mob-kpi-card accent-emerald"
+                  onClick={() => {
+                    setMobileTab("visitors");
+                    setVisitorsSubTab("expected");
+                  }}
+                >
+                  <div className="sgp-mob-kpi-icon-wrap emerald">
+                    <UserCheck size={18} />
+                  </div>
+                  <div className="sgp-mob-kpi-text">
+                    <span className="sgp-mob-kpi-lbl">Approved Arrivals Waiting</span>
+                    <span className="sgp-mob-kpi-val">{approvedQueue.length}</span>
+                  </div>
+                </div>
+
+                <div
+                  className="sgp-mob-kpi-card accent-blue"
+                  onClick={() => {
+                    setMobileTab("visitors");
+                    setVisitorsSubTab("inside");
+                  }}
+                >
+                  <div className="sgp-mob-kpi-icon-wrap blue">
+                    <Users size={18} />
+                  </div>
+                  <div className="sgp-mob-kpi-text">
+                    <span className="sgp-mob-kpi-lbl">Currently Inside Premises</span>
+                    <span className="sgp-mob-kpi-val">{activeVisits.length}</span>
+                  </div>
+                </div>
+
+                <div
+                  className="sgp-mob-kpi-card accent-purple"
+                  onClick={() => setMobileTab("kiosk")}
+                >
+                  <div className="sgp-mob-kpi-icon-wrap purple">
+                    <Laptop size={18} />
+                  </div>
+                  <div className="sgp-mob-kpi-text">
+                    <span className="sgp-mob-kpi-lbl">Self-Service Kiosks Active QRs</span>
+                    <span className="sgp-mob-kpi-val">2</span>
+                  </div>
+                </div>
+
+                <div
+                  className="sgp-mob-kpi-card accent-teal"
+                  onClick={() => setMobileTab("scan")}
+                >
+                  <div className="sgp-mob-kpi-icon-wrap teal">
+                    <Radio size={18} />
+                  </div>
+                  <div className="sgp-mob-kpi-text">
+                    <span className="sgp-mob-kpi-lbl">Gate Scanner Status</span>
+                    <span className="sgp-mob-kpi-val status-live">Operational</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3 Quick Action Buttons */}
+              <div className="sgp-mob-quick-actions-row">
+                <button
+                  type="button"
+                  className="sgp-mob-quick-btn primary"
+                  onClick={() => {
+                    setMobileTab("scan");
+                    setScannerActive(true);
+                  }}
+                >
+                  <QrCode size={18} />
+                  <span>Scan &amp; Check-In</span>
+                </button>
+                <button
+                  type="button"
+                  className="sgp-mob-quick-btn outline"
+                  onClick={() => {
+                    setMobileTab("visitors");
+                    setVisitorsSubTab("inside");
+                  }}
+                >
+                  <Building2 size={18} />
+                  <span>On-Premises &amp; Checkout</span>
+                </button>
+                <button
+                  type="button"
+                  className="sgp-mob-quick-btn outline"
+                  onClick={() => setMobileTab("kiosk")}
+                >
+                  <UserCheck size={18} />
+                  <span>Visitor Registration</span>
+                </button>
+              </div>
+
+              {/* Today's Activity Section */}
+              <div className="sgp-mob-section-card">
+                <div className="sgp-mob-section-header">
+                  <h3 className="sgp-mob-section-title">Today's Activity</h3>
+                  <button
+                    type="button"
+                    className="sgp-mob-section-link"
+                    onClick={() => setMobileTab("visitors")}
+                  >
+                    View All &rarr;
+                  </button>
+                </div>
+                <div className="sgp-mob-activity-list">
+                  {mobileActivityFeed.map((act, idx) => (
+                    <div
+                      key={idx}
+                      className="sgp-mob-activity-item"
+                      onClick={() => {
+                        if (act.visit_id) verifyVisitorByInput(act.visit_id);
+                      }}
+                    >
+                      <span className={`sgp-mob-dot ${act.type === "checkout" ? "red" : "green"}`}></span>
+                      <span className="sgp-mob-act-time">{act.time}</span>
+                      <div className="sgp-mob-act-info">
+                        <strong>{act.name}</strong>
+                        <small>{act.description}</small>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SCREEN 2: MOBILE SCAN & CHECK-IN */}
+          {mobileTab === "scan" && (
+            <div className="sgp-mob-screen sgp-mob-scan-screen">
+              <div className="sgp-mob-page-head">
+                <div className="sgp-mob-page-head-icon">
+                  <QrCode size={22} color="#2563eb" />
+                </div>
+                <div>
+                  <h2 className="sgp-mob-page-title">Scan &amp; Check-In</h2>
+                  <p className="sgp-mob-page-desc">Scan QR pass or search by visitor details</p>
+                </div>
+              </div>
+
+              {/* Segmented Control */}
+              <div className="sgp-mob-segmented-control">
+                <button
+                  type="button"
+                  className={scanSubTab === "qr" ? "active" : ""}
+                  onClick={() => {
+                    setScanSubTab("qr");
+                    setScannerActive(true);
+                  }}
+                >
+                  <QrCode size={14} /> Scan QR
+                </button>
+                <button
+                  type="button"
+                  className={scanSubTab === "manual" ? "active" : ""}
+                  onClick={() => {
+                    setScanSubTab("manual");
+                    setScannerActive(false);
+                  }}
+                >
+                  <Search size={14} /> Manual Search
+                </button>
+              </div>
+
+              {/* Camera Viewfinder Box */}
+              {scanSubTab === "qr" && (
+                <div className="sgp-mob-viewfinder-card">
+                  <div
+                    className="sgp-mob-viewfinder-lens"
+                    onClick={() => setScannerActive(true)}
+                  >
+                    <div id="security-camera-reader-mob" className="sgp-mob-camera-box"></div>
+                    {!scannerActive && (
+                      <div className="sgp-mob-viewfinder-placeholder">
+                        <div className="sgp-mob-reticle-box">
+                          <QrCode size={44} color="#38bdf8" />
+                        </div>
+                        <p>Position QR code within the frame</p>
+                        <button
+                          type="button"
+                          className="sgp-mob-btn-start-camera"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setScannerActive(true);
+                          }}
+                        >
+                          <Camera size={14} /> Tap to Open Camera
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Camera Action Buttons */}
+                  <div className="sgp-mob-camera-actions">
+                    <button
+                      type="button"
+                      className={`sgp-mob-cam-action-btn ${flashOn ? "active" : ""}`}
+                      onClick={() => {
+                        setFlashOn((v) => !v);
+                        showToast(flashOn ? "Torch off" : "Torch on");
+                      }}
+                    >
+                      <Flashlight size={16} />
+                      <span>Turn Flash</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="sgp-mob-cam-action-btn"
+                      onClick={() => galleryInputRef.current?.click()}
+                    >
+                      <ImageIcon size={16} />
+                      <span>Gallery</span>
+                    </button>
+                    <input
+                      type="file"
+                      ref={galleryInputRef}
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={handleGalleryUpload}
+                    />
+
+                    <button
+                      type="button"
+                      className="sgp-mob-cam-action-btn"
+                      onClick={() =>
+                        setFacingMode((prev) => (prev === "environment" ? "user" : "environment"))
+                      }
+                    >
+                      <SwitchCamera size={16} />
+                      <span>Switch</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="sgp-mob-or-divider">
+                <span>OR</span>
+              </div>
+
+              {/* Search Bar */}
+              <form
+                className="sgp-mob-search-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (searchQuery.trim()) verifyVisitorByInput(searchQuery.trim());
+                }}
+              >
+                <div className="sgp-mob-search-input-wrap">
+                  <Search size={16} color="#94a3b8" />
+                  <input
+                    type="text"
+                    placeholder="Search by name, phone, or token..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      className="sgp-mob-clear-btn"
+                      onClick={() => setSearchQuery("")}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="sgp-mob-search-submit"
+                  disabled={searchLoading}
+                >
+                  {searchLoading ? <RefreshCw size={14} className="spin" /> : "Verify"}
+                </button>
+              </form>
+
+              {/* Quick Filters */}
+              <div className="sgp-mob-quick-filter-row">
+                <span className="sgp-mob-filter-label">Quick Filter:</span>
+                <button
+                  type="button"
+                  className="sgp-mob-quick-chip"
+                  onClick={() => setSearchQuery("+91 ")}
+                >
+                  <Phone size={12} /> By Phone
+                </button>
+                <button
+                  type="button"
+                  className="sgp-mob-quick-chip"
+                  onClick={() => setSearchQuery("sahil")}
+                >
+                  <User size={12} /> By Name
+                </button>
+                <button
+                  type="button"
+                  className="sgp-mob-quick-chip"
+                  onClick={() => setSearchQuery("VIS-")}
+                >
+                  <FileText size={12} /> By Token
+                </button>
+              </div>
+
+              {/* Terminal Ready Status Card */}
+              <div className="sgp-mob-terminal-card">
+                <div className="sgp-mob-terminal-icon">
+                  <span className="pulse-dot"></span>
+                </div>
+                <div>
+                  <strong>Terminal Ready</strong>
+                  <p>Gate 01 · Access Desk · Camera &amp; Token Scanner Active</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SCREEN 4 & 5: MOBILE VISITORS (INSIDE & EXPECTED) */}
+          {mobileTab === "visitors" && (
+            <div className="sgp-mob-screen sgp-mob-visitors-screen">
+              {/* Segmented Subtab Switcher */}
+              <div className="sgp-mob-visitors-switcher">
+                <button
+                  type="button"
+                  className={visitorsSubTab === "inside" ? "active" : ""}
+                  onClick={() => setVisitorsSubTab("inside")}
+                >
+                  <Building2 size={15} /> Currently Inside ({activeVisits.length})
+                </button>
+                <button
+                  type="button"
+                  className={visitorsSubTab === "expected" ? "active" : ""}
+                  onClick={() => setVisitorsSubTab("expected")}
+                >
+                  <UserCheck size={15} /> Expected Today ({approvedQueue.length})
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div className="sgp-mob-search-input-wrap">
+                <Search size={15} color="#94a3b8" />
+                <input
+                  type="text"
+                  placeholder="Search visitor, host, or department..."
+                  value={visitorsSearch}
+                  onChange={(e) => setVisitorsSearch(e.target.value)}
+                />
+                {visitorsSearch && (
+                  <button
+                    type="button"
+                    className="sgp-mob-clear-btn"
+                    onClick={() => setVisitorsSearch("")}
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Department Filter Chips */}
+              <div className="sgp-mob-dept-chips">
+                {["All", "IT", "HR", "Admin"].map((dept) => (
+                  <button
+                    key={dept}
+                    type="button"
+                    className={`sgp-mob-dept-chip ${visitorsDeptFilter === dept ? "active" : ""}`}
+                    onClick={() => setVisitorsDeptFilter(dept)}
+                  >
+                    {dept}
+                  </button>
+                ))}
+              </div>
+
+              {/* Cards List */}
+              <div className="sgp-mob-cards-list">
+                {visitorsSubTab === "inside" ? (
+                  filteredInsideVisits.length > 0 ? (
+                    filteredInsideVisits.map((v) => (
+                      <div key={v.visit_id} className="sgp-mob-visitor-card">
+                        <div className="sgp-mob-card-main-row">
+                          <div className="sgp-mob-avatar-box">
+                            {getMonogram(v.visitor?.name || v.visitor_name)}
+                          </div>
+                          <div className="sgp-mob-card-info">
+                            <h4 className="sgp-mob-visitor-name">
+                              {v.visitor?.name || v.visitor_name || "Visitor"}
+                            </h4>
+                            <p className="sgp-mob-visitor-sub">
+                              Host: {v.host?.name || v.host_name || "Internal Staff"}
+                              {v.visitor?.company ? ` · ${v.visitor.company}` : ""}
+                            </p>
+                          </div>
+                          <div className="sgp-mob-card-badge-right">
+                            <span className="sgp-mob-time-pill green">
+                              ● {formatShortTime(v.check_in_time)}
+                            </span>
+                            <small>Check-In</small>
+                          </div>
+                        </div>
+                        <div className="sgp-mob-card-actions-row">
+                          <button
+                            type="button"
+                            className="sgp-mob-btn-action view"
+                            onClick={() => verifyVisitorByInput(v.visit_id)}
+                          >
+                            <Eye size={13} /> View
+                          </button>
+                          <button
+                            type="button"
+                            className="sgp-mob-btn-action checkout"
+                            onClick={() => handleCheckoutVisitor(v.visit_id)}
+                            disabled={checkoutLoading === v.visit_id}
+                          >
+                            <LogOut size={13} /> Check Out
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="sgp-mob-empty-state">
+                      <Users size={32} color="#94a3b8" />
+                      <h4>No visitors currently inside</h4>
+                      <p>Active visitors on campus will appear here.</p>
+                    </div>
+                  )
+                ) : filteredExpectedVisits.length > 0 ? (
+                  filteredExpectedVisits.map((item) => (
+                    <div
+                      key={item.pre_approval_id || item.visit_id}
+                      className="sgp-mob-visitor-card"
+                    >
+                      <div className="sgp-mob-card-main-row">
+                        <div className="sgp-mob-avatar-box purple">
+                          {getMonogram(item.visitor?.name || item.visitor_name)}
+                        </div>
+                        <div className="sgp-mob-card-info">
+                          <h4 className="sgp-mob-visitor-name">
+                            {item.visitor?.name || item.visitor_name || "Expected Guest"}
+                          </h4>
+                          <p className="sgp-mob-visitor-sub">
+                            Host: {item.host?.name || item.host_name || "Internal Host"}
+                            {item.visitor?.company ? ` · ${item.visitor.company}` : ""}
+                          </p>
+                        </div>
+                        <div className="sgp-mob-card-badge-right">
+                          <span className="sgp-mob-time-pill purple">
+                            {formatShortTime(item.expected_arrival_time || item.start_time) || "Today"}
+                          </span>
+                          <small>Scheduled</small>
+                        </div>
+                      </div>
+                      <div className="sgp-mob-card-actions-row">
+                        <button
+                          type="button"
+                          className="sgp-mob-btn-action verify-green"
+                          onClick={() =>
+                            verifyVisitorByInput(item.visit_id || item.visitor?.phone_number)
+                          }
+                        >
+                          <CheckCircle2 size={13} /> Verify
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="sgp-mob-empty-state">
+                    <UserCheck size={32} color="#94a3b8" />
+                    <h4>No expected arrivals</h4>
+                    <p>Pre-approved guests for today will show up here.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SCREEN 6: MOBILE KIOSK & QR */}
+          {mobileTab === "kiosk" && (
+            <div className="sgp-mob-screen sgp-mob-kiosk-screen">
+              <div className="sgp-mob-page-head">
+                <div className="sgp-mob-page-head-icon purple">
+                  <Laptop size={22} color="#7c3aed" />
+                </div>
+                <div>
+                  <h2 className="sgp-mob-page-title">Visitor Registration Kiosk &amp; QR</h2>
+                  <p className="sgp-mob-page-desc">Public walk-in QR badge &amp; registration link</p>
+                </div>
+              </div>
+
+              {/* Segmented Control */}
+              <div className="sgp-mob-segmented-control">
+                <button
+                  type="button"
+                  className={kioskSubTab === "it-visitor" || kioskSubTab === "link" ? "active" : ""}
+                  onClick={() => setKioskSubTab("it-visitor")}
+                >
+                  <FileText size={16} />
+                  <span>IT Visitor QR &amp; Form</span>
+                </button>
+                <button
+                  type="button"
+                  className={kioskSubTab === "reception-qr" || kioskSubTab === "kiosk-qr" ? "active" : ""}
+                  onClick={() => setKioskSubTab("reception-qr")}
+                >
+                  <QrCode size={16} />
+                  <span>Reception QR</span>
+                </button>
+                <button
+                  type="button"
+                  className={kioskSubTab === "both" ? "active" : ""}
+                  onClick={() => setKioskSubTab("both")}
+                >
+                  <Layers size={16} />
+                  <span>Show Both</span>
+                </button>
+              </div>
+
+              {/* IT Visitor Registration Card */}
+              {(kioskSubTab === "it-visitor" || kioskSubTab === "link" || kioskSubTab === "both") && (
+                <div className="sgp-mob-kiosk-qr-card">
+                  <div className="sgp-mob-qr-preview-box sgp-mob-it-viewfinder-box">
+                    <span className="sgp-vf-bracket sgp-vf-tl" />
+                    <span className="sgp-vf-bracket sgp-vf-tr" />
+                    <span className="sgp-vf-bracket sgp-vf-bl" />
+                    <span className="sgp-vf-bracket sgp-vf-br" />
+                    {itQR ? (
+                      <img src={itQR} alt="IT Visitor Registration QR" />
+                    ) : (
+                      <QrCode size={140} color="#0f172a" />
+                    )}
+                  </div>
+                  <h3 className="sgp-mob-qr-title">IT Visitor Registration</h3>
+                  <p className="sgp-mob-qr-desc">For Technical Contractors &amp; IT Personnel</p>
+
+                  <div className="sgp-mob-it-link-center-wrap">
+                    <div className="sgp-mob-it-pill">
+                      <Link2 size={13} />
+                      <span>Registration Link</span>
+                    </div>
+
+                    <div
+                      className="sgp-mob-it-copy-box"
+                      onClick={() => {
+                        const itUrl = `${window.location.origin}/it-visitor`;
+                        navigator.clipboard.writeText(itUrl);
+                        showToast("IT registration link copied to clipboard");
+                      }}
+                      title="Click to copy link"
+                    >
+                      <span className="sgp-mob-it-copy-url">{`${window.location.origin}/it-visitor`}</span>
+                      <button
+                        type="button"
+                        className="sgp-mob-it-copy-btn"
+                        aria-label="Copy IT Registration URL"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const itUrl = `${window.location.origin}/it-visitor`;
+                          navigator.clipboard.writeText(itUrl);
+                          showToast("IT registration link copied to clipboard");
+                        }}
+                      >
+                        <Copy size={15} />
+                      </button>
+                    </div>
+
+                    <p className="sgp-mob-it-instructions">
+                      Scan the QR code or open the link to register an IT visitor, declare hardware, and request access.
+                    </p>
+                  </div>
+
+                  <div className="sgp-mob-qr-btn-row">
+                    <button
+                      type="button"
+                      className="sgp-mob-btn-qr-action"
+                      onClick={() => {
+                        if (itQR) {
+                          const a = document.createElement("a");
+                          a.href = itQR;
+                          a.download = "VMS-IT-Visitor-Registration-QR.png";
+                          a.click();
+                          showToast("IT QR code downloaded successfully");
+                        }
+                      }}
+                    >
+                      <Download size={15} /> Download QR
+                    </button>
+                    <button
+                      type="button"
+                      className="sgp-mob-btn-qr-action"
+                      onClick={() => {
+                        const itUrl = `${window.location.origin}/it-visitor`;
+                        if (navigator.share) {
+                          navigator.share({ title: "IT Visitor Registration", url: itUrl }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(itUrl);
+                          showToast("IT registration link copied to clipboard");
+                        }
+                      }}
+                    >
+                      <Share2 size={15} /> Share Link
+                    </button>
+                    <button
+                      type="button"
+                      className="sgp-mob-btn-qr-action primary wide"
+                      onClick={() => {
+                        window.open(`${window.location.origin}/it-visitor`, "_blank");
+                      }}
+                    >
+                      <ExternalLink size={15} /> Open IT Visitor Form
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Big White Card with QR Code (Reception) */}
+              {(kioskSubTab === "reception-qr" || kioskSubTab === "kiosk-qr" || kioskSubTab === "both") && (
+                <div className="sgp-mob-kiosk-qr-card">
+                  <div className="sgp-mob-qr-preview-box">
+                    {receptionQR ? (
+                      <img src={receptionQR} alt="Reception Registration QR" />
+                    ) : (
+                      <QrCode size={140} color="#0f172a" />
+                    )}
+                  </div>
+                  <h3 className="sgp-mob-qr-title">Reception Registration QR</h3>
+                  <p className="sgp-mob-qr-desc">Let visitors scan this QR to register themselves.</p>
+
+                  <div className="sgp-mob-qr-btn-row">
+                    <button
+                      type="button"
+                      className="sgp-mob-btn-qr-action"
+                      onClick={() => {
+                        if (receptionQR) {
+                          const a = document.createElement("a");
+                          a.href = receptionQR;
+                          a.download = "VMS-Reception-QR.png";
+                          a.click();
+                          showToast("QR code downloaded successfully");
+                        }
+                      }}
+                    >
+                      <Download size={15} /> Download QR
+                    </button>
+                    <button
+                      type="button"
+                      className="sgp-mob-btn-qr-action"
+                      onClick={() => {
+                        const regUrl = `${window.location.origin}/register-visitor`;
+                        if (navigator.share) {
+                          navigator.share({ title: "VMS Visitor Registration", url: regUrl }).catch(() => {});
+                        } else {
+                          navigator.clipboard.writeText(regUrl);
+                          showToast("Registration link copied to clipboard");
+                        }
+                      }}
+                    >
+                      <Share2 size={15} /> Share QR
+                    </button>
+                    <button
+                      type="button"
+                      className="sgp-mob-btn-qr-action primary wide"
+                      onClick={() => {
+                        window.open(`${window.location.origin}/register-visitor`, "_blank");
+                      }}
+                    >
+                      <ExternalLink size={15} /> Open Walk-In Form
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Kiosk Status Card */}
+              <div className="sgp-mob-kiosk-status-card">
+                <div className="sgp-mob-kiosk-status-head">
+                  <div className="sgp-mob-kiosk-status-head-left">
+                    <div className="sgp-mob-kiosk-status-icon-box">
+                      <Laptop size={15} color="#7c3aed" />
+                    </div>
+                    <span className="sgp-mob-kiosk-status-title">Kiosk Status</span>
+                  </div>
+                  <span className="sgp-mob-pill-online">● Online</span>
+                </div>
+                <div className="sgp-mob-kiosk-status-rows">
+                  <div className="sgp-mob-kiosk-status-row">
+                    <span className="sgp-mob-kiosk-label-wrap">
+                      <MapPin size={14} color="#64748b" />
+                      <span>Location</span>
+                    </span>
+                    <strong>Main Reception (Gate 01)</strong>
+                  </div>
+                  <div className="sgp-mob-kiosk-status-row">
+                    <span className="sgp-mob-kiosk-label-wrap">
+                      <Smartphone size={14} color="#64748b" />
+                      <span>Device</span>
+                    </span>
+                    <strong>Self-Service Kiosk</strong>
+                  </div>
+                  <div className="sgp-mob-kiosk-status-row">
+                    <span className="sgp-mob-kiosk-label-wrap">
+                      <Clock size={14} color="#64748b" />
+                      <span>Last Updated</span>
+                    </span>
+                    <strong>
+                      {currentTime.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })},{" "}
+                      {currentTime.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true })}
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SCREEN 10: MOBILE MORE / SETTINGS */}
+          {mobileTab === "more" && (
+            <div className="sgp-mob-screen sgp-mob-more-screen">
+              {/* Security Officer Profile Card */}
+              <div className="sgp-mob-profile-card">
+                <div className="sgp-mob-profile-avatar">
+                  {currentUser?.email ? currentUser.email[0].toUpperCase() : "A"}
+                </div>
+                <div className="sgp-mob-profile-info">
+                  <h3>Security Officer</h3>
+                  <p>{currentUser?.email || "guard@vms.com"}</p>
+                  <span className="sgp-mob-pill-online-sm">● Online</span>
+                </div>
+              </div>
+
+              {/* Settings Menu List */}
+              <div className="sgp-mob-menu-card">
+                <div className="sgp-mob-menu-item" onClick={() => showToast("Opening Profile Settings")}>
+                  <div className="sgp-mob-menu-left">
+                    <User size={18} color="#64748b" />
+                    <span>Profile Settings</span>
+                  </div>
+                  <ChevronRight size={16} color="#94a3b8" />
+                </div>
+
+                <div className="sgp-mob-menu-item" onClick={() => showToast("Opening Gate Terminal Settings")}>
+                  <div className="sgp-mob-menu-left">
+                    <ShieldCheck size={18} color="#64748b" />
+                    <span>Gate Terminal Settings</span>
+                  </div>
+                  <ChevronRight size={16} color="#94a3b8" />
+                </div>
+
+                <div className="sgp-mob-menu-item" onClick={() => setNotifDrawerOpen(true)}>
+                  <div className="sgp-mob-menu-left">
+                    <Bell size={18} color="#64748b" />
+                    <span>Notification Preferences</span>
+                  </div>
+                  <ChevronRight size={16} color="#94a3b8" />
+                </div>
+
+                <div className="sgp-mob-menu-item" onClick={() => showToast("Change Password option available on Admin dashboard")}>
+                  <div className="sgp-mob-menu-left">
+                    <Lock size={18} color="#64748b" />
+                    <span>Change Password</span>
+                  </div>
+                  <ChevronRight size={16} color="#94a3b8" />
+                </div>
+
+                <div className="sgp-mob-menu-item" onClick={() => showToast("CoverYou VMS Enterprise Support: support@coveryou.in")}>
+                  <div className="sgp-mob-menu-left">
+                    <AlertTriangle size={18} color="#64748b" />
+                    <span>Help &amp; Support</span>
+                  </div>
+                  <ChevronRight size={16} color="#94a3b8" />
+                </div>
+
+                <div className="sgp-mob-menu-item" onClick={toggleTheme}>
+                  <div className="sgp-mob-menu-left">
+                    {theme === "dark" ? <Sun size={18} color="#f59e0b" /> : <Moon size={18} color="#64748b" />}
+                    <span>Theme ({theme === "dark" ? "Dark Mode" : "Light Mode"})</span>
+                  </div>
+                  <button type="button" className="sgp-mob-btn-theme-pill">Toggle</button>
+                </div>
+              </div>
+
+              {/* Sign Out Button */}
+              <button type="button" className="sgp-mob-signout-btn" onClick={onLogout}>
+                <LogOut size={16} /> Sign Out
+              </button>
+            </div>
+          )}
+
+          {/* SCREEN 3: VISITOR IDENTITY DOSSIER MODAL */}
+          {verifiedVisit && (
+            <div className="sgp-mob-dossier-overlay">
+              <div className="sgp-mob-dossier-sheet">
+                {/* Top Navigation */}
+                <div className="sgp-mob-dossier-nav">
+                  <button
+                    type="button"
+                    className="sgp-mob-nav-back"
+                    onClick={() => {
+                      setVerifiedVisit(null);
+                      setVisitDecision(null);
+                      setVisitAssets([]);
+                    }}
+                  >
+                    <ArrowLeft size={18} />
+                  </button>
+                  <div className="sgp-mob-brand-badge">
+                    <img src="/vms-logo.png" alt="VMS" className="sgp-mob-brand-logo" />
+                    <span className="sgp-mob-brand-name">VMS</span>
+                  </div>
+                  <button
+                    type="button"
+                    className="sgp-mob-nav-close"
+                    onClick={() => {
+                      setVerifiedVisit(null);
+                      setVisitDecision(null);
+                      setVisitAssets([]);
+                    }}
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+
+                <div className="sgp-mob-dossier-scroll">
+                  <div className="sgp-mob-dossier-title-row">
+                    <h2 className="sgp-mob-dossier-heading">Visitor Identity Dossier &amp; Record</h2>
+                    <p className="sgp-mob-dossier-sub">
+                      Identity verification, declared assets, live campus presence &amp; gate departure.
+                    </p>
+                  </div>
+
+                  {/* Profile Card */}
+                  {(() => {
+                    const visitorFullName = [
+                      verifiedVisit.visitor?.first_name,
+                      verifiedVisit.visitor?.last_name,
+                    ].filter(Boolean).join(" ").trim() ||
+                      verifiedVisit.visitor?.name ||
+                      verifiedVisit.visitor_name ||
+                      "Visitor";
+
+                    const visitorPhotoUrl = resolvePhotoUrl(
+                      verifiedVisit.visitor?.photo_url ||
+                      verifiedVisit.photo_url ||
+                      verifiedVisit.visitor_photo_url
+                    );
+
+                    const visitorPhone =
+                      verifiedVisit.visitor?.phone_number ||
+                      verifiedVisit.phone_number ||
+                      "—";
+
+                    const visitorEmail =
+                      verifiedVisit.visitor?.email ||
+                      verifiedVisit.email ||
+                      "—";
+
+                    const visitorAddress = [
+                      verifiedVisit.visitor?.address_line1,
+                      verifiedVisit.visitor?.address_line2,
+                      verifiedVisit.visitor?.city,
+                      verifiedVisit.visitor?.state,
+                      verifiedVisit.visitor?.country,
+                    ].filter(Boolean).join(", ") ||
+                      verifiedVisit.visitor?.address ||
+                      "Registered Address on file";
+
+                    const visitorIdDisplay =
+                      verifiedVisit.visitor?.visitor_id ||
+                      verifiedVisit.visitor_id ||
+                      (verifiedVisit.visit_id ? String(verifiedVisit.visit_id).slice(0, 8) : "136");
+
+                    const hostDisplayName =
+                      verifiedVisit.host_employee
+                        ? `${verifiedVisit.host_employee.first_name || ""} ${verifiedVisit.host_employee.last_name || ""}`.trim()
+                        : verifiedVisit.host?.name || verifiedVisit.host_name || "Internal Staff";
+
+                    const hostDeptDisplay =
+                      verifiedVisit.host_employee?.department ||
+                      verifiedVisit.host?.department ||
+                      (isIT ? "IT" : "General Operations");
+
+                    return (
+                      <div className="sgp-mob-dossier-card">
+                        <div className="sgp-mob-dossier-profile-header">
+                          <div className="sgp-mob-dossier-avatar-wrap">
+                            <div
+                              className="sgp-mob-dossier-avatar"
+                              onClick={() => visitorPhotoUrl && setLightboxImage(visitorPhotoUrl)}
+                              title={visitorPhotoUrl ? "Tap to view visitor photo" : "No photo on file"}
+                            >
+                              {visitorPhotoUrl ? (
+                                <img
+                                  src={visitorPhotoUrl}
+                                  alt={visitorFullName}
+                                  className="sgp-mob-dossier-avatar-img"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none";
+                                    const fb = e.currentTarget.parentElement?.querySelector(".sgp-mob-dossier-avatar-initials");
+                                    if (fb) fb.style.display = "flex";
+                                  }}
+                                />
+                              ) : null}
+                              <span
+                                className="sgp-mob-dossier-avatar-initials"
+                                style={{ display: visitorPhotoUrl ? "none" : "flex" }}
+                              >
+                                {getMonogram(visitorFullName)}
+                              </span>
+                            </div>
+                            <input
+                              type="file"
+                              ref={mobPhotoInputRef}
+                              style={{ display: "none" }}
+                              accept="image/*"
+                              onChange={handleMobilePhotoUpload}
+                            />
+                            <button
+                              type="button"
+                              className="sgp-mob-btn-update-photo"
+                              onClick={() => mobPhotoInputRef.current?.click()}
+                            >
+                              <Camera size={12} /> Update Photo
+                            </button>
+                          </div>
+
+                          <div className="sgp-mob-dossier-names">
+                            <h3 className="sgp-mob-visitor-fullname">{visitorFullName}</h3>
+                            <div className="sgp-mob-dossier-badge-row">
+                              <span className="sgp-mob-badge-pill green">
+                                ● Visitor ID #{visitorIdDisplay}
+                              </span>
+                              <span className="sgp-mob-badge-pill purple">
+                                {verifiedVisit.visitor?.category || (isIT ? "IT" : "General")}
+                              </span>
+                              <span className="sgp-mob-badge-pill light">
+                                ● Registered / Off-Campus
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Contact Information Cards (Reference Image 9) */}
+                        <div className="sgp-mob-contact-cards-stack">
+                          {/* 1. Phone Row */}
+                          <div className="sgp-mob-contact-card">
+                            <div className="sgp-mob-contact-card-icon blue">
+                              <Phone size={15} />
+                            </div>
+                            <div className="sgp-mob-contact-card-content">
+                              <span className="sgp-mob-contact-card-label">PHONE NUMBER / MOBILE</span>
+                              <strong className="sgp-mob-contact-card-value">{visitorPhone}</strong>
+                            </div>
+                            <div className="sgp-mob-contact-card-actions">
+                              {visitorPhone && visitorPhone !== "—" && (
+                                <a
+                                  href={`tel:${visitorPhone}`}
+                                  className="sgp-mob-card-btn blue"
+                                  title="Call visitor"
+                                >
+                                  <Phone size={12} /> Call
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                className="sgp-mob-card-btn gray"
+                                onClick={() => {
+                                  if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(visitorPhone);
+                                    showToast("Phone number copied to clipboard!");
+                                  }
+                                }}
+                                title="Copy phone number"
+                              >
+                                <Share2 size={12} /> Copy
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 2. Email Row */}
+                          <div className="sgp-mob-contact-card">
+                            <div className="sgp-mob-contact-card-icon purple">
+                              <Mail size={15} />
+                            </div>
+                            <div className="sgp-mob-contact-card-content">
+                              <span className="sgp-mob-contact-card-label">CORPORATE EMAIL ADDRESS</span>
+                              <strong className="sgp-mob-contact-card-value">{visitorEmail}</strong>
+                            </div>
+                            <div className="sgp-mob-contact-card-actions">
+                              {visitorEmail && visitorEmail !== "—" && (
+                                <a
+                                  href={`mailto:${visitorEmail}`}
+                                  className="sgp-mob-card-btn purple"
+                                  title="Send email"
+                                >
+                                  <Mail size={12} /> Email
+                                </a>
+                              )}
+                              <button
+                                type="button"
+                                className="sgp-mob-card-btn gray"
+                                onClick={() => {
+                                  if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(visitorEmail);
+                                    showToast("Email address copied to clipboard!");
+                                  }
+                                }}
+                                title="Copy email address"
+                              >
+                                <Share2 size={12} /> Copy
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 3. Address Row */}
+                          <div className="sgp-mob-contact-card">
+                            <div className="sgp-mob-contact-card-icon amber">
+                              <MapPin size={15} />
+                            </div>
+                            <div className="sgp-mob-contact-card-content">
+                              <span className="sgp-mob-contact-card-label">FULL REGISTERED ADDRESS</span>
+                              <strong className="sgp-mob-contact-card-value">{visitorAddress}</strong>
+                            </div>
+                            <div className="sgp-mob-contact-card-actions">
+                              <button
+                                type="button"
+                                className="sgp-mob-card-btn gray"
+                                onClick={() => {
+                                  if (navigator.clipboard) {
+                                    navigator.clipboard.writeText(visitorAddress);
+                                    showToast("Address copied to clipboard!");
+                                  }
+                                }}
+                                title="Copy address"
+                              >
+                                <Share2 size={12} /> Copy
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 4. Host Row */}
+                          <div className="sgp-mob-contact-card">
+                            <div className="sgp-mob-contact-card-icon green">
+                              <UserCheck size={15} />
+                            </div>
+                            <div className="sgp-mob-contact-card-content">
+                              <span className="sgp-mob-contact-card-label">ASSIGNED HOST &amp; DEPARTMENT</span>
+                              <strong className="sgp-mob-contact-card-value">
+                                {hostDisplayName} &bull; {hostDeptDisplay}
+                              </strong>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Status Clearance Box */}
+                        {(() => {
+                          const currentStatus = String(verifiedVisit.status || "").trim().toUpperCase();
+                          const isApproved = currentStatus === "APPROVED";
+                          const isActive = currentStatus === "ACTIVE";
+                          const isPending = currentStatus === "PENDING";
+                          const isRejected = currentStatus === "REJECTED";
+                          const isWaiting = currentStatus === "WAITING";
+                          const isRescheduled = currentStatus === "RESCHEDULED";
+                          const isExpired = currentStatus === "EXPIRED";
+
+                          let boxClass = "approved";
+                          let boxTitle = "Pre-Approved Visit Scheduled";
+                          let boxSubtitle = "Identity clearance verified. Ready for gate check-in admission.";
+
+                          if (isActive) {
+                            boxClass = "active";
+                            boxTitle = "Active On-Premises Visit";
+                            boxSubtitle = "Checked In &bull; Active Building Pass";
+                          } else if (isPending) {
+                            boxClass = "pending";
+                            boxTitle = "Check-in blocked — visitor approval is required.";
+                            boxSubtitle = "Approval Status: PENDING. Gate check-in cannot proceed until authorized by Host or Admin.";
+                          } else if (isRejected) {
+                            boxClass = "rejected";
+                            boxTitle = "Check-in denied — visitor approval was rejected.";
+                            boxSubtitle = "Approval Status: REJECTED. Visitor entry is strictly forbidden.";
+                          } else if (isWaiting) {
+                            boxClass = "waiting";
+                            boxTitle = "Check-in on hold — host is currently occupied.";
+                            boxSubtitle = "Approval Status: WAITING. Visitor must wait in reception lobby.";
+                          } else if (isRescheduled) {
+                            boxClass = "rescheduled";
+                            boxTitle = "Check-in blocked — visit has been rescheduled.";
+                            boxSubtitle = "Visit has been rescheduled to a future date. Check-in is not permitted today.";
+                          } else if (isExpired) {
+                            boxClass = "expired";
+                            boxTitle = "Check-in blocked — visitor pass/appointment has expired.";
+                            boxSubtitle = "The scheduled arrival time window for this visitor has passed.";
+                          }
+
+                          return (
+                            <div className={`sgp-mob-clearance-box ${boxClass}`}>
+                              <div className="sgp-mob-clearance-icon">
+                                <CalendarClock size={20} />
+                              </div>
+                              <div>
+                                <span className="sgp-mob-clearance-title">{boxTitle}</span>
+                                <p className="sgp-mob-clearance-status">{boxSubtitle}</p>
+                                <p className="sgp-mob-clearance-purpose">
+                                  Scheduled Purpose: {verifiedVisit.purpose || "General Corporate Visit"}; Host: {hostDisplayName}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Primary Action Buttons (Strictly Approval-Dependent) */}
+                        <div className="sgp-mob-dossier-action-buttons">
+                          {verifiedVisit.status === "ACTIVE" ? (
+                            <button
+                              type="button"
+                              className="sgp-mob-btn-primary red"
+                              onClick={() => {
+                                handleCheckoutVisitor(verifiedVisit.visit_id);
+                                setVerifiedVisit(null);
+                              }}
+                              disabled={checkoutLoading === verifiedVisit.visit_id}
+                            >
+                              <LogOut size={16} /> Check Out Visitor Now
+                            </button>
+                          ) : verifiedVisit.status === "APPROVED" ? (
+                            <>
+                              <button
+                                type="button"
+                                className="sgp-mob-btn-primary green"
+                                onClick={() => {
+                                  handleCheckInVisitor(verifiedVisit.visit_id);
+                                  setVerifiedVisit(null);
+                                }}
+                                disabled={checkingIn}
+                              >
+                                {checkingIn ? (
+                                  <>
+                                    <RefreshCw size={16} className="spin" /> Checking In...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 size={16} /> Check In Visitor Now
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                className="sgp-mob-btn-danger outline"
+                                onClick={() => {
+                                  setVerifiedVisit(null);
+                                  showToast("Visitor entry denied by security officer");
+                                }}
+                              >
+                                <XCircle size={16} /> Deny Entry
+                              </button>
+                            </>
+                          ) : (
+                            /* Blocked Action: Display Notice & Prohibit Check-in */
+                            <div className="sgp-mob-blocked-action-notice">
+                              <AlertTriangle size={18} color="#d97706" />
+                              <span>
+                                {verifiedVisit.status === "REJECTED"
+                                  ? "Check-in denied — visitor approval was rejected."
+                                  : verifiedVisit.status === "WAITING"
+                                  ? "Check-in on hold — host is currently occupied."
+                                  : verifiedVisit.status === "RESCHEDULED"
+                                  ? "Check-in blocked — visit has been rescheduled."
+                                  : verifiedVisit.status === "EXPIRED"
+                                  ? "Check-in blocked — visitor pass/appointment has expired."
+                                  : "Check-in blocked — visitor approval is required."}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                      {/* Dossier Tabs */}
+                      <div className="sgp-mob-dossier-tabs">
+                        <button
+                          type="button"
+                          className={dossierTab === "overview" ? "active" : ""}
+                          onClick={() => setDossierTab("overview")}
+                        >
+                          Overview
+                        </button>
+                        <button
+                          type="button"
+                          className={dossierTab === "assets" ? "active" : ""}
+                          onClick={() => setDossierTab("assets")}
+                        >
+                          Assets ({visitAssets.length})
+                        </button>
+                        <button
+                          type="button"
+                          className={dossierTab === "history" ? "active" : ""}
+                          onClick={() => setDossierTab("history")}
+                        >
+                          Visit History (1)
+                        </button>
+                      </div>
+
+                      {/* Tab 1: Overview Metadata Table */}
+                      {dossierTab === "overview" && (
+                        <div className="sgp-mob-metadata-table">
+                          <div className="sgp-mob-meta-row">
+                            <span className="sgp-mob-meta-label">Visitor ID</span>
+                            <span className="sgp-mob-meta-val">#{visitorIdDisplay}</span>
+                          </div>
+                          <div className="sgp-mob-meta-row">
+                            <span className="sgp-mob-meta-label">Visitor Name</span>
+                            <span className="sgp-mob-meta-val">{visitorFullName}</span>
+                          </div>
+                          <div className="sgp-mob-meta-row">
+                            <span className="sgp-mob-meta-label">Category</span>
+                            <span className="sgp-mob-meta-val">{verifiedVisit.visitor?.category || (isIT ? "IT" : "General")}</span>
+                          </div>
+                          <div className="sgp-mob-meta-row">
+                            <span className="sgp-mob-meta-label">Visit Type</span>
+                            <span className="sgp-mob-meta-val">Off-Campus</span>
+                          </div>
+                          <div className="sgp-mob-meta-row">
+                            <span className="sgp-mob-meta-label">Host</span>
+                            <span className="sgp-mob-meta-val">{hostDisplayName}</span>
+                          </div>
+                          <div className="sgp-mob-meta-row">
+                            <span className="sgp-mob-meta-label">Department</span>
+                            <span className="sgp-mob-meta-val">{hostDeptDisplay}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Tab 2: Assets List & Photos */}
+                      {dossierTab === "assets" && (
+                        <div className="sgp-mob-assets-container">
+                          {visitAssets.length === 0 ? (
+                            <div className="sgp-mob-empty-tab">
+                              <PackageCheck size={28} color="#94a3b8" />
+                              <p>No declared electronic hardware or assets for this visitor.</p>
+                            </div>
+                          ) : (
+                            <div className="sgp-mob-assets-list">
+                              {visitAssets.map((asset, idx) => {
+                                const assetPhoto = resolvePhotoUrl(asset.photo_url || asset.asset_photo_url);
+                                const isCleared = !!asset.is_cleared_for_exit || !!asset.cleared_by;
+                                return (
+                                  <div key={asset.asset_id || idx} className="sgp-mob-asset-card">
+                                    <div
+                                      className="sgp-mob-asset-photo-box"
+                                      onClick={() => assetPhoto && setLightboxImage(assetPhoto)}
+                                      title={assetPhoto ? "Tap to view asset photo" : "No asset photo"}
+                                    >
+                                      {assetPhoto ? (
+                                        <img
+                                          src={assetPhoto}
+                                          alt={asset.brand_model || "Hardware Asset"}
+                                          className="sgp-mob-asset-img"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = "none";
+                                            const fb = e.currentTarget.parentElement?.querySelector(".sgp-mob-asset-fb");
+                                            if (fb) fb.style.display = "flex";
+                                          }}
+                                        />
+                                      ) : null}
+                                      <div
+                                        className="sgp-mob-asset-fb"
+                                        style={{ display: assetPhoto ? "none" : "flex" }}
+                                      >
+                                        <Laptop size={22} color="#64748b" />
+                                      </div>
+                                    </div>
+                                    <div className="sgp-mob-asset-info">
+                                      <div className="sgp-mob-asset-header-row">
+                                        <span className="sgp-mob-asset-title">
+                                          {asset.brand_model || asset.asset_type || "Hardware Asset"}
+                                        </span>
+                                        <span className={`sgp-mob-asset-pill ${isCleared ? "cleared" : "pending"}`}>
+                                          {isCleared ? "Cleared Exit" : "Carried In"}
+                                        </span>
+                                      </div>
+                                      <div className="sgp-mob-asset-details">
+                                        <span className="sgp-mob-asset-detail-item">
+                                          <strong>S/N:</strong> {asset.serial_number || "—"}
+                                        </span>
+                                        <span className="sgp-mob-asset-detail-item">
+                                          <strong>Type:</strong> {asset.asset_type || "Hardware"}
+                                        </span>
+                                        {asset.cleared_by && (
+                                          <span className="sgp-mob-asset-detail-item full">
+                                            <strong>Clearance:</strong> {asset.cleared_by}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Tab 3: History */}
+                      {dossierTab === "history" && (
+                        <div className="sgp-mob-history-container">
+                          <div className="sgp-mob-history-card">
+                            <div className="sgp-mob-history-header">
+                              <span className="sgp-mob-history-title">
+                                {verifiedVisit.status === "ACTIVE" ? "Active Check-In" : verifiedVisit.status === "CHECKED_OUT" ? "Completed Visit" : "Scheduled Pre-Approval"}
+                              </span>
+                              <span className="sgp-mob-history-time">
+                                {verifiedVisit.check_in_time ? formatDateTime(verifiedVisit.check_in_time) : "Today"}
+                              </span>
+                            </div>
+                            <p className="sgp-mob-history-line">
+                              <strong>Host:</strong> {hostDisplayName}
+                            </p>
+                            <p className="sgp-mob-history-line">
+                              <strong>Purpose:</strong> {verifiedVisit.purpose || "Official Campus Visit"}
+                            </p>
+                            <p className="sgp-mob-history-line">
+                              <strong>Status:</strong> {verifiedVisit.status}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FIXED BOTTOM NAVIGATION BAR */}
+          <nav className="sgp-mob-bottom-nav">
+            <button
+              type="button"
+              className={`sgp-mob-nav-item ${mobileTab === "home" ? "active" : ""}`}
+              onClick={() => setMobileTab("home")}
+            >
+              <Home size={19} />
+              <span>Home</span>
+            </button>
+            <button
+              type="button"
+              className={`sgp-mob-nav-item ${mobileTab === "scan" ? "active" : ""}`}
+              onClick={() => {
+                setMobileTab("scan");
+                setScannerActive(true);
+              }}
+            >
+              <QrCode size={19} />
+              <span>Scan</span>
+            </button>
+            <button
+              type="button"
+              className={`sgp-mob-nav-item ${mobileTab === "visitors" ? "active" : ""}`}
+              onClick={() => setMobileTab("visitors")}
+            >
+              <div className="sgp-mob-tab-icon-wrap">
+                <Users size={19} />
+                {activeVisits.length > 0 && (
+                  <span className="sgp-mob-tab-badge">{activeVisits.length}</span>
+                )}
+              </div>
+              <span>Visitors</span>
+            </button>
+            <button
+              type="button"
+              className={`sgp-mob-nav-item ${mobileTab === "kiosk" ? "active" : ""}`}
+              onClick={() => setMobileTab("kiosk")}
+            >
+              <Laptop size={19} />
+              <span>Kiosk</span>
+            </button>
+            <button
+              type="button"
+              className={`sgp-mob-nav-item ${mobileTab === "more" ? "active" : ""}`}
+              onClick={() => setMobileTab("more")}
+            >
+              <MoreHorizontal size={19} />
+              <span>More</span>
+            </button>
+          </nav>
+        </div>
+      )}
+
     </div>
   );
 }

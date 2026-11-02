@@ -1117,7 +1117,12 @@ async def security_entry_decision(
     current_user: SecurityUser | None = Depends(get_optional_current_user),
 ):
     result = await db.execute(
-        select(Visit).where(
+        select(Visit)
+        .options(
+            selectinload(Visit.visitor),
+            selectinload(Visit.host_employee),
+        )
+        .where(
             Visit.visit_id == visit_id
         )
     )
@@ -1132,7 +1137,55 @@ async def security_entry_decision(
             "status": "NOT_FOUND",
         }
 
+    # Cross-reference authoritative PreApproval status for this visitor
+    pre_app_result = await db.execute(
+        select(PreApproval)
+        .where(PreApproval.visitor_id == visit.visitor_id)
+        .order_by(PreApproval.created_at.desc())
+    )
+    latest_pre_app = pre_app_result.scalars().first()
+
     status_upper = str(visit.status).strip().upper()
+
+    # If the latest pre-approval is explicitly rejected, waiting, or rescheduled, it governs
+    if latest_pre_app:
+        pre_status = str(latest_pre_app.status or "").strip().upper()
+        if pre_status == "REJECTED":
+            return {
+                "visit_id": str(visit.visit_id),
+                "decision": "REJECT",
+                "reason": "Check-in denied — visitor approval was rejected.",
+                "status": "REJECTED",
+            }
+        if pre_status == "WAITING":
+            return {
+                "visit_id": str(visit.visit_id),
+                "decision": "HOST_BUSY",
+                "reason": "Check-in on hold — host is currently occupied. Visitor must wait in reception.",
+                "status": "WAITING",
+            }
+        if pre_status == "RESCHEDULED":
+            return {
+                "visit_id": str(visit.visit_id),
+                "decision": "RESCHEDULED",
+                "reason": "Check-in blocked — visit has been rescheduled to a future date.",
+                "status": "RESCHEDULED",
+            }
+        if pre_status == "PENDING" and status_upper != "ACTIVE":
+            return {
+                "visit_id": str(visit.visit_id),
+                "decision": "PENDING_APPROVAL",
+                "reason": "Check-in blocked — visitor approval is required.",
+                "status": "PENDING",
+            }
+        # Check appointment expiry if specified
+        if latest_pre_app.expected_out_time and latest_pre_app.expected_out_time < datetime.utcnow() and status_upper != "ACTIVE":
+            return {
+                "visit_id": str(visit.visit_id),
+                "decision": "EXPIRED",
+                "reason": "Check-in blocked — visitor pass/appointment has expired.",
+                "status": "EXPIRED",
+            }
 
     if status_upper == "APPROVED":
         return {
@@ -1154,7 +1207,7 @@ async def security_entry_decision(
         return {
             "visit_id": str(visit.visit_id),
             "decision": "PENDING_APPROVAL",
-            "reason": "Registration received. Awaiting Admin / Host approval. Ask visitor to wait.",
+            "reason": "Check-in blocked — visitor approval is required.",
             "status": "PENDING",
         }
 
@@ -1162,7 +1215,7 @@ async def security_entry_decision(
         return {
             "visit_id": str(visit.visit_id),
             "decision": "HOST_BUSY",
-            "reason": "Host is currently busy. Visitor asked to wait in reception lobby.",
+            "reason": "Check-in on hold — host is currently occupied. Visitor must wait in reception.",
             "status": "WAITING",
         }
 
@@ -1170,7 +1223,7 @@ async def security_entry_decision(
         return {
             "visit_id": str(visit.visit_id),
             "decision": "REJECT",
-            "reason": "Visit request rejected by Host / Admin. Entry denied.",
+            "reason": "Check-in denied — visitor approval was rejected.",
             "status": "REJECTED",
         }
 
@@ -1200,7 +1253,7 @@ async def security_entry_decision(
 async def check_in_visit_by_id(
     visit_id: UUID,
     db: AsyncSession = Depends(get_db),
-    current_user: SecurityUser | None = Depends(get_optional_current_user),
+    current_user: SecurityUser = Depends(require_roles("SECURITY", "ADMIN", "MANAGEMENT")),
 ):
     result = await db.execute(
         select(Visit)
@@ -1220,27 +1273,72 @@ async def check_in_visit_by_id(
             detail="Visit record not found",
         )
 
-    if visit.status not in ["APPROVED", "PENDING", "CHECKED_OUT"]:
+    # 1. Duplicate check-in prevention: already ACTIVE
+    if visit.status == "ACTIVE":
         raise HTTPException(
             status_code=409,
-            detail=(
-                "Only approved, pending, or checked-out visitors can be checked in. "
-                f"Current status: {visit.status}"
-            ),
+            detail="Visitor is already checked in and active on premises.",
+        )
+
+    # 2. Already completed visit prevention
+    if visit.status == "CHECKED_OUT":
+        raise HTTPException(
+            status_code=409,
+            detail="Visit has already concluded. A new pre-approval is required.",
+        )
+
+    # 3. Check authoritative matching PreApproval with row lock
+    pre_app_result = await db.execute(
+        select(PreApproval)
+        .where(PreApproval.visitor_id == visit.visitor_id)
+        .order_by(PreApproval.created_at.desc())
+        .with_for_update()
+    )
+    pre_app = pre_app_result.scalars().first()
+
+    # Check for rejected approval
+    if visit.status == "REJECTED" or (pre_app and pre_app.status == "REJECTED"):
+        raise HTTPException(
+            status_code=403,
+            detail="Check-in denied — visitor approval was rejected.",
+        )
+
+    # Check for waiting status
+    if visit.status == "WAITING" or (pre_app and pre_app.status == "WAITING"):
+        raise HTTPException(
+            status_code=403,
+            detail="Check-in on hold — host is currently occupied. Visitor must wait in reception.",
+        )
+
+    # Check for rescheduled visit
+    if visit.status == "RESCHEDULED" or (pre_app and pre_app.status == "RESCHEDULED"):
+        raise HTTPException(
+            status_code=403,
+            detail="Check-in blocked — visit has been rescheduled to a future date.",
+        )
+
+    # Check for expired appointment window
+    now = datetime.utcnow()
+    if pre_app and pre_app.expected_out_time and pre_app.expected_out_time < now:
+        raise HTTPException(
+            status_code=410,
+            detail="Check-in blocked — visitor pass/appointment has expired.",
+        )
+
+    # Strict approval enforcement: must be APPROVED
+    is_visit_approved = visit.status == "APPROVED"
+    is_pre_app_approved = (not pre_app) or (pre_app.status in ["APPROVED", "CHECKED_IN"])
+
+    if not is_visit_approved or not is_pre_app_approved:
+        raise HTTPException(
+            status_code=403,
+            detail="Check-in blocked — visitor approval is required.",
         )
 
     visit.status = "ACTIVE"
-    visit.check_in_time = datetime.utcnow()
+    visit.check_in_time = now
     visit.check_out_time = None
 
-    # Sync matching PreApproval if present
-    pre_app_result = await db.execute(
-        select(PreApproval).where(
-            PreApproval.visitor_id == visit.visitor_id,
-            PreApproval.status.in_(["APPROVED", "PENDING"]),
-        )
-    )
-    pre_app = pre_app_result.scalars().first()
     if pre_app:
         pre_app.status = "CHECKED_IN"
 
@@ -1252,10 +1350,10 @@ async def check_in_visit_by_id(
             visit_id=visit.visit_id,
             action="IT_VISITOR_CHECKED_IN" if is_it else "VISITOR_CHECKED_IN",
             description=(
-                f"{visitor_name} checked in successfully at Security Gate by {current_user.email + ' (' + current_user.role + ')' if current_user else 'Gate Security Terminal'}. "
+                f"{visitor_name} checked in successfully at Security Gate by {current_user.email} ({current_user.role}). "
                 "Pass is now ACTIVE on premises."
             ),
-            performed_by=f"{current_user.email} ({current_user.role})" if current_user else "Gate Security Terminal (GUARD)",
+            performed_by=f"{current_user.email} ({current_user.role})",
             created_at=datetime.utcnow(),
         )
     )

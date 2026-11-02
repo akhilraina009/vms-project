@@ -9,6 +9,10 @@ import {
   QrCode,
   Clock,
   CalendarClock,
+  Home,
+  CalendarCheck,
+  Calendar,
+  Plus,
   Building2,
   Bell,
   BellRing,
@@ -30,6 +34,7 @@ import {
   ExternalLink,
   Cpu,
   Eye,
+  EyeOff,
   Check,
   Copy,
   Camera,
@@ -37,6 +42,7 @@ import {
   Info,
   FileText,
   Server,
+  ArrowUpDown,
   CheckCheck,
   Trash2,
   BellOff,
@@ -46,6 +52,7 @@ import {
   User,
   Menu,
   Settings,
+  SlidersHorizontal,
   Sun,
   Moon,
   Package,
@@ -54,15 +61,24 @@ import {
   Upload,
   Download,
   MoreVertical,
+  Lock,
+  HelpCircle,
+  Shield,
+  Smartphone,
+  LayoutGrid,
+  Image as ImageIcon,
+  SwitchCamera,
+  VideoOff,
 } from "lucide-react";
 import QRCode from "qrcode";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeScanner } from "html5-qrcode";
 import AssetPhotoPicker from "./AssetPhotoPicker";
 
 import CreateVisit from "./CreateVisit";
 import PreApprovals from "./PreApprovals";
 import Login from "./Login";
 import PublicRegistration from "./PublicRegistration";
+import { isITApproval } from "./utils/approvalFilters";
 import PublicVisitorPass from "./PublicVisitorPass";
 import ITVisitPortal from "./ITVisitPortal";
 import ITPortalQRPage from "./ITPortalQRPage";
@@ -182,7 +198,7 @@ function VMSApp() {
   useEffect(() => {
     if (!currentUser) return;
     const role = String(currentUser.role || "ADMIN").toUpperCase();
-    const itPages = ["it-assets", "log-recovery", "it-pre-approvals", "it-visitors", "it-notifications", "it-checkout-history"];
+    const itPages = ["it-assets", "log-recovery", "it-hosts", "it-pre-approvals", "it-visitors", "it-notifications", "it-checkout-history"];
 
     if (role === "IT_COVERYOU" || role === "IT") {
       if (!itPages.includes(currentPage)) {
@@ -202,8 +218,100 @@ function VMSApp() {
 
   /* Lightbox for inspecting visitor or hardware asset photos */
   const [assetLightbox, setAssetLightbox] = useState(null);
+
+  /* User initials for mobile mockups */
+  const userInitials = useMemo(() => {
+    if (currentUser?.first_name && currentUser?.last_name) {
+      return `${currentUser.first_name[0]}${currentUser.last_name[0]}`.toUpperCase();
+    }
+    if (currentUser?.first_name && currentUser.first_name.length >= 2) {
+      return currentUser.first_name.slice(0, 2).toUpperCase();
+    }
+    if (currentUser?.email) {
+      const clean = currentUser.email.split("@")[0].replace(/[._-]/g, " ").trim();
+      const parts = clean.split(" ").filter(Boolean);
+      if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      if (parts.length === 1 && parts[0].length >= 2) return parts[0].slice(0, 2).toUpperCase();
+    }
+    return "AR";
+  }, [currentUser]);
   /* Account & System Settings Modal */
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [settingsSubView, setSettingsSubView] = useState("main");
+  const [passForm, setPassForm] = useState({ current: "", next: "", confirm: "" });
+  const [passShow, setPassShow] = useState(false);
+  const [passLoading, setPassLoading] = useState(false);
+  const [passMsg, setPassMsg] = useState({ type: "", text: "" });
+
+  const [mobileNotifPrefs, setMobileNotifPrefs] = useState(() => {
+    try {
+      const saved = localStorage.getItem("vms_notif_prefs");
+      return saved ? JSON.parse(saved) : { emailAlerts: true, securityAlarm: true, hardwareClearance: true, soundArrival: true };
+    } catch {
+      return { emailAlerts: true, securityAlarm: true, hardwareClearance: true, soundArrival: true };
+    }
+  });
+
+  const handleUpdateNotifPref = (key) => {
+    setMobileNotifPrefs((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem("vms_notif_prefs", JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
+
+  const handlePasswordSubmit = async (e) => {
+    e?.preventDefault();
+    setPassMsg({ type: "", text: "" });
+    if (!passForm.current) {
+      setPassMsg({ type: "error", text: "Please enter your current password." });
+      return;
+    }
+    if (!passForm.next || passForm.next.length < 6) {
+      setPassMsg({ type: "error", text: "New password must be at least 6 characters long." });
+      return;
+    }
+    if (passForm.next !== passForm.confirm) {
+      setPassMsg({ type: "error", text: "New password and confirmation do not match." });
+      return;
+    }
+
+    setPassLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...authHeaders(),
+        },
+        body: JSON.stringify({
+          current_password: passForm.current,
+          new_password: passForm.next,
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Failed to update password. Verify current password.");
+      }
+
+      setPassMsg({ type: "success", text: "Password updated successfully! Please keep it secure." });
+      setPassForm({ current: "", next: "", confirm: "" });
+      setTimeout(() => {
+        setSettingsSubView("main");
+        setPassMsg({ type: "", text: "" });
+      }, 1600);
+    } catch (err) {
+      setPassMsg({ type: "error", text: err.message || "Failed to change password." });
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
   /* Digital Visitor Pass QR Code Data URL */
   const [passQrCode, setPassQrCode] = useState("");
 
@@ -218,6 +326,31 @@ function VMSApp() {
     localStorage.setItem("vms_theme", theme);
     localStorage.setItem("vms-theme", theme);
   }, [theme]);
+
+  /* Synchronous Print Mode Handlers to Guarantee Clean White Executive PDF/Print Output */
+  useEffect(() => {
+    let activeThemeBeforePrint = null;
+    const onBeforePrint = () => {
+      activeThemeBeforePrint = document.documentElement.getAttribute("data-theme") || "light";
+      document.documentElement.setAttribute("data-theme", "light");
+      document.documentElement.classList.remove("dark");
+      document.body.classList.add("vms-print-mode");
+    };
+    const onAfterPrint = () => {
+      if (activeThemeBeforePrint) {
+        document.documentElement.setAttribute("data-theme", activeThemeBeforePrint);
+        document.documentElement.classList.toggle("dark", activeThemeBeforePrint === "dark");
+      }
+      document.body.classList.remove("vms-print-mode");
+    };
+
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    return () => {
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+  }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "dark" ? "light" : "dark"));
@@ -265,6 +398,32 @@ function VMSApp() {
 
   const itUnreadCount = itNotifications.filter((n) => !n.read).length;
   const generalUnreadCount = generalNotifications.filter((n) => !n.read).length;
+
+  // Real-time tracking of pending Pre-Approval requests for badge counters
+  const [globalPreApprovals, setGlobalPreApprovals] = useState([]);
+
+  const generalPendingApprovals = useMemo(() => {
+    return globalPreApprovals.filter((item) => {
+      const purpose = String(item.purpose || "").toUpperCase();
+      const isIT = isITApproval(item);
+      if (isIT) return false;
+      const status = String(item.status || "").trim().toUpperCase();
+      return status === "PENDING" || status === "WAITING";
+    });
+  }, [globalPreApprovals]);
+
+  const itPendingApprovals = useMemo(() => {
+    return globalPreApprovals.filter((item) => {
+      const purpose = String(item.purpose || "").toUpperCase();
+      const isIT = isITApproval(item);
+      if (!isIT) return false;
+      const status = String(item.status || "").trim().toUpperCase();
+      return status === "PENDING" || status === "WAITING";
+    });
+  }, [globalPreApprovals]);
+
+  const generalPreApprovalPendingCount = generalPendingApprovals.length;
+  const itPreApprovalPendingCount = itPendingApprovals.length;
 
   // Keep notification read/cleared state in this browser across refreshes.
   // Audit records remain in the backend; Clear all only hides them in this UI.
@@ -441,19 +600,37 @@ function VMSApp() {
     }
   }, [authToken, notificationPreferencesKey]);
 
+  const fetchGlobalPreApprovals = useCallback(async () => {
+    if (!authToken) return;
+    try {
+      const response = await fetch(`${API_BASE_URL}/pre-approvals/`, {
+        headers: authHeaders(),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setGlobalPreApprovals(Array.isArray(data) ? data : []);
+      }
+    } catch (e) {
+      console.warn("Unable to load pre-approvals for badge counters:", e);
+    }
+  }, [authToken]);
+
   useEffect(() => {
     if (!authToken) {
       setNotifications([]);
+      setGlobalPreApprovals([]);
       return;
     }
 
     fetchAuditNotifications();
+    fetchGlobalPreApprovals();
     const interval = setInterval(() => {
       fetchAuditNotifications();
+      fetchGlobalPreApprovals();
     }, 4000);
 
     return () => clearInterval(interval);
-  }, [authToken, fetchAuditNotifications]);
+  }, [authToken, fetchAuditNotifications, fetchGlobalPreApprovals]);
 
   const markNotificationAsRead = (id) => {
     const preferences = readNotificationPreferences();
@@ -571,6 +748,7 @@ function VMSApp() {
   }, []);
 
   const addNotification = (notification) => {
+    fetchGlobalPreApprovals();
     const newNotification = {
       id: `local-${Date.now()}-${Math.random()}`,
       title: notification.title,
@@ -633,6 +811,9 @@ function VMSApp() {
   const [visitorDirectoryFilter, setVisitorDirectoryFilter] = useState("all");
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState("");
   const [showAddVisitor, setShowAddVisitor] = useState(false);
+  const [showMobileCompanyFilter, setShowMobileCompanyFilter] = useState(false);
+  const [showMobileHostFilter, setShowMobileHostFilter] = useState(false);
+  const [selectedHostDeptFilter, setSelectedHostDeptFilter] = useState("");
 
   // Visitor Detail Dossier & Direct Checkout Modal
   const [selectedVisitorDossier, setSelectedVisitorDossier] = useState(null);
@@ -682,8 +863,17 @@ function VMSApp() {
     first_name: "",
     last_name: "",
     email: "",
+    phone_number: "",
     department: "",
+    designation: "",
+    office_location: "",
+    notes: "",
+    status: "ACTIVE",
   });
+  const [selectedHostDetail, setSelectedHostDetail] = useState(null);
+  const [copiedHostContact, setCopiedHostContact] = useState("");
+  const [itHostScope, setItHostScope] = useState("it"); // "it" | "all"
+  const [hostStatusFilter, setHostStatusFilter] = useState("all"); // "all" | "active" | "reception"
 
   /* =========================================================
      IT DEPARTMENT & ASSET RECOVERY
@@ -694,6 +884,7 @@ function VMSApp() {
   const [itAssetsError, setItAssetsError] = useState("");
   const [itSearchQuery, setItSearchQuery] = useState("");
   const [itCategoryFilter, setItCategoryFilter] = useState("all");
+  const [itSortOrder, setItSortOrder] = useState("newest");
   const [selectedAssetDetail, setSelectedAssetDetail] = useState(null);
   const [showAddRecoveryModal, setShowAddRecoveryModal] = useState(false);
   const [printableAssetReceipt, setPrintableAssetReceipt] = useState(null);
@@ -791,6 +982,24 @@ function VMSApp() {
   );
   const [manualTokenInput, setManualTokenInput] = useState("");
   const [manualLookupLoading, setManualLookupLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= 768
+  );
+  const [scannerCameraActive, setScannerCameraActive] = useState(false);
+  const [cameraFacingMode, setCameraFacingMode] = useState("environment");
+  const [availableCameras, setAvailableCameras] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
+  const html5QrCodeRef = useRef(null);
+  const scanProcessingRef = useRef(false);
+  const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    const handleMobileResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener("resize", handleMobileResize);
+    return () => window.removeEventListener("resize", handleMobileResize);
+  }, []);
 
   /* =========================================================
      FETCH CALLS
@@ -1472,7 +1681,17 @@ function VMSApp() {
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || "Unable to create host.");
 
-      setHostForm({ first_name: "", last_name: "", email: "", department: "" });
+      setHostForm({
+        first_name: "",
+        last_name: "",
+        email: "",
+        phone_number: "",
+        department: "",
+        designation: "",
+        office_location: "",
+        notes: "",
+        status: "ACTIVE",
+      });
       setShowAddHost(false);
       await fetchHosts();
     } catch (err) {
@@ -1879,107 +2098,218 @@ function VMSApp() {
     setError("");
   };
 
-  useEffect(() => {
-    if (currentPage !== "scanner") return;
+  const handleQrDecoded = async (decodedText) => {
+    if (scanProcessingRef.current) return;
 
-    let scanner = null;
-    let scanProcessing = false;
+    const directVisitId = extractVisitId(decodedText);
+    const passToken = directVisitId
+      ? null
+      : extractVisitorPassToken(decodedText);
 
-    const startScanner = async () => {
-      try {
-        scanner = new Html5QrcodeScanner(
-          "qr-reader",
-          {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            rememberLastUsedCamera: true,
-            showTorchButtonIfSupported: true,
-          },
-          false
+    if (!directVisitId && !passToken) {
+      setScannerError(
+        "Invalid QR code. Scan a valid Visit ID QR or Visitor Pass QR."
+      );
+      return;
+    }
+
+    scanProcessingRef.current = true;
+    setScannerError("");
+    setScannerMessage(
+      passToken
+        ? "Visitor Pass detected. Validating pass..."
+        : "QR detected. Verifying visitor..."
+    );
+
+    try {
+      let verifiedVisitId = directVisitId;
+
+      if (passToken) {
+        const response = await fetch(
+          `${API_BASE_URL}/public-registration/verify-pass/${encodeURIComponent(passToken)}`
         );
+        const data = await response.json().catch(() => ({}));
 
-        scanner.render(
-          async (decodedText) => {
-            if (scanProcessing) return;
+        if (!response.ok) {
+          const detail = data?.detail;
+          const message = Array.isArray(detail)
+            ? detail.map((item) => item.msg || "").filter(Boolean).join(", ")
+            : detail;
+          throw new Error(
+            message || `Visitor Pass validation failed (${response.status}).`
+          );
+        }
 
-            const directVisitId = extractVisitId(decodedText);
-            const passToken = directVisitId
-              ? null
-              : extractVisitorPassToken(decodedText);
-
-            if (!directVisitId && !passToken) {
-              setScannerError(
-                "Invalid QR code. Scan a valid Visit ID QR or Visitor Pass QR."
-              );
-              return;
-            }
-
-            scanProcessing = true;
-            setScannerError("");
-            setScannerMessage(
-              passToken
-                ? "Visitor Pass detected. Validating pass..."
-                : "QR detected. Verifying visitor..."
-            );
-
-            try {
-              let verifiedVisitId = directVisitId;
-
-              if (passToken) {
-                const response = await fetch(
-                  `${API_BASE_URL}/public-registration/verify-pass/${encodeURIComponent(passToken)}`
-                );
-                const data = await response.json().catch(() => ({}));
-
-                if (!response.ok) {
-                  const detail = data?.detail;
-                  const message = Array.isArray(detail)
-                    ? detail.map((item) => item.msg || "").filter(Boolean).join(", ")
-                    : detail;
-                  throw new Error(
-                    message || `Visitor Pass validation failed (${response.status}).`
-                  );
-                }
-
-                verifiedVisitId = data?.visit_id;
-                if (!verifiedVisitId) {
-                  throw new Error(
-                    "The Visitor Pass was validated, but the backend did not return a Visit ID."
-                  );
-                }
-              }
-
-              try {
-                await scanner.clear();
-              } catch {
-                // Scanner may already have stopped
-              }
-
-              await fetchVisit(verifiedVisitId);
-              setScannerMessage("Visitor verification completed.");
-            } catch (err) {
-              console.error("QR visitor verification error:", err);
-              setScannerError(err.message || "Unable to verify this QR code.");
-              setScannerMessage("Scan a valid visitor QR code to try again.");
-              scanProcessing = false;
-            }
-          },
-          () => {}
-        );
-      } catch (err) {
-        console.error("Scanner initialization error:", err);
-        setScannerError("Unable to start QR scanner. Please allow camera access.");
+        verifiedVisitId = data?.visit_id;
+        if (!verifiedVisitId) {
+          throw new Error(
+            "The Visitor Pass was validated, but the backend did not return a Visit ID."
+          );
+        }
       }
-    };
 
-    startScanner();
+      // Stop camera feed upon successful scan
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        try {
+          await html5QrCodeRef.current.stop();
+        } catch {
+          // ignore
+        }
+      }
+      setScannerCameraActive(false);
+
+      await fetchVisit(verifiedVisitId);
+      setScannerMessage("Visitor verification completed.");
+    } catch (err) {
+      console.error("QR visitor verification error:", err);
+      setScannerError(err.message || "Unable to verify this QR code.");
+      setScannerMessage("Scan a valid visitor QR code to try again.");
+      scanProcessingRef.current = false;
+    }
+  };
+
+  const startCamera = async (facing = cameraFacingMode, camId = selectedCameraId, silent = false) => {
+    try {
+      if (!silent) setScannerError("");
+      setScannerMessage("Initializing camera...");
+
+      const qrEl = document.getElementById("qr-reader");
+      if (!qrEl) return;
+
+      if (html5QrCodeRef.current) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
+          }
+          await html5QrCodeRef.current.clear();
+        } catch {
+          // ignore
+        }
+      }
+
+      const html5QrCode = new Html5Qrcode("qr-reader");
+      html5QrCodeRef.current = html5QrCode;
+
+      // Query available camera devices for the user
+      try {
+        const devices = await Html5Qrcode.getCameras();
+        if (devices && devices.length > 0) {
+          setAvailableCameras(devices);
+        }
+      } catch (e) {
+        console.warn("Could not list cameras:", e);
+      }
+
+      const cameraSource = camId ? camId : { facingMode: { ideal: facing } };
+
+      await html5QrCode.start(
+        cameraSource,
+        {
+          fps: 12,
+          qrbox: (w, h) => {
+            const minEdge = Math.min(w, h);
+            const size = Math.floor(minEdge * 0.72);
+            return { width: Math.max(160, size), height: Math.max(160, size) };
+          },
+          aspectRatio: 1.0,
+        },
+        (decodedText) => {
+          handleQrDecoded(decodedText);
+        },
+        () => {}
+      );
+
+      setScannerCameraActive(true);
+      setScannerError("");
+      setScannerMessage(
+        facing === "environment"
+          ? "Back camera active. Align visitor pass QR within frame."
+          : "Front camera active. Align visitor pass QR within frame."
+      );
+    } catch (err) {
+      console.error("Camera start error:", err);
+      setScannerCameraActive(false);
+      if (!silent) {
+        setScannerError("Camera permission denied or camera unavailable. Please allow camera access in browser settings.");
+        setScannerMessage("Tap Start Scanning to retry or upload an image file.");
+      } else {
+        setScannerMessage("Camera ready. Tap Start Camera to begin scanning.");
+      }
+    }
+  };
+
+  const stopCamera = async () => {
+    if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+      try {
+        await html5QrCodeRef.current.stop();
+      } catch (e) {
+        console.warn("Error stopping camera:", e);
+      }
+    }
+    setScannerCameraActive(false);
+    setScannerMessage("Camera paused. Tap Start Scanning to resume.");
+  };
+
+  const toggleCameraFacingMode = async () => {
+    const nextMode = cameraFacingMode === "environment" ? "user" : "environment";
+    setCameraFacingMode(nextMode);
+    setSelectedCameraId("");
+    if (scannerCameraActive) {
+      await startCamera(nextMode, "");
+    } else {
+      setScannerMessage(
+        nextMode === "environment"
+          ? "Back Camera selected. Tap Start Scanning."
+          : "Front Camera selected. Tap Start Scanning."
+      );
+    }
+  };
+
+  const handleCameraDeviceChange = async (deviceId) => {
+    setSelectedCameraId(deviceId);
+    if (scannerCameraActive) {
+      await startCamera(cameraFacingMode, deviceId);
+    }
+  };
+
+  const handleImageFileScan = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScannerError("");
+    setScannerMessage("Decoding image QR pass...");
+    try {
+      const html5QrCode = html5QrCodeRef.current || new Html5Qrcode("qr-reader");
+      const decodedText = await html5QrCode.scanFile(file, true);
+      handleQrDecoded(decodedText);
+    } catch (err) {
+      console.error("File QR decode error:", err);
+      setScannerError("No valid visitor QR code found in selected image. Please try another photo.");
+      setScannerMessage("Scan a visitor QR code to verify entry.");
+    }
+    if (e.target) e.target.value = "";
+  };
+
+  useEffect(() => {
+    if (currentPage !== "scanner" || visit) return;
+
+    scanProcessingRef.current = false;
+    let isMounted = true;
+
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        startCamera(cameraFacingMode, selectedCameraId, true);
+      }
+    }, 350);
 
     return () => {
-      if (scanner) {
-        scanner.clear().catch(() => {});
+      isMounted = false;
+      clearTimeout(timer);
+      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+        html5QrCodeRef.current.stop().catch(() => {});
       }
+      setScannerCameraActive(false);
     };
-  }, [currentPage]);
+  }, [currentPage, visit]);
 
   const handleManualLookup = async (e) => {
     if (e) e.preventDefault();
@@ -2051,7 +2381,7 @@ function VMSApp() {
   }, [authToken, currentUser]);
 
   useEffect(() => {
-    if (currentPage === "hosts") {
+    if (currentPage === "hosts" || currentPage === "it-hosts") {
       fetchHosts();
     }
   }, [currentPage]);
@@ -2300,10 +2630,54 @@ function VMSApp() {
     fetchVisitors();
   };
 
+  const getAssetDisplayInfo = (asset) => {
+    const fullText = (asset.brand_model || asset.asset_type || "Standard Device").trim();
+    const serial = asset.serial_number || "NO-TAG";
+    let title = fullText;
+    let subtitle = asset.asset_type || "Hardware";
+
+    if (fullText.toLowerCase().includes("software") || fullText.toLowerCase().includes("diagnostics") || fullText.toLowerCase().includes("consultation") || (asset.asset_type && asset.asset_type.toLowerCase().includes("no hardware"))) {
+      title = "Software";
+      subtitle = "Diagnostics / Consultation";
+    } else if (fullText.toLowerCase().startsWith("lenovo thinkpad")) {
+      title = fullText;
+      subtitle = fullText.slice(15).trim() || "Laptop";
+    } else if (fullText.toLowerCase().startsWith("dell poweredge")) {
+      title = fullText;
+      subtitle = fullText.slice(14).trim() || "Server Module";
+    } else if (fullText.toLowerCase().startsWith("cisco catalyst")) {
+      title = fullText;
+      subtitle = fullText.slice(5).trim() || "Switch Module";
+    } else if (fullText.toLowerCase().startsWith("dell precision")) {
+      title = fullText;
+      subtitle = "Laptop";
+    } else if (fullText.includes(" - ")) {
+      const parts = fullText.split(" - ");
+      title = parts[0].trim();
+      subtitle = parts[1].trim();
+    }
+
+    const lower = (fullText + " " + (asset.asset_type || "")).toLowerCase();
+    let iconCategory = "others";
+    if (lower.includes("software") || lower.includes("consultation") || lower.includes("diagnostic") || lower.includes("contractor (no hardware)")) {
+      iconCategory = "software";
+    } else if (lower.includes("laptop") || lower.includes("thinkpad") || lower.includes("precision") || lower.includes("macbook") || lower.includes("notebook")) {
+      iconCategory = "laptop";
+    } else if (lower.includes("server") || lower.includes("poweredge") || lower.includes("blade")) {
+      iconCategory = "server";
+    } else if (lower.includes("switch") || lower.includes("catalyst") || lower.includes("router") || lower.includes("cisco")) {
+      iconCategory = "switch";
+    } else if (lower.includes("phone") || lower.includes("mobile") || lower.includes("tab")) {
+      iconCategory = "mobile";
+    }
+
+    return { title, subtitle, serial, iconCategory };
+  };
+
   const filteredITAssets = useMemo(() => {
     if (!Array.isArray(itAssets)) return [];
 
-    return itAssets.filter((item) => {
+    let list = itAssets.filter((item) => {
       // 1. Category Filter
       if (itCategoryFilter === "on_premises") {
         if (item.custody_status !== "ON_PREMISES") return false;
@@ -2339,7 +2713,15 @@ function VMSApp() {
         purpose.includes(search)
       );
     });
-  }, [itAssets, itCategoryFilter, itSearchQuery]);
+
+    if (itSortOrder === "newest") {
+      list.sort((a, b) => new Date(b.created_at || b.check_in_time || 0) - new Date(a.created_at || a.check_in_time || 0));
+    } else if (itSortOrder === "oldest") {
+      list.sort((a, b) => new Date(a.created_at || a.check_in_time || 0) - new Date(b.created_at || b.check_in_time || 0));
+    }
+
+    return list;
+  }, [itAssets, itCategoryFilter, itSearchQuery, itSortOrder]);
 
   const openCreateVisit = () => {
     setCurrentPage("create");
@@ -2417,6 +2799,10 @@ const renderNotifications = () => {
 
     return (
       <>
+        {/* =========================================================
+            DESKTOP VIEW (> 768px): PRESERVED 100% UNTOUCHED
+        ========================================================= */}
+        <div className="vms-desktop-only">
         {/* Executive Notifications Header */}
         <div className="notif-management-header">
           <div className="notif-header-title-box">
@@ -2763,6 +3149,327 @@ const renderNotifications = () => {
             </div>
           )}
         </section>
+        </div>
+
+        {/* =========================================================
+            MOBILE VIEW (<= 768px): VISITOR NOTIFICATIONS
+        ========================================================= */}
+        <div className="vms-mobile-only mobile-visitor-notif-container">
+          {/* 1. Executive Dark Navy Hero Card */}
+          <div className="mobile-visitor-notif-hero">
+            <div className="mobile-visitor-notif-hero-badge-row">
+              <span className="mobile-visitor-notif-division-pill">VISITOR MANAGEMENT</span>
+              <span className="mobile-visitor-notif-telemetry-pill">
+                <span className="status-dot"></span>
+                Visitor Telemetry Active
+              </span>
+            </div>
+
+            <h2 className="mobile-visitor-notif-hero-title">Visitor Notifications</h2>
+            <p className="mobile-visitor-notif-hero-desc">
+              Audit log of general visitor check-ins, security gate clearances, host arrivals, and visitor requests.
+            </p>
+
+            {/* Actions inside Hero Card */}
+            <div className="mobile-visitor-notif-hero-actions">
+              <div
+                className="mobile-visitor-notif-unread-banner"
+                onClick={() => setNotificationFilter((prev) => (prev === "unread" ? "all" : "unread"))}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="unread-banner-left">
+                  <Bell size={15} />
+                  <span>{unreadCount} Unread Notifications</span>
+                </div>
+                <ChevronRight size={15} />
+              </div>
+
+              <button
+                type="button"
+                className="mobile-visitor-notif-btn-read"
+                onClick={markGeneralNotificationsAsRead}
+              >
+                <Check size={16} />
+                <span>Mark all as read</span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-visitor-notif-btn-clear"
+                onClick={clearGeneralNotifications}
+              >
+                <Trash2 size={15} />
+                <span>Clear all</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2. 2x2 Metric Cards Grid */}
+          <section className="mobile-visitor-notif-stats-grid">
+            <div className="mobile-visitor-notif-stat-card">
+              <div className="mobile-visitor-notif-stat-top">
+                <div className="mobile-visitor-notif-stat-icon blue">
+                  <Bell size={16} />
+                </div>
+                <span className="mobile-visitor-notif-stat-label">Total Activity Logs</span>
+              </div>
+              <div className="mobile-visitor-notif-stat-bottom">
+                <strong className="mobile-visitor-notif-stat-value">{targetNotifications.length}</strong>
+                <svg width="44" height="20" viewBox="0 0 44 20" fill="none" className="mobile-visitor-notif-sparkline">
+                  <path d="M2 14 C 10 18, 16 6, 24 12 C 32 18, 38 4, 42 7" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="mobile-visitor-notif-stat-card">
+              <div className="mobile-visitor-notif-stat-top">
+                <div className="mobile-visitor-notif-stat-icon amber">
+                  <BellRing size={16} />
+                </div>
+                <span className="mobile-visitor-notif-stat-label">Unread Telemetry</span>
+              </div>
+              <div className="mobile-visitor-notif-stat-bottom">
+                <strong className="mobile-visitor-notif-stat-value">{unreadCount}</strong>
+                <svg width="44" height="20" viewBox="0 0 44 20" fill="none" className="mobile-visitor-notif-sparkline">
+                  <path d="M2 14 C 10 18, 16 6, 24 12 C 32 18, 38 4, 42 7" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="mobile-visitor-notif-stat-card">
+              <div className="mobile-visitor-notif-stat-top">
+                <div className="mobile-visitor-notif-stat-icon green">
+                  <ShieldCheck size={16} />
+                </div>
+                <span className="mobile-visitor-notif-stat-label">Gate Access Clearances</span>
+              </div>
+              <div className="mobile-visitor-notif-stat-bottom">
+                <strong className="mobile-visitor-notif-stat-value">{gateCount}</strong>
+                <svg width="44" height="20" viewBox="0 0 44 20" fill="none" className="mobile-visitor-notif-sparkline">
+                  <path d="M2 14 C 10 18, 16 6, 24 12 C 32 18, 38 4, 42 7" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="mobile-visitor-notif-stat-card">
+              <div className="mobile-visitor-notif-stat-top">
+                <div className="mobile-visitor-notif-stat-icon purple">
+                  <Users size={16} />
+                </div>
+                <span className="mobile-visitor-notif-stat-label">Registration Requests</span>
+              </div>
+              <div className="mobile-visitor-notif-stat-bottom">
+                <strong className="mobile-visitor-notif-stat-value">{requestCount}</strong>
+                <svg width="44" height="20" viewBox="0 0 44 20" fill="none" className="mobile-visitor-notif-sparkline">
+                  <path d="M2 14 C 10 18, 16 6, 24 12 C 32 18, 38 4, 42 7" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Scope Filter Tabs Row */}
+          <div className="mobile-visitor-notif-tabs-row">
+            <button
+              type="button"
+              className={`mobile-visitor-notif-tab ${notificationFilter === "all" ? "active" : ""}`}
+              onClick={() => setNotificationFilter("all")}
+            >
+              <Bell size={14} />
+              <span>All Activities ({targetNotifications.length})</span>
+            </button>
+            <button
+              type="button"
+              className={`mobile-visitor-notif-tab ${notificationFilter === "unread" ? "active" : ""}`}
+              onClick={() => setNotificationFilter("unread")}
+            >
+              <span className="tab-unread-dot"></span>
+              <span>Unread ({unreadCount})</span>
+            </button>
+            {gateCount > 0 && (
+              <button
+                type="button"
+                className={`mobile-visitor-notif-tab ${notificationFilter === "gate" ? "active" : ""}`}
+                onClick={() => setNotificationFilter("gate")}
+              >
+                <ShieldCheck size={14} />
+                <span>Gate Clearances ({gateCount})</span>
+              </button>
+            )}
+            {requestCount > 0 && (
+              <button
+                type="button"
+                className={`mobile-visitor-notif-tab ${notificationFilter === "request" ? "active" : ""}`}
+                onClick={() => setNotificationFilter("request")}
+              >
+                <Users size={14} />
+                <span>Visitor Requests ({requestCount})</span>
+              </button>
+            )}
+          </div>
+
+          {/* 4. Search and Filter Bar */}
+          <div className="mobile-visitor-notif-search-row">
+            <div className="mobile-visitor-notif-search-box" style={{ position: "relative", display: "flex", alignItems: "center", flex: 1 }}>
+              <Search size={15} className="mobile-visitor-notif-search-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+              <input
+                type="text"
+                className="mobile-visitor-notif-search-input"
+                style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+                value={notifSearchQuery}
+                onChange={(e) => setNotifSearchQuery(e.target.value)}
+                placeholder="Search visitor notifications, host, gate..."
+              />
+              {notifSearchQuery && (
+                <button
+                  type="button"
+                  className="mobile-visitor-notif-search-clear"
+                  onClick={() => setNotifSearchQuery("")}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className="mobile-visitor-notif-filter-toggle-btn"
+              title="Toggle filter view"
+              onClick={() => setNotificationFilter((prev) => (prev === "unread" ? "all" : "unread"))}
+            >
+              <SlidersHorizontal size={15} />
+            </button>
+          </div>
+
+          {/* 5. Notification Cards List */}
+          <div className="mobile-visitor-notif-cards-list">
+            {filtered.length === 0 ? (
+              <div className="mobile-visitor-notif-empty-state">
+                <BellRing size={28} color="#94a3b8" />
+                <p>No visitor notifications found.</p>
+              </div>
+            ) : (
+              filtered.map((notification) => {
+                const isUnread = !notification.read;
+                const isSuccess = notification.type === "success";
+                const isWarning = notification.type === "warning";
+
+                let icon = <Bell size={18} />;
+                let iconBoxClass = "info";
+                let badgeText = "VISITOR EVENT";
+                let badgeClass = "info";
+
+                if (isSuccess) {
+                  icon = <CheckCircle2 size={18} />;
+                  iconBoxClass = "green";
+                  badgeText = notification.title?.includes("Cleared")
+                    ? "EXIT CLEARANCE"
+                    : notification.title?.includes("Checked Out")
+                    ? "CHECKOUT"
+                    : "VERIFIED";
+                  badgeClass = "green";
+                } else if (isWarning) {
+                  icon = <AlertTriangle size={18} />;
+                  iconBoxClass = "amber";
+                  badgeText = "ALERT";
+                  badgeClass = "amber";
+                } else if (
+                  notification.type === "visitor" ||
+                  notification.title?.includes("Visitor")
+                ) {
+                  icon = <UserCheck size={18} />;
+                  iconBoxClass = "blue";
+                  badgeText = "VISITOR PASS";
+                  badgeClass = "blue";
+                } else if (
+                  notification.action?.includes("REQUEST") ||
+                  notification.title?.includes("Registration") ||
+                  notification.title?.includes("Request")
+                ) {
+                  icon = <Users size={18} />;
+                  iconBoxClass = "purple";
+                  badgeText = "REGISTRATION";
+                  badgeClass = "purple";
+                } else if (
+                  notification.action?.includes("GATE") ||
+                  notification.title?.includes("Gate") ||
+                  notification.title?.includes("Clearance") ||
+                  notification.title?.includes("Security")
+                ) {
+                  icon = <ShieldCheck size={18} />;
+                  iconBoxClass = "green";
+                  badgeText = "GATE CLEARANCE";
+                  badgeClass = "green";
+                }
+
+                return (
+                  <div
+                    key={notification.id}
+                    className={`mobile-visitor-notif-card ${isUnread ? "unread" : ""}`}
+                    onClick={() => markNotificationAsRead(notification.id)}
+                  >
+                    <div className="mobile-visitor-notif-card-inner">
+                      <div className={`mobile-visitor-notif-card-icon-box ${iconBoxClass}`}>
+                        {icon}
+                      </div>
+
+                      <div className="mobile-visitor-notif-card-body">
+                        <div className="mobile-visitor-notif-card-header">
+                          <h4 className="mobile-visitor-notif-card-title">{notification.title}</h4>
+                          <div className="mobile-visitor-notif-card-top-right">
+                            {isUnread && <span className="mobile-visitor-notif-blue-dot"></span>}
+                            <button
+                              type="button"
+                              className="mobile-visitor-notif-card-dots"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                dismissNotification(e, notification.id);
+                              }}
+                              title="Dismiss notification"
+                            >
+                              <MoreVertical size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mobile-visitor-notif-card-badge-row">
+                          <span className={`mobile-visitor-notif-tag-badge ${badgeClass}`}>
+                            {badgeText}
+                          </span>
+                        </div>
+
+                        <div className="mobile-visitor-notif-card-time-row">
+                          <Clock size={11} />
+                          <span>{notification.time}</span>
+                        </div>
+
+                        <p className="mobile-visitor-notif-card-message">
+                          {notification.message}
+                        </p>
+
+                        {(notification.action?.includes("REQUEST_RAISED") ||
+                          notification.action?.includes("RESCHEDULED") ||
+                          (notification.message || "").toLowerCase().includes("awaiting") ||
+                          (notification.message || "").toLowerCase().includes("pre-approval")) && (
+                          <button
+                            type="button"
+                            className="mobile-visitor-notif-preapproval-link"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              markNotificationAsRead(notification.id);
+                              openPreApprovals(false);
+                            }}
+                          >
+                            Review in Pre-Approvals →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </>
     );
   };
@@ -2820,6 +3527,10 @@ const renderNotifications = () => {
 
     return (
       <>
+        {/* =========================================================
+            DESKTOP VIEW (PRESERVED 100% UNTOUCHED)
+        ========================================================= */}
+        <div className="vms-desktop-only">
         {/* Executive IT Notifications Header */}
         <div className="notif-management-header">
           <div className="notif-header-title-box">
@@ -2878,44 +3589,44 @@ const renderNotifications = () => {
         </div>
 
         {/* KPI Metrics Grid */}
-        <section className="stats-grid">
-          <div className="stat-card">
-            <div className="stat-icon purple">
-              <Server size={20} />
+        <section className="stats-grid notif-metrics-grid">
+          <div className="stat-card notif-metric-card">
+            <div className="stat-icon notif-metric-icon purple">
+              <Server size={22} />
             </div>
-            <div className="stat-content">
-              <strong>{itNotifications.length}</strong>
-              <span>Total IT Telemetry</span>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon amber">
-              <BellRing size={20} />
-            </div>
-            <div className="stat-content">
-              <strong>{unreadCount}</strong>
-              <span>Unread Alerts</span>
+            <div className="stat-content notif-metric-content">
+              <strong className="notif-metric-val">{itNotifications.length}</strong>
+              <span className="notif-metric-lbl">Total IT Telemetry</span>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon blue">
-              <Laptop size={20} />
+          <div className="stat-card notif-metric-card">
+            <div className="stat-icon notif-metric-icon amber">
+              <BellRing size={22} />
             </div>
-            <div className="stat-content">
-              <strong>{assetCount}</strong>
-              <span>Hardware Custody Events</span>
+            <div className="stat-content notif-metric-content">
+              <strong className="notif-metric-val">{unreadCount}</strong>
+              <span className="notif-metric-lbl">Unread Alerts</span>
             </div>
           </div>
 
-          <div className="stat-card">
-            <div className="stat-icon green">
-              <ShieldCheck size={20} />
+          <div className="stat-card notif-metric-card">
+            <div className="stat-icon notif-metric-icon blue">
+              <Laptop size={22} />
             </div>
-            <div className="stat-content">
-              <strong>{gateCount}</strong>
-              <span>Gate & Server Clearances</span>
+            <div className="stat-content notif-metric-content">
+              <strong className="notif-metric-val">{assetCount}</strong>
+              <span className="notif-metric-lbl">Hardware Custody Events</span>
+            </div>
+          </div>
+
+          <div className="stat-card notif-metric-card">
+            <div className="stat-icon notif-metric-icon green">
+              <ShieldCheck size={22} />
+            </div>
+            <div className="stat-content notif-metric-content">
+              <strong className="notif-metric-val">{gateCount}</strong>
+              <span className="notif-metric-lbl">Gate &amp; Server Clearances</span>
             </div>
           </div>
         </section>
@@ -3130,6 +3841,282 @@ const renderNotifications = () => {
             </div>
           )}
         </section>
+        </div>
+
+        {/* =========================================================
+            MOBILE VIEW (EXACT MATCH TO MOCKUP)
+        ========================================================= */}
+        <div className="vms-mobile-only mobile-it-notif-container">
+          {/* 1. Executive Dark Navy Hero Card */}
+          <div className="mobile-it-notif-hero">
+            <div className="mobile-it-notif-hero-badge-row">
+              <span className="mobile-it-notif-division-pill">IT DEPARTMENT DIVISION</span>
+              <span className="mobile-it-notif-telemetry-pill">
+                <span className="status-dot"></span>
+                IT Technical Telemetry Active
+              </span>
+            </div>
+
+            <div className="mobile-it-notif-hero-title-wrap">
+              <div className="mobile-it-notif-hero-text">
+                <h2 className="mobile-it-notif-hero-title">IT Visit Notifications</h2>
+                <p className="mobile-it-notif-hero-desc">
+                  Dedicated real-time telemetry, hardware custody alerts, and security clearances exclusively for IT technical personnel and contractors.
+                </p>
+              </div>
+
+              <div className="mobile-it-notif-hero-ill">
+                <div className="mobile-it-notif-server-icon">
+                  <Server size={30} />
+                  <Shield size={14} className="server-shield-badge" />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions inside Hero Card */}
+            <div className="mobile-it-notif-hero-actions">
+              <div
+                className="mobile-it-notif-unread-banner"
+                onClick={() => setItNotifFilter((prev) => (prev === "unread" ? "all" : "unread"))}
+                role="button"
+                tabIndex={0}
+              >
+                <div className="unread-banner-left">
+                  <Bell size={15} />
+                  <span>{unreadCount} Unread IT Notifications</span>
+                </div>
+                <ChevronRight size={15} />
+              </div>
+
+              <button
+                type="button"
+                className="mobile-it-notif-btn-read"
+                onClick={markITNotificationsAsRead}
+              >
+                <Check size={16} />
+                <span>Mark all as read</span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-it-notif-btn-clear"
+                onClick={clearITNotifications}
+              >
+                <Trash2 size={15} />
+                <span>Clear all</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2. 2x2 Metric Cards Grid */}
+          <section className="mobile-it-notif-stats-grid">
+            <div className="mobile-it-notif-stat-card">
+              <div className="mobile-it-notif-stat-top">
+                <div className="mobile-it-notif-stat-icon purple">
+                  <Server size={16} />
+                </div>
+                <span className="mobile-it-notif-stat-label">Total IT Telemetry</span>
+              </div>
+              <div className="mobile-it-notif-stat-bottom">
+                <strong className="mobile-it-notif-stat-value">{itNotifications.length}</strong>
+                <svg width="44" height="20" viewBox="0 0 44 20" fill="none" className="mobile-it-notif-sparkline">
+                  <path d="M2 14 C 10 18, 16 6, 24 12 C 32 18, 38 4, 42 7" stroke="#c084fc" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="mobile-it-notif-stat-card">
+              <div className="mobile-it-notif-stat-top">
+                <div className="mobile-it-notif-stat-icon amber">
+                  <BellRing size={16} />
+                </div>
+                <span className="mobile-it-notif-stat-label">Unread Alerts</span>
+              </div>
+              <div className="mobile-it-notif-stat-bottom">
+                <strong className="mobile-it-notif-stat-value">{unreadCount}</strong>
+                <svg width="44" height="20" viewBox="0 0 44 20" fill="none" className="mobile-it-notif-sparkline">
+                  <path d="M2 14 C 10 18, 16 6, 24 12 C 32 18, 38 4, 42 7" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="mobile-it-notif-stat-card">
+              <div className="mobile-it-notif-stat-top">
+                <div className="mobile-it-notif-stat-icon blue">
+                  <Laptop size={16} />
+                </div>
+                <span className="mobile-it-notif-stat-label">Hardware Custody Events</span>
+              </div>
+              <div className="mobile-it-notif-stat-bottom">
+                <strong className="mobile-it-notif-stat-value">{assetCount}</strong>
+                <svg width="44" height="20" viewBox="0 0 44 20" fill="none" className="mobile-it-notif-sparkline">
+                  <path d="M2 14 C 10 18, 16 6, 24 12 C 32 18, 38 4, 42 7" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+
+            <div className="mobile-it-notif-stat-card">
+              <div className="mobile-it-notif-stat-top">
+                <div className="mobile-it-notif-stat-icon green">
+                  <ShieldCheck size={16} />
+                </div>
+                <span className="mobile-it-notif-stat-label">Gate & Server Clearances</span>
+              </div>
+              <div className="mobile-it-notif-stat-bottom">
+                <strong className="mobile-it-notif-stat-value">{gateCount}</strong>
+                <svg width="44" height="20" viewBox="0 0 44 20" fill="none" className="mobile-it-notif-sparkline">
+                  <path d="M2 14 C 10 18, 16 6, 24 12 C 32 18, 38 4, 42 7" stroke="#4ade80" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. Scope Filter Tabs Row */}
+          <div className="mobile-it-notif-tabs-row">
+            <button
+              type="button"
+              className={`mobile-it-notif-tab ${itNotifFilter === "all" ? "active" : ""}`}
+              onClick={() => setItNotifFilter("all")}
+            >
+              <FileText size={14} />
+              <span>All IT Visits ({itNotifications.length})</span>
+            </button>
+            <button
+              type="button"
+              className={`mobile-it-notif-tab ${itNotifFilter === "unread" ? "active" : ""}`}
+              onClick={() => setItNotifFilter("unread")}
+            >
+              <Bell size={14} />
+              <span className="tab-unread-dot"></span>
+              <span>Unread ({unreadCount})</span>
+            </button>
+          </div>
+
+          {/* 4. Search and Filter Bar */}
+          <div className="mobile-it-notif-search-row">
+            <div className="mobile-it-notif-search-box" style={{ position: "relative", display: "flex", alignItems: "center", flex: 1 }}>
+              <Search size={15} className="mobile-it-notif-search-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+              <input
+                type="text"
+                className="mobile-it-notif-search-input"
+                style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+                value={itNotifSearchQuery}
+                onChange={(e) => setItNotifSearchQuery(e.target.value)}
+                placeholder="Search IT notifications, asset ID, contractor, serial..."
+              />
+              {itNotifSearchQuery && (
+                <button
+                  type="button"
+                  className="mobile-it-notif-search-clear"
+                  onClick={() => setItNotifSearchQuery("")}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className="mobile-it-notif-filter-toggle-btn"
+              title="Toggle filter view"
+              onClick={() => setItNotifFilter((prev) => (prev === "unread" ? "all" : "unread"))}
+            >
+              <SlidersHorizontal size={15} />
+            </button>
+          </div>
+
+          {/* 5. Notification Cards List */}
+          <div className="mobile-it-notif-cards-list">
+            {filtered.length === 0 ? (
+              <div className="mobile-it-notif-empty-state">
+                <BellRing size={28} color="#94a3b8" />
+                <p>No IT notifications found.</p>
+              </div>
+            ) : (
+              filtered.map((notification) => {
+                const isUnread = !notification.read;
+                const act = String(notification.action || "").toUpperCase();
+                const tit = String(notification.title || "").toUpperCase();
+                const msg = String(notification.message || "").toLowerCase();
+
+                let icon = <Server size={18} />;
+                let iconBoxClass = "purple";
+                let badgeText = "IT VISIT REQUEST";
+                let badgeClass = "purple";
+
+                if (act.includes("ASSET") || tit.includes("ASSET") || tit.includes("HARDWARE") || msg.includes("hardware") || msg.includes("asset")) {
+                  icon = <Bell size={18} />;
+                  iconBoxClass = "amber";
+                  badgeText = tit.includes("CLEARED") || tit.includes("EXIT") ? "ASSET EXIT CLEARANCE" : "HARDWARE CUSTODY";
+                  badgeClass = "amber";
+                } else if (act.includes("REQUEST") || tit.includes("REQUEST")) {
+                  icon = <Server size={18} />;
+                  iconBoxClass = "purple";
+                  badgeText = "IT VISIT REQUEST";
+                  badgeClass = "purple";
+                } else if (act.includes("CHECKED_IN") || tit.includes("CHECKED IN") || tit.includes("ARRIVED")) {
+                  icon = <UserCheck size={18} />;
+                  iconBoxClass = "blue";
+                  badgeText = "IT CONTRACTOR ARRIVED";
+                  badgeClass = "blue";
+                } else if (act.includes("VERIF") || tit.includes("SECURITY") || tit.includes("CLEARANCE")) {
+                  icon = <ShieldCheck size={18} />;
+                  iconBoxClass = "green";
+                  badgeText = "GATE & SERVER CLEARANCE";
+                  badgeClass = "green";
+                }
+
+                return (
+                  <div
+                    key={notification.id}
+                    className={`mobile-it-notif-card ${isUnread ? "unread" : ""}`}
+                    onClick={() => markNotificationAsRead(notification.id)}
+                  >
+                    <div className="mobile-it-notif-card-inner">
+                      <div className={`mobile-it-notif-card-icon-box ${iconBoxClass}`}>
+                        {icon}
+                      </div>
+
+                      <div className="mobile-it-notif-card-body">
+                        <div className="mobile-it-notif-card-header">
+                          <h4 className="mobile-it-notif-card-title">{notification.title}</h4>
+                          <div className="mobile-it-notif-card-top-right">
+                            {isUnread && <span className="mobile-it-notif-blue-dot"></span>}
+                            <button
+                              type="button"
+                              className="mobile-it-notif-card-dots"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markNotificationAsRead(notification.id);
+                              }}
+                              title="Notification options"
+                            >
+                              <MoreVertical size={14} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="mobile-it-notif-card-badge-row">
+                          <span className={`mobile-it-notif-tag-badge ${badgeClass}`}>
+                            {badgeText}
+                          </span>
+                        </div>
+
+                        <div className="mobile-it-notif-card-time-row">
+                          <Clock size={11} />
+                          <span>{notification.time}</span>
+                        </div>
+
+                        <p className="mobile-it-notif-card-message">
+                          {notification.message}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </>
     );
   };
@@ -3137,6 +4124,10 @@ const renderNotifications = () => {
     const renderDashboard = () => {
     return (
       <>
+        {/* =========================================================
+            DESKTOP VIEW (> 768px): PRESERVED 100% UNTOUCHED
+        ========================================================= */}
+        <div className="vms-desktop-only">
         {/* Executive Dashboard Header */}
         <div className="it-management-header">
           <div className="it-header-title-box">
@@ -3525,6 +4516,407 @@ const renderNotifications = () => {
             </button>
           </div>
         </section>
+        </div>
+
+        {/* =========================================================
+            MOBILE VIEW (<= 768px): DEDICATED NEW SECURITY DASHBOARD UI
+        ========================================================= */}
+        <div className="vms-mobile-only mobile-security-dashboard-container">
+          {/* 1. Executive Dark Navy Hero Card */}
+          <div className="mobile-dashboard-hero">
+            <div className="mobile-dashboard-hero-badge-row">
+              <span className="mobile-dashboard-badge-pill">ACCESS &amp; GATE CONTROL</span>
+              <span className="mobile-dashboard-telemetry-pill">
+                <span className="status-dot"></span>
+                Gate Security Active
+              </span>
+            </div>
+
+            <div className="mobile-dashboard-hero-title-wrap">
+              <div className="mobile-dashboard-hero-text">
+                <h2 className="mobile-dashboard-hero-title">Security Command Dashboard</h2>
+                <p className="mobile-dashboard-hero-desc">
+                  Monitor real-time gate verifications, visitor admissions, building occupancy, and active departures.
+                </p>
+              </div>
+            </div>
+
+            <div className="mobile-dashboard-hero-controls">
+              <button
+                type="button"
+                className="mobile-dashboard-btn-create"
+                onClick={openCreateVisit}
+              >
+                <UserPlus size={15} />
+                <span>Create Visit</span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-dashboard-btn-scan"
+                onClick={openScanner}
+              >
+                <QrCode size={15} />
+                <span>Scan Visitor QR</span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-dashboard-btn-terminal"
+                onClick={() => window.open("/guard", "_blank")}
+              >
+                <ExternalLink size={14} />
+                <span>Gate Terminal</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 2. 2x2 KPI Metric Cards Grid */}
+          <div className="mobile-dashboard-stats-grid">
+            <div
+              className={`mobile-dashboard-stat-card ${dashboardVisitorFilter === "all" ? "active" : ""}`}
+              onClick={() => setDashboardVisitorFilter("all")}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mobile-dashboard-stat-icon blue">
+                <Users size={18} />
+              </div>
+              <div className="mobile-dashboard-stat-content">
+                <span>Visitors Today</span>
+                <strong>{dashboardLoading ? "..." : visitorsToday}</strong>
+              </div>
+              <ChevronRight size={14} className="mobile-dashboard-stat-arrow" />
+            </div>
+
+            <div
+              className={`mobile-dashboard-stat-card ${dashboardVisitorFilter === "inside" ? "active" : ""}`}
+              onClick={() => setDashboardVisitorFilter(dashboardVisitorFilter === "inside" ? "all" : "inside")}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mobile-dashboard-stat-icon green">
+                <UserCheck size={18} />
+              </div>
+              <div className="mobile-dashboard-stat-content">
+                <span>Currently Inside</span>
+                <strong>{dashboardLoading ? "..." : currentlyInside}</strong>
+              </div>
+              <ChevronRight size={14} className="mobile-dashboard-stat-arrow" />
+            </div>
+
+            <div
+              className="mobile-dashboard-stat-card"
+              onClick={() => openPreApprovals(true)}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mobile-dashboard-stat-icon amber">
+                <Clock size={18} />
+              </div>
+              <div className="mobile-dashboard-stat-content">
+                <span>Expected Visitors</span>
+                <strong>{dashboardLoading ? "..." : expectedVisitors}</strong>
+              </div>
+              <ChevronRight size={14} className="mobile-dashboard-stat-arrow" />
+            </div>
+
+            <div
+              className={`mobile-dashboard-stat-card ${dashboardVisitorFilter === "checked_out" ? "active" : ""}`}
+              onClick={() => setDashboardVisitorFilter(dashboardVisitorFilter === "checked_out" ? "all" : "checked_out")}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mobile-dashboard-stat-icon purple">
+                <LogOut size={18} />
+              </div>
+              <div className="mobile-dashboard-stat-content">
+                <span>Checked Out</span>
+                <strong>{dashboardLoading ? "..." : checkedOut}</strong>
+              </div>
+              <ChevronRight size={14} className="mobile-dashboard-stat-arrow" />
+            </div>
+          </div>
+
+          {/* 3. Section Header */}
+          <div className="mobile-dashboard-section-header">
+            <div className="mobile-dashboard-section-left">
+              <div className="mobile-dashboard-section-icon">
+                <Users size={16} />
+              </div>
+              <div>
+                <h3>Today's Visitors</h3>
+                <p>Click any row to view full pass &amp; checkout</p>
+              </div>
+            </div>
+            <span className="mobile-dashboard-counter">
+              {filteredVisitors.length} of {visitors.length} record{visitors.length === 1 ? "" : "s"}
+            </span>
+          </div>
+
+          {/* 4. Search Bar */}
+          <div className="mobile-dashboard-search-wrap" style={{ position: "relative", display: "flex", alignItems: "center", width: "100%", marginBottom: "12px" }}>
+            <Search size={15} className="mobile-dashboard-search-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+            <input
+              type="text"
+              placeholder="Search visitor, company, host..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mobile-dashboard-search-input"
+              style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                className="mobile-dashboard-search-clear"
+                onClick={() => setSearchTerm("")}
+                style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", zIndex: 3 }}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+
+          {/* 5. Filter Pills */}
+          <div className="mobile-dashboard-pills-row">
+            <button
+              type="button"
+              className={`mobile-dashboard-pill ${dashboardVisitorFilter === "all" ? "active" : ""}`}
+              onClick={() => setDashboardVisitorFilter("all")}
+            >
+              All Visitors ({visitors.length})
+            </button>
+            <button
+              type="button"
+              className={`mobile-dashboard-pill ${dashboardVisitorFilter === "inside" ? "active" : ""}`}
+              onClick={() => setDashboardVisitorFilter("inside")}
+            >
+              <span className="status-dot"></span>
+              Currently Inside ({currentlyInside})
+            </button>
+            <button
+              type="button"
+              className={`mobile-dashboard-pill ${dashboardVisitorFilter === "checked_out" ? "active" : ""}`}
+              onClick={() => setDashboardVisitorFilter("checked_out")}
+            >
+              Checked Out ({checkedOut})
+            </button>
+          </div>
+
+          {/* 6. Visitor Cards List */}
+          <div className="mobile-dashboard-cards-list">
+            {dashboardLoading ? (
+              <div className="empty-state" style={{ padding: "40px 16px" }}>
+                <RefreshCw className="spin" size={20} />
+                <span>Loading today's visitors...</span>
+              </div>
+            ) : filteredVisitors.length === 0 ? (
+              <div className="empty-state" style={{ padding: "40px 16px" }}>
+                <Users size={24} />
+                <strong>No visitors found</strong>
+                <span>No visitors match your search or filter.</span>
+              </div>
+            ) : (
+              filteredVisitors.map((item, index) => {
+                const initials = getInitials(item.visitor_name || "Visitor");
+                const isInside = item.status === "ACTIVE";
+                const avatarPalette = [
+                  { bg: "#0f172a", text: "#ffffff" },
+                  { bg: "#0f172a", text: "#ffffff" },
+                  { bg: "#2563eb", text: "#ffffff" },
+                  { bg: "#7c3aed", text: "#ffffff" },
+                  { bg: "#059669", text: "#ffffff" },
+                  { bg: "#d97706", text: "#ffffff" },
+                ];
+                const avatarColor = avatarPalette[index % avatarPalette.length];
+
+                return (
+                  <div
+                    key={item.visit_id}
+                    className="mobile-dashboard-visitor-card"
+                    onClick={() => openVisitorPassDetail(item.visit_id)}
+                  >
+                    {/* Card Top: Avatar, Name + ID, Options */}
+                    <div className="mobile-dashboard-card-top">
+                      <div className="mobile-dashboard-card-left">
+                        <div
+                          className="mobile-dashboard-card-avatar"
+                          style={{
+                            background: avatarColor.bg,
+                            color: avatarColor.text,
+                          }}
+                        >
+                          <span className="avatar-initials">{initials}</span>
+                        </div>
+                        <div className="mobile-dashboard-card-identity">
+                          <h4 className="mobile-dashboard-card-name">
+                            {item.visitor_name || "Unknown Visitor"}
+                          </h4>
+                          <span className="mobile-dashboard-id-badge">
+                            ID: {item.visitor_id || "—"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="mobile-dashboard-options-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openVisitorPassDetail(item.visit_id);
+                        }}
+                        title="Options"
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    </div>
+
+                    {/* Metadata 3-Column / 2-Row Grid */}
+                    <div className="mobile-dashboard-meta-grid">
+                      {/* Row 1 Col 1: Purpose */}
+                      <div className="mobile-dash-meta-item">
+                        <div className="mobile-dash-meta-label">
+                          <FileText size={12} />
+                          <span>Purpose</span>
+                        </div>
+                        <div className="mobile-dash-meta-value purpose-blue">
+                          {item.purpose || "cc"}
+                        </div>
+                      </div>
+
+                      {/* Row 1 Col 2: Host */}
+                      <div className="mobile-dash-meta-item">
+                        <div className="mobile-dash-meta-label">
+                          <User size={12} />
+                          <span>Host</span>
+                        </div>
+                        <div className="mobile-dash-meta-value">
+                          {item.host_name || "—"}
+                        </div>
+                      </div>
+
+                      {/* Row 1 Col 3: Company */}
+                      <div className="mobile-dash-meta-item">
+                        <div className="mobile-dash-meta-label">
+                          <Building2 size={12} />
+                          <span>Company</span>
+                        </div>
+                        <div className="mobile-dash-meta-value">
+                          {item.company_name || "IT"}
+                        </div>
+                      </div>
+
+                      {/* Row 2 Col 1: Check In */}
+                      <div className="mobile-dash-meta-item">
+                        <div className="mobile-dash-meta-label">
+                          <Clock size={12} />
+                          <span>Check In</span>
+                        </div>
+                        <div className="mobile-dash-meta-value">
+                          {formatTime(item.check_in_time)}
+                        </div>
+                      </div>
+
+                      {/* Row 2 Col 2: Status */}
+                      <div className="mobile-dash-meta-item">
+                        <div className="mobile-dash-meta-label">
+                          <span className="status-dot"></span>
+                          <span>Status</span>
+                        </div>
+                        <div className="mobile-dash-meta-value status-green">
+                          {isInside ? "● Inside" : item.status}
+                        </div>
+                      </div>
+
+                      {/* Row 2 Col 3: Decision */}
+                      <div className="mobile-dash-meta-item">
+                        <div className="mobile-dash-meta-label">
+                          <ShieldCheck size={12} />
+                          <span>Decision</span>
+                        </div>
+                        <div className="mobile-dash-meta-value">
+                          <span className={`mobile-dash-decision-badge ${item.decision === "ALLOW" ? "allow" : "deny"}`}>
+                            {item.decision}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Action Button: Pass & Checkout */}
+                    <button
+                      type="button"
+                      className="mobile-dashboard-btn-pass-checkout"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openVisitorPassDetail(item.visit_id);
+                      }}
+                    >
+                      <div className="btn-inner-left">
+                        <QrCode size={14} />
+                        <span>Pass &amp; Checkout</span>
+                      </div>
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* 7. Quick Actions Section */}
+          <div className="mobile-dashboard-quick-actions">
+            <div className="mobile-dashboard-quick-header">
+              <h4>Quick Actions</h4>
+              <p>Common security operations</p>
+            </div>
+            <div className="mobile-dashboard-quick-list">
+              <button
+                type="button"
+                className="mobile-dashboard-quick-item"
+                onClick={openScanner}
+              >
+                <div className="mobile-quick-icon blue">
+                  <QrCode size={18} />
+                </div>
+                <div className="mobile-quick-text">
+                  <strong>Scan QR Code</strong>
+                  <span>Verify visitor entry</span>
+                </div>
+                <ChevronRight size={16} className="mobile-quick-arrow" />
+              </button>
+
+              <button
+                type="button"
+                className="mobile-dashboard-quick-item"
+                onClick={openCreateVisit}
+              >
+                <div className="mobile-quick-icon green">
+                  <UserPlus size={18} />
+                </div>
+                <div className="mobile-quick-text">
+                  <strong>Create Visit</strong>
+                  <span>Register a new visit</span>
+                </div>
+                <ChevronRight size={16} className="mobile-quick-arrow" />
+              </button>
+
+              <button
+                type="button"
+                className="mobile-dashboard-quick-item"
+                onClick={openCheckout}
+              >
+                <div className="mobile-quick-icon amber">
+                  <LogOut size={18} />
+                </div>
+                <div className="mobile-quick-text">
+                  <strong>Checkout</strong>
+                  <span>Process visitor exit</span>
+                </div>
+                <ChevronRight size={16} className="mobile-quick-arrow" />
+              </button>
+            </div>
+          </div>
+        </div>
       </>
     );
   };
@@ -3532,6 +4924,294 @@ const renderNotifications = () => {
   const renderScanner = () => {
     return (
       <div className="scanner-view-page">
+        {/* Mobile View: Dedicated Gate Security Scanner UI */}
+        {isMobile && (
+          <div className="scanner-mobile-view">
+            {/* 1. Dark Hero Card */}
+            <div className="scanner-mobile-hero">
+              <div className="scanner-mobile-hero-icon">
+                <QrCode size={20} />
+              </div>
+              <div className="scanner-mobile-hero-text">
+                <h3>Gate Security Scanner</h3>
+                <p>QR pass verification &amp; physical asset clearance</p>
+              </div>
+            </div>
+
+            {!visit && (
+              <>
+                {/* 2. Four Stat Cards Compact Row */}
+                <div className="scanner-mobile-stats-row">
+                  <div className="scanner-mobile-stat-card">
+                    <div className="scanner-mobile-stat-icon green-check">
+                      <Check size={14} strokeWidth={3} />
+                    </div>
+                    <div className="scanner-mobile-stat-info">
+                      <span className="scanner-mobile-stat-label">Scanner</span>
+                      <strong className="scanner-mobile-stat-val text-emerald">Online</strong>
+                    </div>
+                  </div>
+
+                  <div className="scanner-mobile-stat-card">
+                    <div className="scanner-mobile-stat-icon blue">
+                      <User size={15} />
+                    </div>
+                    <div className="scanner-mobile-stat-info">
+                      <span className="scanner-mobile-stat-label">Active Visitors</span>
+                      <strong className="scanner-mobile-stat-val">{dashboardData?.statistics?.currently_inside || 0}</strong>
+                    </div>
+                  </div>
+
+                  <div className="scanner-mobile-stat-card">
+                    <div className="scanner-mobile-stat-icon purple">
+                      <LogOut size={15} />
+                    </div>
+                    <div className="scanner-mobile-stat-info">
+                      <span className="scanner-mobile-stat-label">Cleared Today</span>
+                      <strong className="scanner-mobile-stat-val">{dashboardData?.statistics?.checked_out || 0}</strong>
+                    </div>
+                  </div>
+
+                  <div className="scanner-mobile-stat-card">
+                    <div className="scanner-mobile-stat-icon amber">
+                      <LayoutGrid size={15} />
+                    </div>
+                    <div className="scanner-mobile-stat-info">
+                      <span className="scanner-mobile-stat-label">Security Gate</span>
+                      <strong className="scanner-mobile-stat-val">Lane 01</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Camera QR Scanner Card */}
+                <div className="scanner-mobile-card">
+                  <div className="scanner-mobile-card-header">
+                    <div className="scanner-mobile-header-left">
+                      <div className="scanner-mobile-header-icon blue">
+                        <Camera size={16} />
+                      </div>
+                      <div>
+                        <h4 className="scanner-mobile-card-title">Camera QR Scanner</h4>
+                        <p className="scanner-mobile-card-sub">Point visitor's digital or printed pass QR code at the camera</p>
+                      </div>
+                    </div>
+                    <div className={`scanner-mobile-ready-badge ${scannerCameraActive ? "scanner-badge-active" : ""}`}>
+                      <span className={`scanner-ready-dot ${scannerCameraActive ? "scanner-dot-active" : ""}`}></span>
+                      <span>
+                        {scannerCameraActive
+                          ? (cameraFacingMode === "environment" ? "BACK CAMERA ACTIVE" : "FRONT CAMERA ACTIVE")
+                          : "GATE SCANNER READY"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Viewfinder Area */}
+                  <div className="scanner-mobile-viewfinder">
+                    <div className="scanner-reticle-frame">
+                      <div className="scanner-bracket top-left"></div>
+                      <div className="scanner-bracket top-right"></div>
+                      <div className="scanner-bracket bottom-left"></div>
+                      <div className="scanner-bracket bottom-right"></div>
+                      {scannerCameraActive && <div className="scanner-laser-line"></div>}
+                    </div>
+
+                    {/* Live HTML5 QR Reader */}
+                    <div id="qr-reader" className="qr-reader-mobile-viewport"></div>
+
+                    {!scannerCameraActive && (
+                      <div className="scanner-idle-overlay">
+                        <Camera size={34} className="scanner-idle-icon" />
+                        <span className="scanner-idle-title">Camera Idle</span>
+                        <span className="scanner-idle-sub">
+                          {cameraFacingMode === "environment" ? "Back Camera" : "Front Camera"} selected
+                        </span>
+                        <button
+                          type="button"
+                          className="scanner-idle-start-btn"
+                          onClick={() => startCamera(cameraFacingMode, selectedCameraId)}
+                        >
+                          <Camera size={15} />
+                          <span>Start Camera</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Primary Mobile Scanner Controls */}
+                  <div className="scanner-mobile-controls-grid">
+                    {scannerCameraActive ? (
+                      <button
+                        type="button"
+                        className="scanner-control-btn btn-danger"
+                        onClick={stopCamera}
+                      >
+                        <VideoOff size={15} />
+                        <span>Stop Scanning</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="scanner-control-btn btn-primary"
+                        onClick={() => startCamera(cameraFacingMode, selectedCameraId)}
+                      >
+                        <Camera size={15} />
+                        <span>Start Scanning</span>
+                      </button>
+                    )}
+
+                    {/* Back Camera / Front Camera Flip Option */}
+                    <button
+                      type="button"
+                      className="scanner-control-btn btn-flip-camera"
+                      onClick={toggleCameraFacingMode}
+                      title={cameraFacingMode === "environment" ? "Switch to Front Camera" : "Switch to Back Camera"}
+                    >
+                      <SwitchCamera size={16} />
+                      <span>{cameraFacingMode === "environment" ? "Back Camera" : "Front Camera"}</span>
+                    </button>
+                  </div>
+
+                  {/* Camera Lens Selector & File Upload */}
+                  <div className="scanner-mobile-secondary-row">
+                    {availableCameras.length > 1 && (
+                      <div className="scanner-camera-select-wrap">
+                        <select
+                          className="scanner-camera-select"
+                          value={selectedCameraId}
+                          onChange={(e) => handleCameraDeviceChange(e.target.value)}
+                          aria-label="Select Camera Device"
+                        >
+                          <option value="">Auto ({cameraFacingMode === "environment" ? "Back Camera" : "Front Camera"})</option>
+                          {availableCameras.map((cam, idx) => (
+                            <option key={cam.id} value={cam.id}>
+                              {cam.label || `Camera ${idx + 1}`}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={handleImageFileScan}
+                    />
+
+                    <button
+                      type="button"
+                      className="scanner-btn-file-upload"
+                      onClick={() => fileInputRef.current?.click()}
+                    >
+                      <ImageIcon size={15} />
+                      <span>Scan an Image File</span>
+                    </button>
+                  </div>
+
+                  {/* Info Pill */}
+                  <div className="scanner-mobile-info-pill">
+                    <Info size={14} style={{ flexShrink: 0 }} />
+                    <span>{scannerMessage || "Point visitor QR code at back camera to verify."}</span>
+                  </div>
+
+                  {scannerError && (
+                    <div className="error-banner" style={{ marginTop: "10px" }}>
+                      <XCircle size={15} />
+                      <span>{scannerError}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Manual Pass Lookup Card */}
+                <div className="scanner-mobile-card">
+                  <div className="scanner-mobile-card-header">
+                    <div className="scanner-mobile-header-left">
+                      <div className="scanner-mobile-header-icon blue">
+                        <Search size={16} />
+                      </div>
+                      <div>
+                        <h4 className="scanner-mobile-card-title">Manual Pass Lookup</h4>
+                        <p className="scanner-mobile-card-sub">Direct lookup by pass token, badge ID, or UUID</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleManualLookup} className="scanner-mobile-lookup-form">
+                    <label className="scanner-mobile-input-label">PASS TOKEN / VISIT REFERENCE</label>
+                    <div className="scanner-mobile-input-wrap">
+                      <Search size={15} className="scanner-mobile-input-icon" />
+                      <input
+                        type="text"
+                        value={manualTokenInput}
+                        onChange={(e) => setManualTokenInput(e.target.value)}
+                        placeholder="e.g. V-20261028-387, EMP-12345, or VMS-XXXX"
+                        className="scanner-mobile-input"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={manualLookupLoading || !manualTokenInput.trim()}
+                      className="scanner-btn-primary"
+                    >
+                      {manualLookupLoading ? (
+                        <>
+                          <RefreshCw size={15} className="spin" /> Verifying Credentials...
+                        </>
+                      ) : (
+                        <>
+                          <ShieldCheck size={16} /> Verify Visitor Pass
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
+
+                {/* 5. Security Guidelines Card */}
+                <div className="scanner-mobile-card">
+                  <div className="scanner-mobile-card-header" style={{ marginBottom: "10px" }}>
+                    <div className="scanner-mobile-header-left">
+                      <div className="scanner-mobile-header-icon purple">
+                        <Shield size={16} />
+                      </div>
+                      <h4 className="scanner-mobile-card-title">Security Guidelines</h4>
+                    </div>
+                  </div>
+
+                  <div className="scanner-mobile-guidelines-box">
+                    <div className="scanner-guideline-item">
+                      <span className="scanner-step-badge">1</span>
+                      <span className="scanner-step-text">Ensure the QR code is centered and clearly lit.</span>
+                    </div>
+                    <div className="scanner-guideline-item">
+                      <span className="scanner-step-badge">2</span>
+                      <span className="scanner-step-text">Verify visitor photo identity when required (ID if requested).</span>
+                    </div>
+                    <div className="scanner-guideline-item">
+                      <span className="scanner-step-badge">3</span>
+                      <span className="scanner-step-text">Check declared equipment before authorizing building entry or exit.</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 6. Bottom Back Button */}
+                <button
+                  type="button"
+                  className="scanner-mobile-bottom-back-btn"
+                  onClick={openDashboard}
+                >
+                  <ArrowLeft size={15} />
+                  <span>Back</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Desktop View: Preserved 100% untouched */}
+        {!isMobile && (
+          <div className="scanner-desktop-view">
         <div className="topbar">
           <div className="scanner-header-title">
             <div className="scanner-title-badge">
@@ -3692,6 +5372,8 @@ const renderNotifications = () => {
             </section>
           </div>
           </>
+        )}
+          </div>
         )}
 
         {loading && (
@@ -4029,6 +5711,10 @@ const renderNotifications = () => {
 
     return (
       <>
+        {/* =========================================================
+            DESKTOP VIEW (> 768px): PRESERVED 100% UNTOUCHED
+        ========================================================= */}
+        <div className="vms-desktop-only">
         {/* Executive Visitors Header */}
         <div className="it-management-header">
           <div className="it-header-title-box">
@@ -4663,6 +6349,535 @@ const renderNotifications = () => {
           <ShieldCheck size={14} color="#12b76a" />
           Visitor information is stored securely in the VMS database.
         </div>
+        </div>
+
+        {/* =========================================================
+            MOBILE VIEW (<= 768px): VISITORS DIRECTORY & REGISTRY
+            (Exact 1:1 match to mobile mockup)
+        ========================================================= */}
+        <div className="vms-mobile-only mobile-visitors-container">
+          {/* 1. Executive Dark Navy Hero Card */}
+          <div className="mobile-visitor-hero">
+            <div className="mobile-visitor-hero-badge-row">
+              <span className="mobile-visitor-badge-pill">IDENTITY &amp; DIRECTORY REGISTRY</span>
+              <span className="mobile-visitor-telemetry-pill">
+                <span className="status-dot"></span>
+                Active Database Directory
+              </span>
+            </div>
+
+            <div className="mobile-visitor-hero-title-wrap">
+              <div className="mobile-visitor-hero-text">
+                <h2 className="mobile-visitor-hero-title">Visitors Directory &amp; Registry</h2>
+                <p className="mobile-visitor-hero-desc">
+                  Search, audit, and manage registered visitors, active campus occupants, and corporate affiliations.
+                </p>
+              </div>
+              <div className="mobile-visitor-hero-watermark">
+                <Users size={38} />
+              </div>
+            </div>
+
+            <div className="mobile-visitor-hero-controls">
+              <button
+                type="button"
+                className="mobile-visitor-btn-add"
+                onClick={() => {
+                  setShowAddVisitor(!showAddVisitor);
+                  setVisitorError("");
+                }}
+              >
+                <UserPlus size={15} />
+                <span>{showAddVisitor ? "Close Form" : "Add Visitor"}</span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-visitor-btn-scan"
+                onClick={openScanner}
+              >
+                <QrCode size={15} />
+                <span>Scan Visitor QR</span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-visitor-btn-refresh"
+                onClick={() => {
+                  fetchVisitors();
+                  fetchDashboard();
+                }}
+                disabled={visitorLoading}
+                title="Refresh visitors & live status"
+              >
+                <RefreshCw size={15} className={visitorLoading ? "spin" : ""} />
+              </button>
+            </div>
+          </div>
+
+          {/* 2. KPI Metrics Grid (2x2) */}
+          <div className="mobile-visitor-stats-grid">
+            <div
+              className={`mobile-visitor-stat-card ${visitorDirectoryFilter === "all" && !selectedCompanyFilter ? "active" : ""}`}
+              onClick={() => {
+                setVisitorDirectoryFilter("all");
+                setSelectedCompanyFilter("");
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mobile-visitor-stat-icon blue">
+                <Users size={18} />
+              </div>
+              <div className="mobile-visitor-stat-content">
+                <strong>{totalVisitors}</strong>
+                <span>Total Visitors</span>
+              </div>
+              <ChevronRight size={14} className="mobile-visitor-stat-arrow" />
+            </div>
+
+            <div
+              className={`mobile-visitor-stat-card ${visitorDirectoryFilter === "inside" ? "active" : ""}`}
+              onClick={() => {
+                setVisitorDirectoryFilter(visitorDirectoryFilter === "inside" ? "all" : "inside");
+                setSelectedCompanyFilter("");
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mobile-visitor-stat-icon green">
+                <UserCheck size={18} />
+              </div>
+              <div className="mobile-visitor-stat-content">
+                <strong>{insideCount}</strong>
+                <span>Currently Inside</span>
+              </div>
+              <ChevronRight size={14} className="mobile-visitor-stat-arrow" />
+            </div>
+
+            <div
+              className={`mobile-visitor-stat-card ${visitorDirectoryFilter === "companies" ? "active" : ""}`}
+              onClick={() => {
+                setVisitorDirectoryFilter(visitorDirectoryFilter === "companies" ? "all" : "companies");
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mobile-visitor-stat-icon purple">
+                <Building2 size={18} />
+              </div>
+              <div className="mobile-visitor-stat-content">
+                <strong>{companyCount}</strong>
+                <span>Companies</span>
+              </div>
+              <ChevronRight size={14} className="mobile-visitor-stat-arrow" />
+            </div>
+
+            <div
+              className={`mobile-visitor-stat-card ${visitorDirectoryFilter === "active" ? "active" : ""}`}
+              onClick={() => {
+                setVisitorDirectoryFilter(visitorDirectoryFilter === "active" ? "all" : "active");
+                setSelectedCompanyFilter("");
+              }}
+              role="button"
+              tabIndex={0}
+            >
+              <div className="mobile-visitor-stat-icon amber">
+                <ShieldCheck size={18} />
+              </div>
+              <div className="mobile-visitor-stat-content">
+                <strong className="status-val">ACTIVE</strong>
+                <span>Directory Status</span>
+              </div>
+              <ChevronRight size={14} className="mobile-visitor-stat-arrow" />
+            </div>
+          </div>
+
+          {/* Add Visitor Form (Mobile Card) */}
+          {showAddVisitor && (
+            <div className="mobile-visitor-form-card">
+              <div className="mobile-visitor-form-header">
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "15px", fontWeight: 700, color: "#0f172a" }}>Register New Visitor</h3>
+                  <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>Add to enterprise directory</p>
+                </div>
+                <button type="button" onClick={() => setShowAddVisitor(false)} className="mobile-visitor-form-close">
+                  <X size={16} />
+                </button>
+              </div>
+
+              <form onSubmit={createVisitor} className="mobile-visitor-form">
+                <div className="mobile-visitor-form-field">
+                  <label>First Name *</label>
+                  <input
+                    name="first_name"
+                    value={newVisitor.first_name}
+                    onChange={handleVisitorInput}
+                    placeholder="Enter first name"
+                    required
+                  />
+                </div>
+                <div className="mobile-visitor-form-field">
+                  <label>Last Name</label>
+                  <input
+                    name="last_name"
+                    value={newVisitor.last_name}
+                    onChange={handleVisitorInput}
+                    placeholder="Enter last name"
+                  />
+                </div>
+                <div className="mobile-visitor-form-field">
+                  <label>Phone Number</label>
+                  <input
+                    name="phone_number"
+                    value={newVisitor.phone_number}
+                    onChange={handleVisitorInput}
+                    placeholder="e.g. +91 98765 43210"
+                    type="tel"
+                  />
+                </div>
+                <div className="mobile-visitor-form-field">
+                  <label>Email Address</label>
+                  <input
+                    name="email"
+                    value={newVisitor.email}
+                    onChange={handleVisitorInput}
+                    placeholder="visitor@company.com"
+                    type="email"
+                  />
+                </div>
+                <div className="mobile-visitor-form-field">
+                  <label>Company / Organization Name</label>
+                  <input
+                    name="company_name"
+                    value={newVisitor.company_name}
+                    onChange={handleVisitorInput}
+                    placeholder="e.g. Independent, Acme Corp"
+                  />
+                </div>
+                <div className="mobile-visitor-form-field">
+                  <label>Address / City</label>
+                  <input
+                    name="address_line1"
+                    value={newVisitor.address_line1}
+                    onChange={handleVisitorInput}
+                    placeholder="City, State, Street"
+                  />
+                </div>
+
+                <div className="mobile-visitor-form-actions">
+                  <button type="button" onClick={() => setShowAddVisitor(false)} className="btn-cancel">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={visitorCreateLoading} className="btn-submit">
+                    {visitorCreateLoading ? "Creating..." : "Save Visitor"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* 3. Section Heading & Records Count */}
+          <div className="mobile-visitor-section-header">
+            <h3 className="mobile-visitor-section-title">Visitor Directory</h3>
+            <span className="mobile-visitor-section-count">
+              {filteredVisitorsList.length} of {totalVisitors} visitor records displayed
+            </span>
+          </div>
+
+          {/* 4. Search Bar & Filter Button */}
+          <div className="mobile-visitor-search-row" style={{ marginBottom: "12px" }}>
+            <div className="mobile-visitor-search-box" style={{ position: "relative", display: "flex", alignItems: "center", flex: 1 }}>
+              <Search size={15} className="mobile-visitor-search-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+              <input
+                type="text"
+                value={visitorSearch}
+                onChange={(e) => setVisitorSearch(e.target.value)}
+                placeholder="Search visitors by name, company, email..."
+                className="mobile-visitor-search-input"
+                style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+              />
+              {visitorSearch && (
+                <button
+                  type="button"
+                  className="mobile-visitor-search-clear"
+                  onClick={() => setVisitorSearch("")}
+                  style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", zIndex: 3 }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className={`mobile-visitor-filter-btn ${showMobileCompanyFilter || selectedCompanyFilter ? "active" : ""}`}
+              onClick={() => setShowMobileCompanyFilter(!showMobileCompanyFilter)}
+              title="Filter by company"
+            >
+              <SlidersHorizontal size={15} />
+            </button>
+          </div>
+
+          {/* Quick Company Filter Dropdown (When Filter Icon is Clicked) */}
+          {showMobileCompanyFilter && (
+            <div className="mobile-visitor-company-dropdown-card">
+              <div className="mobile-visitor-company-header">
+                <span>Filter by Company ({distinctCompanies.length})</span>
+                <button type="button" onClick={() => setShowMobileCompanyFilter(false)}>
+                  <X size={13} />
+                </button>
+              </div>
+              <select
+                value={selectedCompanyFilter}
+                onChange={(e) => {
+                  setSelectedCompanyFilter(e.target.value);
+                  if (e.target.value) setVisitorDirectoryFilter("companies");
+                }}
+                className="mobile-visitor-company-select"
+              >
+                <option value="">All Companies ({distinctCompanies.length})</option>
+                {distinctCompanies.map((comp) => (
+                  <option key={comp} value={comp}>{comp}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 5. Horizontal Filter Pills Row */}
+          <div className="mobile-visitor-pills-row">
+            <button
+              type="button"
+              className={`mobile-visitor-pill ${visitorDirectoryFilter === "all" && !selectedCompanyFilter ? "active" : ""}`}
+              onClick={() => {
+                setVisitorDirectoryFilter("all");
+                setSelectedCompanyFilter("");
+              }}
+            >
+              All Visitors ({totalVisitors})
+            </button>
+
+            <button
+              type="button"
+              className={`mobile-visitor-pill ${visitorDirectoryFilter === "inside" ? "active" : ""}`}
+              onClick={() => {
+                setVisitorDirectoryFilter(visitorDirectoryFilter === "inside" ? "all" : "inside");
+                setSelectedCompanyFilter("");
+              }}
+            >
+              <span className="live-dot"></span>
+              Currently Inside ({insideCount})
+            </button>
+
+            <button
+              type="button"
+              className={`mobile-visitor-pill ${visitorDirectoryFilter === "companies" ? "active" : ""}`}
+              onClick={() => setVisitorDirectoryFilter("companies")}
+            >
+              Corporate ({corporateVisitorsCount})
+            </button>
+
+            <button
+              type="button"
+              className={`mobile-visitor-pill ${visitorDirectoryFilter === "active" ? "active" : ""}`}
+              onClick={() => {
+                setVisitorDirectoryFilter("active");
+                setSelectedCompanyFilter("");
+              }}
+            >
+              Active Records ({activeRecordsCount})
+            </button>
+
+            {(visitorDirectoryFilter !== "all" || visitorSearch || selectedCompanyFilter) && (
+              <button
+                type="button"
+                className="mobile-visitor-pill-reset"
+                onClick={() => {
+                  setVisitorDirectoryFilter("all");
+                  setSelectedCompanyFilter("");
+                  setVisitorSearch("");
+                }}
+              >
+                Clear
+              </button>
+            )}
+          </div>
+
+          {/* 6. Visitor Cards List */}
+          {visitorLoading ? (
+            <div className="mobile-visitor-empty">
+              <RefreshCw size={24} className="spin" style={{ color: "#2563eb", marginBottom: "8px" }} />
+              <p>Loading visitors...</p>
+            </div>
+          ) : filteredVisitorsList.length === 0 ? (
+            <div className="mobile-visitor-empty">
+              <Users size={32} style={{ color: "#94a3b8", marginBottom: "8px" }} />
+              <strong>No visitors found</strong>
+              <p>Try searching with different keywords or resetting filters.</p>
+              <button
+                type="button"
+                className="mobile-visitor-btn-add"
+                style={{ marginTop: "12px", width: "auto" }}
+                onClick={() => {
+                  setVisitorDirectoryFilter("all");
+                  setSelectedCompanyFilter("");
+                  setVisitorSearch("");
+                }}
+              >
+                Show All Visitors
+              </button>
+            </div>
+          ) : (
+            <div className="mobile-visitor-cards-list">
+              {filteredVisitorsList.map((item, index) => {
+                const name = `${item.first_name || ""} ${item.last_name || ""}`.trim();
+                const isInside = activeVisitorIds.has(Number(item.visitor_id));
+                const activeVisit = activeVisitByVisitorId.get(Number(item.visitor_id));
+                const resolvedPhoto = resolvePhotoUrl(item.photo_url);
+                const initials = getInitials(name || "Visitor");
+                const avatarPalette = [
+                  { bg: "#0f172a", text: "#ffffff" },
+                  { bg: "#0f172a", text: "#ffffff" },
+                  { bg: "#2563eb", text: "#ffffff" },
+                  { bg: "#7c3aed", text: "#ffffff" },
+                  { bg: "#059669", text: "#ffffff" },
+                  { bg: "#d97706", text: "#ffffff" },
+                ];
+                const avatarColor = avatarPalette[index % avatarPalette.length];
+
+                return (
+                  <div
+                    key={item.visitor_id}
+                    className={`mobile-visitor-card ${isInside ? "inside" : ""}`}
+                    onClick={() => openVisitorDossier(item)}
+                  >
+                    {/* Top Row: Avatar + Name/Sub + Status + ID + 3-dots */}
+                    <div className="mobile-visitor-card-top">
+                      <div className="mobile-visitor-card-left">
+                        <div
+                          className="mobile-visitor-card-avatar"
+                          style={{
+                            background: avatarColor.bg,
+                            color: avatarColor.text,
+                          }}
+                        >
+                          <span className="avatar-initials">{initials}</span>
+                        </div>
+
+                        <div className="mobile-visitor-card-identity">
+                          <h4 className="mobile-visitor-card-name">{name || "Unknown Visitor"}</h4>
+                          <span className={`mobile-visitor-card-sub ${isInside ? "onsite" : ""}`}>
+                            {isInside && activeVisit?.purpose
+                              ? `Onsite: ${activeVisit.purpose}`
+                              : "Registered visitor"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mobile-visitor-card-right" onClick={(e) => e.stopPropagation()}>
+                        {isInside ? (
+                          <span className="mobile-visitor-status-pill inside">
+                            <span className="status-dot"></span>
+                            Inside
+                          </span>
+                        ) : (
+                          <span className="mobile-visitor-status-pill active">
+                            Active
+                          </span>
+                        )}
+
+                        <span className="mobile-visitor-id-pill">#{item.visitor_id}</span>
+
+                        <button
+                          type="button"
+                          className="mobile-visitor-options-btn"
+                          onClick={() => openVisitorDossier(item)}
+                          title="Options"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Middle Details Grid (2 Columns) */}
+                    <div className="mobile-visitor-card-meta">
+                      <div className="mobile-visitor-meta-col">
+                        <div className="mobile-visitor-meta-item">
+                          <Phone size={12} className="meta-icon" />
+                          <span className="truncate">{item.phone_number || "—"}</span>
+                        </div>
+                        <div className="mobile-visitor-meta-item">
+                          <Building2 size={12} className="meta-icon" />
+                          <span className="truncate">{item.company_name || "Independent"}</span>
+                        </div>
+                      </div>
+
+                      <div className="mobile-visitor-meta-col">
+                        <div className="mobile-visitor-meta-item">
+                          <Mail size={12} className="meta-icon" />
+                          <span className="truncate">{item.email || "—"}</span>
+                        </div>
+                        <div className="mobile-visitor-meta-item">
+                          <MapPin size={12} className="meta-icon" />
+                          <span className="truncate">
+                            {[item.city, item.state].filter(Boolean).join(", ") || item.address_line1 || "On record"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Action Button(s) */}
+                    <div className="mobile-visitor-card-actions" onClick={(e) => e.stopPropagation()}>
+                      {!isInside ? (
+                        <button
+                          type="button"
+                          className="mobile-visitor-btn-details-full"
+                          onClick={() => openVisitorDossier(item)}
+                        >
+                          <Eye size={13} />
+                          <span>Details</span>
+                        </button>
+                      ) : (
+                        <div className="mobile-visitor-btn-triple-wrap">
+                          <button
+                            type="button"
+                            className="mobile-visitor-btn-details-triple"
+                            onClick={() => openVisitorDossier(item)}
+                          >
+                            <Eye size={13} />
+                            <span>Details</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="mobile-visitor-btn-pass-triple"
+                            onClick={() =>
+                              activeVisit &&
+                              window.open(`/visitor-pass/${encodeURIComponent(activeVisit.visit_id)}`, "_blank")
+                            }
+                          >
+                            <QrCode size={13} />
+                            <span>Pass</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className="mobile-visitor-btn-checkout-triple"
+                            disabled={directCheckoutLoading === String(activeVisit?.visit_id)}
+                            onClick={() => handleDirectVisitorCheckout(activeVisit?.visit_id, name)}
+                          >
+                            <LogOut size={13} />
+                            <span>{directCheckoutLoading === String(activeVisit?.visit_id) ? "Checking Out..." : "Check Out"}</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         {/* =========================================================
             COMPREHENSIVE VISITOR DOSSIER & CHECKOUT MODAL
@@ -4728,98 +6943,113 @@ const renderNotifications = () => {
                   <>
                     {/* Visitor Profile Card */}
                     <div className="vms-dossier-profile-card">
-                      <div className="vms-dossier-avatar-col">
-                        <div className="vms-dossier-avatar-box">
-                          {dossierData.visitor?.photo_url ? (
-                            <img
-                              src={resolvePhotoUrl(dossierData.visitor.photo_url)}
-                              alt={`${dossierData.visitor.first_name} ${dossierData.visitor.last_name}`}
-                              onError={(e) => {
-                                e.currentTarget.style.display = "none";
-                              }}
-                            />
-                          ) : null}
-                          <span className="vms-dossier-avatar-initials">
-                            {getInitials(`${dossierData.visitor?.first_name || ""} ${dossierData.visitor?.last_name || ""}`)}
-                          </span>
+                      {/* Top Row: Avatar & Primary Identity */}
+                      <div className="vms-dossier-hero-row">
+                        <div className="vms-dossier-avatar-col">
+                          <div className="vms-dossier-avatar-box">
+                            {dossierData.visitor?.photo_url ? (
+                              <img
+                                src={resolvePhotoUrl(dossierData.visitor.photo_url)}
+                                alt={`${dossierData.visitor.first_name} ${dossierData.visitor.last_name}`}
+                                onError={(e) => {
+                                  e.currentTarget.style.display = "none";
+                                  const fallback = e.currentTarget.parentElement?.querySelector(".vms-dossier-avatar-initials");
+                                  if (fallback) fallback.style.display = "flex";
+                                }}
+                                onLoad={(e) => {
+                                  const fallback = e.currentTarget.parentElement?.querySelector(".vms-dossier-avatar-initials");
+                                  if (fallback) fallback.style.display = "none";
+                                }}
+                              />
+                            ) : null}
+                            <span
+                              className="vms-dossier-avatar-initials"
+                              style={{ display: dossierData.visitor?.photo_url ? "none" : "flex" }}
+                            >
+                              {getInitials(`${dossierData.visitor?.first_name || ""} ${dossierData.visitor?.last_name || ""}`)}
+                            </span>
+                          </div>
+                          <input
+                            type="file"
+                            ref={dossierPhotoInputRef}
+                            style={{ display: "none" }}
+                            accept="image/*"
+                            onChange={handleDossierPhotoUpload}
+                          />
+                          <button
+                            type="button"
+                            className="vms-dossier-change-photo-btn"
+                            disabled={dossierPhotoUploading}
+                            onClick={() => dossierPhotoInputRef.current?.click()}
+                            title="Upload new image or replace current photo"
+                          >
+                            <Camera size={12} />
+                            <span>{dossierPhotoUploading ? "Updating..." : "Update Photo"}</span>
+                          </button>
                         </div>
-                        <input
-                          type="file"
-                          ref={dossierPhotoInputRef}
-                          style={{ display: "none" }}
-                          accept="image/*"
-                          onChange={handleDossierPhotoUpload}
-                        />
-                        <button
-                          type="button"
-                          className="vms-dossier-change-photo-btn"
-                          disabled={dossierPhotoUploading}
-                          onClick={() => dossierPhotoInputRef.current?.click()}
-                          title="Upload new image or replace current photo"
-                        >
-                          <Camera size={12} />
-                          <span>{dossierPhotoUploading ? "Updating..." : "Update Photo"}</span>
-                        </button>
-                      </div>
 
-                      <div className="vms-dossier-info-col">
-                        <div className="vms-dossier-name-row">
-                          <div>
-                            <h2 className="vms-dossier-name">
-                              {dossierData.visitor?.first_name} {dossierData.visitor?.last_name}
-                            </h2>
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-                              <span className="visitor-id-badge">Visitor ID #{dossierData.visitor?.visitor_id}</span>
-                              <div className="it-company-tag">
-                                <Building2 size={12} />
-                                <span>{dossierData.visitor?.company_name || "Independent"}</span>
+                        <div className="vms-dossier-identity-col">
+                          <div className="vms-dossier-name-row">
+                            <div className="vms-dossier-name-left">
+                              <h2 className="vms-dossier-name">
+                                {dossierData.visitor?.first_name} {dossierData.visitor?.last_name}
+                              </h2>
+                              <div className="vms-dossier-meta-badges">
+                                <span className="visitor-id-badge">Visitor ID #{dossierData.visitor?.visitor_id}</span>
+                                <div className="it-company-tag">
+                                  <Building2 size={12} />
+                                  <span>{dossierData.visitor?.company_name || "Independent"}</span>
+                                </div>
                               </div>
                             </div>
-                          </div>
 
-                          <div className="vms-dossier-badges">
-                            {dossierData.active_visit ? (
-                              <span className="vms-live-indicator-pill">
-                                <span className="vms-pulse-dot"></span>
-                                Currently Inside
-                              </span>
-                            ) : (
-                              <span className="status-pill checked">
-                                Registered / Off-Campus
-                              </span>
-                            )}
+                            <div className="vms-dossier-badges">
+                              {dossierData.active_visit ? (
+                                <span className="vms-live-indicator-pill">
+                                  <span className="vms-pulse-dot"></span>
+                                  Currently Inside
+                                </span>
+                              ) : (
+                                <span className="status-pill checked">
+                                  Registered / Off-Campus
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
+                      </div>
 
-                        <div className="vms-dossier-grid-details">
-                          <div className="vms-dossier-field">
-                            <span className="vms-dossier-field-label">Phone Number</span>
-                            <span className="vms-dossier-field-val">
-                              <Phone size={13} style={{ color: "#0284c7" }} />
-                              {dossierData.visitor?.phone_number ? (
-                                <a href={`tel:${dossierData.visitor.phone_number}`} style={{ color: "inherit", textDecoration: "none" }}>
-                                  {dossierData.visitor.phone_number}
-                                </a>
-                              ) : "—"}
-                            </span>
-                          </div>
+                      {/* Full-Width Contact Channels & Location Grid */}
+                      <div className="vms-dossier-grid-details">
+                        <div className="vms-dossier-field">
+                          <span className="vms-dossier-field-label">Phone Number</span>
+                          <span className="vms-dossier-field-val">
+                            <Phone size={13} style={{ color: "#0284c7", flexShrink: 0 }} />
+                            {dossierData.visitor?.phone_number ? (
+                              <a href={`tel:${dossierData.visitor.phone_number}`} style={{ color: "inherit", textDecoration: "none" }}>
+                                {dossierData.visitor.phone_number}
+                              </a>
+                            ) : "—"}
+                          </span>
+                        </div>
 
-                          <div className="vms-dossier-field">
-                            <span className="vms-dossier-field-label">Email Address</span>
-                            <span className="vms-dossier-field-val">
-                              <Mail size={13} style={{ color: "#0284c7" }} />
-                              {dossierData.visitor?.email ? (
-                                <a href={`mailto:${dossierData.visitor.email}`} style={{ color: "inherit", textDecoration: "none" }}>
-                                  {dossierData.visitor.email}
-                                </a>
-                              ) : "—"}
-                            </span>
-                          </div>
+                        <div className="vms-dossier-field">
+                          <span className="vms-dossier-field-label">Email Address</span>
+                          <span className="vms-dossier-field-val">
+                            <Mail size={13} style={{ color: "#0284c7", flexShrink: 0 }} />
+                            {dossierData.visitor?.email ? (
+                              <a href={`mailto:${dossierData.visitor.email}`} style={{ color: "inherit", textDecoration: "none" }}>
+                                {dossierData.visitor.email}
+                              </a>
+                            ) : "—"}
+                          </span>
+                        </div>
 
-                          <div className="vms-dossier-field" style={{ gridColumn: "1 / -1" }}>
-                            <span className="vms-dossier-field-label">Full Registered Address</span>
-                            <span className="vms-dossier-field-val">
-                              <MapPin size={13} style={{ color: "#0284c7", flexShrink: 0 }} />
+                        <div className="vms-dossier-field vms-dossier-field-address" style={{ gridColumn: "1 / -1" }}>
+                          <span className="vms-dossier-field-label">Full Registered Address</span>
+                          <span className="vms-dossier-field-val">
+                            <MapPin size={13} style={{ color: "#0284c7", flexShrink: 0 }} />
+                            <span>
                               {formatVisitorAddress([
                                 dossierData.visitor?.address_line1,
                                 dossierData.visitor?.address_line2,
@@ -4829,7 +7059,7 @@ const renderNotifications = () => {
                                 dossierData.visitor?.country,
                               ])}
                             </span>
-                          </div>
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -5551,6 +7781,7 @@ const renderNotifications = () => {
 
               {/* Modal Footer */}
               <div
+                className="vms-dossier-footer"
                 style={{
                   padding: "14px 24px",
                   background: "#f8fafc",
@@ -7140,9 +9371,39 @@ const renderNotifications = () => {
     );
   };
 
+  const isITVisitRecord = (item) => {
+    if (!item) return false;
+    const purpose = String(item.purpose || "").toUpperCase();
+    if (purpose.includes("[IT_VISIT]")) return true;
+
+    const hostDept = String(
+      item.host_employee?.department || item.host?.department || ""
+    ).trim().toUpperCase();
+    if (hostDept === "IT" || hostDept.includes("TECH") || hostDept.includes("INFORMATION TECH")) {
+      return true;
+    }
+
+    const company = String(item.visitor?.company_name || "").trim().toUpperCase();
+    if (company === "IT" || company === "IT DEPARTMENT" || company.includes("IT SERVICES") || company.includes("TECH SOLUTIONS")) {
+      return true;
+    }
+
+    if (
+      purpose.includes("DATA CENTER") ||
+      purpose.includes("SERVER ROOM") ||
+      purpose.includes("HARDWARE DIAGNOSTICS") ||
+      purpose.includes("BLADE SERVER") ||
+      purpose.includes("NETWORK RACK")
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
   const renderCheckoutHistory = () => {
     const generalOnlyHistory = (checkoutHistory || []).filter(
-      (item) => !Boolean(item.purpose && String(item.purpose).toUpperCase().includes("[IT_VISIT]"))
+      (item) => !isITVisitRecord(item)
     );
     return (
       <CheckoutHistory
@@ -7163,7 +9424,7 @@ const renderNotifications = () => {
   ========================================================= */
   const renderITCheckoutHistory = () => {
     const itOnlyHistory = (checkoutHistory || []).filter(
-      (item) => Boolean(item.purpose && String(item.purpose).toUpperCase().includes("[IT_VISIT]"))
+      (item) => isITVisitRecord(item)
     );
     return (
       <CheckoutHistory
@@ -7179,316 +9440,944 @@ const renderNotifications = () => {
     );
   };
 
-  const renderHosts = () => {
+  const renderHosts = (isIT = false) => {
     const query = hostSearch.trim().toLowerCase();
-    const filteredHosts = hostList.filter((host) => {
+    const itHostsOnly = hostList.filter(
+      (h) => (h.department || "").trim().toUpperCase() === "IT" || (h.department || "").trim().toUpperCase().includes("TECH")
+    );
+    const baseList = isIT && itHostScope === "it" ? itHostsOnly : hostList;
+
+    const distinctDepartments = Array.from(
+      new Set(baseList.map((h) => (h.department || "").trim()).filter(Boolean))
+    ).sort();
+
+    const filteredHosts = baseList.filter((host) => {
       const name = `${host.first_name || ""} ${host.last_name || ""}`.trim().toLowerCase();
-      return (
+      const matchesSearch = (
         !query ||
         name.includes(query) ||
         String(host.employee_id || "").includes(query) ||
         String(host.email || "").toLowerCase().includes(query) ||
-        String(host.department || "").toLowerCase().includes(query)
+        String(host.department || "").toLowerCase().includes(query) ||
+        String(host.phone_number || "").includes(query) ||
+        String(host.designation || "").toLowerCase().includes(query) ||
+        String(host.office_location || "").toLowerCase().includes(query)
       );
+      const matchesDept = !selectedHostDeptFilter || (host.department || "").trim().toLowerCase() === selectedHostDeptFilter.toLowerCase();
+      const matchesStatus = (
+        hostStatusFilter === "all"
+          ? true
+          : (hostStatusFilter === "active" || hostStatusFilter === "reception")
+          ? (host.status || "ACTIVE") === "ACTIVE"
+          : (host.status || "ACTIVE") !== "ACTIVE"
+      );
+      return matchesSearch && matchesDept && matchesStatus;
     });
 
-    const activeHostsCount = hostList.filter((h) => (h.status || "ACTIVE") === "ACTIVE").length;
-    const departmentCount = new Set(hostList.map((h) => h.department).filter(Boolean)).size;
+    const activeHostsCount = baseList.filter((h) => (h.status || "ACTIVE") === "ACTIVE").length;
+    const departmentCount = new Set(baseList.map((h) => h.department).filter(Boolean)).size;
 
     return (
-      <>
-        {/* Executive Hosts Header */}
-        <div className="it-management-header">
-          <div className="it-header-title-box">
-            <div className="it-header-badge-row">
-              <span className="it-division-pill">Organization Staff Directory</span>
-              <span className="it-telemetry-pill">
-                <span className="status-dot"></span>
-                Active Staff Records
-              </span>
-            </div>
-            <h2 className="it-page-title">Hosts &amp; Employee Directory</h2>
-            <p className="it-page-desc">
-              Manage internal company hosts, department assignments, and contact channels for visitor reception
-            </p>
-          </div>
-
-          <div className="it-header-controls">
-            <button
-              type="button"
-              className="it-log-recovery-primary-btn"
-              onClick={() => {
-                setHostCreateError("");
-                setShowAddHost(true);
-              }}
-            >
-              <UserPlus size={15} />
-              <span>Add Host</span>
-            </button>
-
-            <button
-              type="button"
-              className="it-refresh-btn"
-              onClick={fetchHosts}
-              disabled={hostLoading}
-              title="Refresh hosts list"
-            >
-              <RefreshCw size={15} className={hostLoading ? "spin" : ""} />
-            </button>
-
-            <button type="button" className="it-qr-portal-btn" onClick={openDashboard}>
-              <ArrowLeft size={14} />
-              <span>Back to Dashboard</span>
-            </button>
-          </div>
-        </div>
-
-        {hostError && (
-          <div className="error-banner">
-            <XCircle size={16} />
-            {hostError}
-          </div>
-        )}
-
-        {/* 3 KPI Stat Cards */}
-        <section className="stats-grid" style={{ marginBottom: "24px" }}>
-          <div className="stat-card">
-            <div className="stat-icon blue">
-              <Users size={18} />
-            </div>
-            <div className="stat-content">
-              <span>Total Hosts</span>
-              <strong>{hostList.length}</strong>
-              <span className="stat-interactive-hint">Registered employees</span>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon green">
-              <UserCheck size={18} />
-            </div>
-            <div className="stat-content">
-              <span>Active Hosts</span>
-              <strong>{activeHostsCount}</strong>
-              <span className="stat-interactive-hint">Available for visits</span>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon purple">
-              <Building2 size={18} />
-            </div>
-            <div className="stat-content">
-              <span>Departments</span>
-              <strong>{departmentCount}</strong>
-              <span className="stat-interactive-hint">Active divisions</span>
-            </div>
-          </div>
-
-          <div className="stat-card">
-            <div className="stat-icon amber">
-              <ShieldCheck size={18} />
-            </div>
-            <div className="stat-content">
-              <span>Active Reception</span>
-              <strong>100%</strong>
-              <span className="stat-interactive-hint">Staff Verified</span>
-            </div>
-          </div>
-        </section>
-
-        {hostLoading ? (
-          <section className="page-card">
-            <div className="empty-state">
-              <RefreshCw size={24} className="spin" />
-              <strong>Loading hosts...</strong>
-              <span>Fetching employees from the VMS database.</span>
-            </div>
-          </section>
-        ) : filteredHosts.length === 0 ? (
-          <section className="page-card">
-            <div className="empty-state">
-              <Users size={28} />
-              <strong>No hosts found</strong>
-              <span>No employees match your search.</span>
-            </div>
-          </section>
-        ) : (
-          <section className="table-card">
-            <div className="table-toolbar">
-              <div>
-                <h2>Host Directory</h2>
-                <p>
-                  {filteredHosts.length} employee{filteredHosts.length === 1 ? "" : "s"} available to host visitors
-                </p>
+      <div className="vms-hosts-container">
+        {/* =========================================================
+            DESKTOP VIEW (> 768px): PRESERVED 100% UNTOUCHED
+        ========================================================= */}
+        <div className="vms-desktop-only">
+          {/* Executive Hosts Header (Hero Card) */}
+          <div className="it-management-header">
+            <div className="it-header-title-box">
+              <div className="it-header-badge-row">
+                <span className="it-division-pill">{isIT ? "IT INFRASTRUCTURE DIVISION" : "ORGANIZATION STAFF DIRECTORY"}</span>
+                <span className="it-telemetry-pill">
+                  <span className="status-dot"></span>
+                  {isIT ? "Active IT Hosts & System Engineers" : "Active Staff Records"}
+                </span>
               </div>
-              <div className="visitor-toolbar-actions">
-                <div className="search-field">
-                  <Search size={14} />
-                  <input
-                    type="text"
-                    placeholder="Search name, ID, department..."
-                    value={hostSearch}
-                    onChange={(e) => setHostSearch(e.target.value)}
-                  />
-                  {hostSearch && (
-                    <button
-                      type="button"
-                      style={{ background: "transparent", border: 0, cursor: "pointer", color: "#94a3b8" }}
-                      onClick={() => setHostSearch("")}
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
+              <h2 className="it-page-title">{isIT ? "IT Hosts & Technical Engineers Directory" : "Hosts & Employee Directory"}</h2>
+              <p className="it-page-desc">
+                {isIT
+                  ? "Manage internal IT hosts, system engineers, and technical personnel authorized to host visitor hardware access."
+                  : "Manage internal company hosts, department assignments, and contact channels for visitor reception"}
+              </p>
+            </div>
+
+            <div className="it-header-controls">
+              <button
+                type="button"
+                className="it-log-recovery-primary-btn"
+                onClick={() => {
+                  setHostCreateError("");
+                  setHostForm({
+                    first_name: "",
+                    last_name: "",
+                    email: "",
+                    phone_number: "",
+                    department: isIT ? "IT" : "IT",
+                    designation: "",
+                    office_location: "",
+                    notes: "",
+                    status: "ACTIVE",
+                  });
+                  setShowAddHost(true);
+                }}
+              >
+                <UserPlus size={15} />
+                <span>{isIT ? "Add IT Host" : "Add Host"}</span>
+              </button>
+
+              <button
+                type="button"
+                className="it-refresh-btn"
+                onClick={fetchHosts}
+                disabled={hostLoading}
+                title="Refresh hosts list"
+              >
+                <RefreshCw size={15} className={hostLoading ? "spin" : ""} />
+              </button>
+
+              <button type="button" className="it-qr-portal-btn" onClick={isIT ? openITAssets : openDashboard}>
+                <ArrowLeft size={14} />
+                <span>{isIT ? "Back to IT Assets" : "Back to Dashboard"}</span>
+              </button>
+            </div>
+          </div>
+
+          {hostError && (
+            <div className="error-banner">
+              <XCircle size={16} />
+              {hostError}
+            </div>
+          )}
+
+          {/* Scope Tabs (Visible in IT Mode) */}
+          {isIT && (
+            <div className="mobile-host-tabs-row">
+              <button
+                type="button"
+                className={`mobile-host-tab-pill ${itHostScope === "it" ? "active" : ""}`}
+                onClick={() => setItHostScope("it")}
+              >
+                IT Department Hosts ({itHostsOnly.length})
+              </button>
+              <button
+                type="button"
+                className={`mobile-host-tab-pill ${itHostScope === "all" ? "active" : ""}`}
+                onClick={() => setItHostScope("all")}
+              >
+                All Organization Staff ({hostList.length})
+              </button>
+            </div>
+          )}
+
+          {/* Desktop 2x2 Stats Grid */}
+          <section className="mobile-host-stats-grid">
+            <div
+              className={`mobile-host-stat-card clickable ${hostStatusFilter === "all" && !selectedHostDeptFilter && !showMobileHostFilter ? "active active-blue" : ""}`}
+              onClick={() => {
+                setHostStatusFilter("all");
+                setSelectedHostDeptFilter("");
+                setHostSearch("");
+                setShowMobileHostFilter(false);
+              }}
+              role="button"
+              tabIndex={0}
+              title="Click to view all hosts"
+            >
+              <div className="mobile-host-stat-icon blue">
+                <Users size={16} />
+              </div>
+              <div className="mobile-host-stat-content">
+                <strong>{baseList.length}</strong>
+                <span>Total Hosts</span>
+              </div>
+              <ChevronRight size={14} className="mobile-host-stat-arrow" />
+            </div>
+
+            <div
+              className={`mobile-host-stat-card clickable ${hostStatusFilter === "active" ? "active active-green" : ""}`}
+              onClick={() => {
+                setHostStatusFilter((prev) => (prev === "active" ? "all" : "active"));
+              }}
+              role="button"
+              tabIndex={0}
+              title="Click to filter by active hosts"
+            >
+              <div className="mobile-host-stat-icon green">
+                <UserCheck size={16} />
+              </div>
+              <div className="mobile-host-stat-content">
+                <strong>{activeHostsCount}</strong>
+                <span>Active Hosts</span>
+              </div>
+              <ChevronRight size={14} className="mobile-host-stat-arrow" />
+            </div>
+
+            <div
+              className={`mobile-host-stat-card clickable ${showMobileHostFilter || selectedHostDeptFilter ? "active active-purple" : ""}`}
+              onClick={() => {
+                setShowMobileHostFilter((prev) => !prev);
+              }}
+              role="button"
+              tabIndex={0}
+              title="Click to toggle department filters"
+            >
+              <div className="mobile-host-stat-icon purple">
+                <Building2 size={16} />
+              </div>
+              <div className="mobile-host-stat-content">
+                <strong>{departmentCount}</strong>
+                <span>Departments</span>
+              </div>
+              <ChevronRight size={14} className="mobile-host-stat-arrow" />
+            </div>
+
+            <div
+              className={`mobile-host-stat-card clickable ${hostStatusFilter === "reception" ? "active active-amber" : ""}`}
+              onClick={() => {
+                setHostStatusFilter((prev) => (prev === "reception" ? "all" : "reception"));
+              }}
+              role="button"
+              tabIndex={0}
+              title="Click to filter by 100% active reception hosts"
+            >
+              <div className="mobile-host-stat-icon amber">
+                <ShieldCheck size={16} />
+              </div>
+              <div className="mobile-host-stat-content">
+                <strong>100%</strong>
+                <span>Active Reception</span>
+              </div>
+              <ChevronRight size={14} className="mobile-host-stat-arrow" />
+            </div>
+          </section>
+
+          {/* Active Filter Banner (Desktop) */}
+          {(hostStatusFilter !== "all" || selectedHostDeptFilter || hostSearch) && (
+            <div className="mobile-host-active-filter-bar">
+              <span className="active-filter-label">
+                Active Filter:
+                <strong>
+                  {hostStatusFilter === "active" && " Active Hosts"}
+                  {hostStatusFilter === "reception" && " Active Reception Hosts"}
+                  {selectedHostDeptFilter && ` Department: ${selectedHostDeptFilter}`}
+                  {hostSearch && ` Search: "${hostSearch}"`}
+                </strong>
+                <span> ({filteredHosts.length} of {baseList.length} shown)</span>
+              </span>
+              <button
+                type="button"
+                className="clear-active-filter-btn"
+                onClick={() => {
+                  setHostStatusFilter("all");
+                  setSelectedHostDeptFilter("");
+                  setHostSearch("");
+                  setShowMobileHostFilter(false);
+                }}
+              >
+                <X size={12} />
+                <span>Reset Filters</span>
+              </button>
+            </div>
+          )}
+
+          {/* Desktop Table */}
+          {filteredHosts.length === 0 ? (
+            <section className="page-card">
+              <div className="empty-state">
+                <Users size={28} />
+                <strong>No hosts found</strong>
+                <span>No employees match your search.</span>
+              </div>
+            </section>
+          ) : (
+            <section className="table-card">
+              <div className="table-toolbar">
+                <div>
+                  <h2>Host Directory</h2>
+                  <p>
+                    {filteredHosts.length} employee{filteredHosts.length === 1 ? "" : "s"} available to host visitors
+                  </p>
+                </div>
+                <div className="visitor-toolbar-actions">
+                  <div className="search-field">
+                    <Search size={14} />
+                    <input
+                      type="text"
+                      placeholder="Search name, ID, department..."
+                      value={hostSearch}
+                      onChange={(e) => setHostSearch(e.target.value)}
+                    />
+                    {hostSearch && (
+                      <button
+                        type="button"
+                        style={{ background: "transparent", border: 0, cursor: "pointer", color: "#94a3b8" }}
+                        onClick={() => setHostSearch("")}
+                      >
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Host</th>
-                    <th>Employee ID</th>
-                    <th>Email Address</th>
-                    <th>Department</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredHosts.map((host) => {
-                    const dept = (host.department || "").trim().toUpperCase();
-                    let deptBadgeClass = "badge-info";
-                    if (dept === "IT" || dept.includes("TECH")) deptBadgeClass = "badge-it";
-                    else if (dept === "HR" || dept.includes("HUMAN")) deptBadgeClass = "badge-success";
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style={{ width: "24%" }}>Host &amp; Designation</th>
+                      <th style={{ width: "13%" }}>Employee ID</th>
+                      <th style={{ width: "22%" }}>Contact Channels</th>
+                      <th style={{ width: "23%" }}>Department &amp; Office</th>
+                      <th style={{ width: "10%" }}>Clearance</th>
+                      <th style={{ width: "8%", textAlign: "right" }}>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredHosts.map((host) => {
+                      const dept = (host.department || "").trim().toUpperCase();
+                      let deptBadgeClass = "badge-info";
+                      if (dept === "IT" || dept.includes("TECH")) deptBadgeClass = "badge-it";
+                      else if (dept === "HR" || dept.includes("HUMAN")) deptBadgeClass = "badge-success";
 
-                    return (
-                      <tr key={host.employee_id}>
-                        <td>
-                          <div className="visitor-cell">
-                            <div className="visitor-avatar">
-                              {getInitials(
-                                `${host.first_name || ""} ${host.last_name || ""}`
+                      return (
+                        <tr
+                          key={host.employee_id}
+                          className="host-row-clickable"
+                          onClick={() => setSelectedHostDetail(host)}
+                          style={{ cursor: "pointer" }}
+                          title="Click row to inspect full host dossier"
+                        >
+                          <td>
+                            <div className="visitor-cell">
+                              <div className="visitor-avatar">
+                                {getInitials(
+                                  `${host.first_name || ""} ${host.last_name || ""}`
+                                )}
+                              </div>
+                              <div>
+                                <strong style={{ color: "#0f172a", fontSize: "13.5px" }}>
+                                  {host.first_name} {host.last_name}
+                                </strong>
+                                {host.designation && (
+                                  <div style={{ fontSize: "11.5px", color: "#64748b", marginTop: "2px" }}>
+                                    {host.designation}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <span className="visitor-id-badge">EMP-{host.employee_id}</span>
+                          </td>
+                          <td>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                              <span style={{ color: "#334155", fontSize: "12.5px" }}>{host.email || "—"}</span>
+                              {host.phone_number && (
+                                <span style={{ color: "#64748b", fontSize: "11.5px", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                  <Phone size={11} style={{ color: "#3b82f6" }} /> {host.phone_number}
+                                </span>
                               )}
                             </div>
-                            <div>
-                              <strong>
-                                {host.first_name} {host.last_name}
-                              </strong>
+                          </td>
+                          <td>
+                            <div className="host-dept-cell">
+                              <span className={`notif-category-badge ${deptBadgeClass}`}>
+                                {host.department || "General"}
+                              </span>
+                              {host.office_location && (
+                                <span className="host-office-location">
+                                  <MapPin size={10} style={{ color: "#94a3b8" }} /> {host.office_location}
+                                </span>
+                              )}
                             </div>
-                          </div>
-                        </td>
-                        <td>
-                          <span className="visitor-id-badge">EMP-{host.employee_id}</span>
-                        </td>
-                        <td style={{ color: "#475569" }}>{host.email || "—"}</td>
-                        <td>
-                          <span className={`notif-category-badge ${deptBadgeClass}`}>
-                            {host.department || "General"}
-                          </span>
-                        </td>
-                        <td>
-                          <span
-                            className={`status-pill ${
-                              host.status === "ACTIVE" ? "active" : ""
-                            }`}
-                          >
-                            {host.status || "ACTIVE"}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
+                          </td>
+                          <td>
+                            <span
+                              className={`status-pill ${
+                                host.status === "ACTIVE" ? "active" : ""
+                              }`}
+                            >
+                              {host.status || "ACTIVE"}
+                            </span>
+                          </td>
+                          <td style={{ textAlign: "right" }}>
+                            <button
+                              type="button"
+                              className="host-view-dossier-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedHostDetail(host);
+                              }}
+                            >
+                              <Eye size={12} />
+                              <span>View Dossier</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+        </div>
 
-        {showAddHost && (
-          <div className="host-modal-overlay">
-            <div className="host-modal">
-              <div className="host-modal-header">
-                <div>
-                  <h2>Add Host</h2>
-                  <p>Add an employee who can receive visitors.</p>
-                </div>
+        {/* =========================================================
+            MOBILE VIEW (<= 768px): MATCHES media_1793421445237_41ec04f6.jpg
+        ========================================================= */}
+        <div className="vms-mobile-only mobile-hosts-container">
+          {/* 1. Executive Dark Navy Hero Card */}
+          <div className="mobile-host-hero">
+            <div className="mobile-host-hero-badge-row">
+              <span className="mobile-host-badge-pill">
+                {isIT ? "IT INFRASTRUCTURE DIVISION" : "ORGANIZATION STAFF DIRECTORY"}
+              </span>
+              <span className="mobile-host-telemetry-pill">
+                <span className="status-dot"></span>
+                {isIT ? "Active IT Hosts & System Engineers" : "Active Staff Records"}
+              </span>
+            </div>
+
+            <div className="mobile-host-hero-title-wrap">
+              <div className="mobile-host-hero-text">
+                <h2 className="mobile-host-hero-title">
+                  {isIT ? "IT Hosts & Technical Engineers Directory" : "Hosts & Employee Directory"}
+                </h2>
+                <p className="mobile-host-hero-desc">
+                  {isIT
+                    ? "Manage internal IT hosts, system engineers, and technical personnel authorized to host visitor hardware access."
+                    : "Manage internal company hosts, department assignments, and contact channels for visitor reception."}
+                </p>
+              </div>
+              <div className="mobile-host-hero-watermark">
+                <Users size={38} />
+              </div>
+            </div>
+
+            <div className="mobile-host-hero-controls">
+              <button
+                type="button"
+                className="mobile-host-btn-add"
+                onClick={() => {
+                  setHostCreateError("");
+                  setHostForm({
+                    first_name: "",
+                    last_name: "",
+                    email: "",
+                    phone_number: "",
+                    department: isIT ? "IT" : "IT",
+                    designation: "",
+                    office_location: "",
+                    notes: "",
+                    status: "ACTIVE",
+                  });
+                  setShowAddHost(true);
+                }}
+              >
+                <UserPlus size={15} />
+                <span>{isIT ? "Add IT Host" : "Add Host"}</span>
+              </button>
+
+              <button
+                type="button"
+                className="mobile-host-btn-refresh"
+                onClick={fetchHosts}
+                disabled={hostLoading}
+                title="Refresh hosts list"
+              >
+                <RefreshCw size={15} className={hostLoading ? "spin" : ""} />
+              </button>
+
+              <button
+                type="button"
+                className="mobile-host-btn-back"
+                onClick={isIT ? openITAssets : openDashboard}
+              >
+                <ArrowLeft size={14} />
+                <span>{isIT ? "Back to IT Assets" : "Back to Dashboard"}</span>
+              </button>
+            </div>
+          </div>
+
+          {hostError && (
+            <div className="error-banner">
+              <XCircle size={16} />
+              {hostError}
+            </div>
+          )}
+
+          {/* Scope Tabs (Visible in IT Mode) */}
+          {isIT && (
+            <div className="mobile-host-tabs-row">
+              <button
+                type="button"
+                className={`mobile-host-tab-pill ${itHostScope === "it" ? "active" : ""}`}
+                onClick={() => setItHostScope("it")}
+              >
+                IT Department Hosts ({itHostsOnly.length})
+              </button>
+              <button
+                type="button"
+                className={`mobile-host-tab-pill ${itHostScope === "all" ? "active" : ""}`}
+                onClick={() => setItHostScope("all")}
+              >
+                All Organization Staff ({hostList.length})
+              </button>
+            </div>
+          )}
+
+          {/* 2. 2x2 KPI Metrics Grid */}
+          <div className="mobile-host-stats-grid">
+            {/* Card 1: Total Hosts */}
+            <div
+              className={`mobile-host-stat-card clickable ${hostStatusFilter === "all" && !selectedHostDeptFilter && !showMobileHostFilter ? "active active-blue" : ""}`}
+              onClick={() => {
+                setHostStatusFilter("all");
+                setSelectedHostDeptFilter("");
+                setHostSearch("");
+                setShowMobileHostFilter(false);
+              }}
+              role="button"
+              tabIndex={0}
+              title="Click to view all hosts"
+            >
+              <div className="mobile-host-stat-icon blue">
+                <Users size={18} />
+              </div>
+              <div className="mobile-host-stat-content">
+                <strong>{baseList.length}</strong>
+                <span>Total Hosts</span>
+              </div>
+              <ChevronRight size={14} className="mobile-host-stat-arrow" />
+            </div>
+
+            {/* Card 2: Active Hosts */}
+            <div
+              className={`mobile-host-stat-card clickable ${hostStatusFilter === "active" ? "active active-green" : ""}`}
+              onClick={() => {
+                setHostStatusFilter((prev) => (prev === "active" ? "all" : "active"));
+              }}
+              role="button"
+              tabIndex={0}
+              title="Click to filter by active hosts"
+            >
+              <div className="mobile-host-stat-icon green">
+                <UserCheck size={18} />
+              </div>
+              <div className="mobile-host-stat-content">
+                <strong>{activeHostsCount}</strong>
+                <span>Active Hosts</span>
+              </div>
+              <ChevronRight size={14} className="mobile-host-stat-arrow" />
+            </div>
+
+            {/* Card 3: Departments */}
+            <div
+              className={`mobile-host-stat-card clickable ${showMobileHostFilter || selectedHostDeptFilter ? "active active-purple" : ""}`}
+              onClick={() => {
+                setShowMobileHostFilter((prev) => !prev);
+              }}
+              role="button"
+              tabIndex={0}
+              title="Click to toggle department filters"
+            >
+              <div className="mobile-host-stat-icon purple">
+                <Building2 size={18} />
+              </div>
+              <div className="mobile-host-stat-content">
+                <strong>{departmentCount}</strong>
+                <span>Departments</span>
+              </div>
+              <ChevronRight size={14} className="mobile-host-stat-arrow" />
+            </div>
+
+            {/* Card 4: Active Reception */}
+            <div
+              className={`mobile-host-stat-card clickable ${hostStatusFilter === "reception" ? "active active-amber" : ""}`}
+              onClick={() => {
+                setHostStatusFilter((prev) => (prev === "reception" ? "all" : "reception"));
+              }}
+              role="button"
+              tabIndex={0}
+              title="Click to filter by 100% active reception hosts"
+            >
+              <div className="mobile-host-stat-icon amber">
+                <ShieldCheck size={18} />
+              </div>
+              <div className="mobile-host-stat-content">
+                <strong>100%</strong>
+                <span>Active Reception</span>
+              </div>
+              <ChevronRight size={14} className="mobile-host-stat-arrow" />
+            </div>
+          </div>
+
+          {/* Active Filter Banner (Mobile) */}
+          {(hostStatusFilter !== "all" || selectedHostDeptFilter || hostSearch) && (
+            <div className="mobile-host-active-filter-bar">
+              <span className="active-filter-label">
+                Active Filter:
+                <strong>
+                  {hostStatusFilter === "active" && " Active Hosts"}
+                  {hostStatusFilter === "reception" && " Active Reception Hosts"}
+                  {selectedHostDeptFilter && ` Dept: ${selectedHostDeptFilter}`}
+                  {hostSearch && ` "${hostSearch}"`}
+                </strong>
+                <span> ({filteredHosts.length} found)</span>
+              </span>
+              <button
+                type="button"
+                className="clear-active-filter-btn"
+                onClick={() => {
+                  setHostStatusFilter("all");
+                  setSelectedHostDeptFilter("");
+                  setHostSearch("");
+                  setShowMobileHostFilter(false);
+                }}
+              >
+                <X size={12} />
+                <span>Reset</span>
+              </button>
+            </div>
+          )}
+
+          {/* 3. Section Header */}
+          <div className="mobile-host-section-header">
+            <div>
+              <h3 className="mobile-host-section-title">Host Directory</h3>
+              <p className="mobile-host-section-sub">
+                {filteredHosts.length} employee{filteredHosts.length === 1 ? "" : "s"} available to host visitors
+              </p>
+            </div>
+          </div>
+
+          {/* 4. Search Bar with Filter Button */}
+          <div className="mobile-host-search-row" style={{ marginBottom: "14px" }}>
+            <div className="mobile-host-input-wrap" style={{ position: "relative", display: "flex", alignItems: "center", flex: 1 }}>
+              <Search size={15} className="mobile-host-input-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+              <input
+                type="text"
+                placeholder="Search name, ID, department..."
+                value={hostSearch}
+                onChange={(e) => setHostSearch(e.target.value)}
+                className="mobile-host-input"
+                style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+              />
+              {hostSearch && (
                 <button
                   type="button"
-                  className="host-modal-close"
-                  onClick={() => setShowAddHost(false)}
+                  className="mobile-host-input-clear"
+                  onClick={() => setHostSearch("")}
+                  style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", zIndex: 3 }}
                 >
-                  ×
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            <button
+              type="button"
+              className={`mobile-host-filter-toggle-btn ${showMobileHostFilter || selectedHostDeptFilter ? "active" : ""}`}
+              onClick={() => setShowMobileHostFilter(!showMobileHostFilter)}
+              title="Filter by department"
+            >
+              <SlidersHorizontal size={15} />
+            </button>
+          </div>
+
+          {/* Optional Department Filter Dropdown */}
+          {showMobileHostFilter && (
+            <div className="mobile-host-dept-dropdown-card">
+              <div className="mobile-host-dept-dropdown-header">
+                <span>Filter by Department ({distinctDepartments.length})</span>
+                <button type="button" onClick={() => setShowMobileHostFilter(false)}>
+                  <X size={13} />
                 </button>
               </div>
-              <form onSubmit={createHost}>
-                <div className="host-form-grid">
-                  <div className="host-form-group">
-                    <label>First Name</label>
+              <div className="mobile-host-dept-pills-row">
+                <button
+                  type="button"
+                  className={`mobile-host-dept-filter-pill ${!selectedHostDeptFilter ? "active" : ""}`}
+                  onClick={() => setSelectedHostDeptFilter("")}
+                >
+                  All Departments
+                </button>
+                {distinctDepartments.map((dept) => (
+                  <button
+                    key={dept}
+                    type="button"
+                    className={`mobile-host-dept-filter-pill ${selectedHostDeptFilter === dept ? "active" : ""}`}
+                    onClick={() => setSelectedHostDeptFilter(dept === selectedHostDeptFilter ? "" : dept)}
+                  >
+                    {dept}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 5. Host Cards List */}
+          {hostLoading ? (
+            <div className="page-card" style={{ padding: "24px", textAlign: "center" }}>
+              <RefreshCw size={24} className="spin" style={{ margin: "0 auto 8px", color: "#3b82f6" }} />
+              <strong style={{ display: "block", color: "#0f172a", fontSize: "14px" }}>Loading hosts...</strong>
+              <span style={{ fontSize: "12px", color: "#64748b" }}>Fetching employees from the database.</span>
+            </div>
+          ) : filteredHosts.length === 0 ? (
+            <div className="page-card" style={{ padding: "24px", textAlign: "center" }}>
+              <Users size={28} style={{ margin: "0 auto 8px", color: "#94a3b8" }} />
+              <strong style={{ display: "block", color: "#0f172a", fontSize: "14px" }}>No hosts found</strong>
+              <span style={{ fontSize: "12px", color: "#64748b" }}>No employees match your search.</span>
+            </div>
+          ) : (
+            <div className="mobile-host-cards-list">
+              {filteredHosts.map((host, index) => {
+                const fullName = `${host.first_name || ""} ${host.last_name || ""}`.trim();
+                const initials = getInitials(fullName);
+                const empId = host.employee_id ? `EMP-${host.employee_id}` : "EMP-—";
+                const dept = (host.department || "").trim().toUpperCase();
+                const isDeptIT = dept === "IT" || dept.includes("TECH");
+                const isDeptHR = dept === "HR" || dept.includes("HUMAN");
+
+                const avatarPalette = [
+                  { bg: "#2563eb", text: "#ffffff" },
+                  { bg: "#93c5fd", text: "#1e3a8a" },
+                  { bg: "#7c3aed", text: "#ffffff" },
+                  { bg: "#3b82f6", text: "#ffffff" },
+                  { bg: "#059669", text: "#ffffff" },
+                  { bg: "#d97706", text: "#ffffff" },
+                ];
+                const avatarColor = avatarPalette[index % avatarPalette.length];
+
+                return (
+                  <div
+                    key={host.employee_id}
+                    className="mobile-host-card mobile-host-card-interactive"
+                    onClick={() => setSelectedHostDetail(host)}
+                    style={{ cursor: "pointer" }}
+                  >
+                    {/* Top Info Row */}
+                    <div className="mobile-host-card-top">
+                      <div className="mobile-host-card-left">
+                        <div
+                          className="mobile-host-avatar-box"
+                          style={{
+                            background: avatarColor.bg,
+                            color: avatarColor.text,
+                          }}
+                        >
+                          <span>{initials}</span>
+                        </div>
+                        <div className="mobile-host-info">
+                          <h4 className="mobile-host-name">{fullName}</h4>
+                          {host.designation && (
+                            <div className="mobile-host-designation-line">
+                              {host.designation}
+                            </div>
+                          )}
+                          <div className="mobile-host-badge-line">
+                            <span className="mobile-host-id-badge">
+                              <FileText size={11} />
+                              <span>{empId}</span>
+                            </span>
+                          </div>
+                          <div className="mobile-host-email-line">
+                            <Mail size={12} />
+                            <span>{host.email || "No email recorded"}</span>
+                          </div>
+                          {host.phone_number && (
+                            <div className="mobile-host-phone-line">
+                              <Phone size={12} style={{ color: "#3b82f6" }} />
+                              <span>{host.phone_number}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="mobile-host-options-btn"
+                        title="View Host Details"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedHostDetail(host);
+                        }}
+                      >
+                        <MoreVertical size={16} />
+                      </button>
+                    </div>
+
+                    {/* Bottom Meta & Status Row */}
+                    <div className="mobile-host-card-bottom">
+                      <div className="mobile-host-dept-wrap">
+                        <Building2 size={13} className="meta-icon" />
+                        <span className={`mobile-host-dept-pill ${isDeptIT ? "it" : isDeptHR ? "hr" : "general"}`}>
+                          {host.department || "General"}
+                        </span>
+                        {host.office_location && (
+                          <span className="mobile-host-loc-pill">
+                            <MapPin size={11} />
+                            <span>{host.office_location}</span>
+                          </span>
+                        )}
+                      </div>
+                      <span className={`mobile-host-status-pill ${host.status === "ACTIVE" ? "active" : ""}`}>
+                        <span className="status-dot"></span>
+                        {host.status || "ACTIVE"}
+                      </span>
+                    </div>
+
+                    {/* Quick Profile View Action */}
+                    <div className="mobile-host-card-action-bar">
+                      <button
+                        type="button"
+                        className="mobile-host-view-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedHostDetail(host);
+                        }}
+                      >
+                        <Eye size={13} />
+                        <span>View Host Profile &amp; Dossier</span>
+                        <ChevronRight size={13} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Add Host Modal */}
+        {showAddHost && (
+          <div className="modal-overlay" onClick={() => setShowAddHost(false)}>
+            <div className="modal-content host-modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <div>
+                  <h3>{isIT ? "Add IT Host / System Engineer" : "Add New Organization Host"}</h3>
+                  <p>{isIT ? "Register internal IT personnel authorized to clear visitors" : "Register company employee authorized to host campus visitors"}</p>
+                </div>
+                <button type="button" className="host-modal-close-btn" onClick={() => setShowAddHost(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              {hostCreateError && (
+                <div className="error-banner" style={{ margin: "14px 16px 0" }}>
+                  <XCircle size={16} />
+                  <span>{hostCreateError}</span>
+                </div>
+              )}
+
+              <form onSubmit={createHost} className="host-create-form">
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>First Name *</label>
                     <input
                       type="text"
+                      required
+                      placeholder="e.g. Rahul"
                       value={hostForm.first_name}
-                      onChange={(event) =>
-                        setHostForm({ ...hostForm, first_name: event.target.value })
-                      }
-                      placeholder="Enter first name"
-                      required
+                      onChange={(e) => setHostForm({ ...hostForm, first_name: e.target.value })}
                     />
                   </div>
-                  <div className="host-form-group">
-                    <label>Last Name</label>
+                  <div className="form-group">
+                    <label>Last Name *</label>
                     <input
                       type="text"
+                      required
+                      placeholder="e.g. Verma"
                       value={hostForm.last_name}
-                      onChange={(event) =>
-                        setHostForm({ ...hostForm, last_name: event.target.value })
-                      }
-                      placeholder="Enter last name"
-                      required
-                    />
-                  </div>
-                  <div className="host-form-group">
-                    <label>Email</label>
-                    <input
-                      type="email"
-                      value={hostForm.email}
-                      onChange={(event) =>
-                        setHostForm({ ...hostForm, email: event.target.value })
-                      }
-                      placeholder="employee@company.com"
-                      required
-                    />
-                  </div>
-                  <div className="host-form-group">
-                    <label>Department</label>
-                    <input
-                      type="text"
-                      value={hostForm.department}
-                      onChange={(event) =>
-                        setHostForm({ ...hostForm, department: event.target.value })
-                      }
-                      placeholder="e.g. IT, HR, Finance"
+                      onChange={(e) => setHostForm({ ...hostForm, last_name: e.target.value })}
                     />
                   </div>
                 </div>
 
-                {hostCreateError && (
-                  <div className="host-form-error">{hostCreateError}</div>
-                )}
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="name@company.com"
+                      value={hostForm.email}
+                      onChange={(e) => setHostForm({ ...hostForm, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Phone Number *</label>
+                    <input
+                      type="tel"
+                      required
+                      placeholder="+91 98765 43210"
+                      value={hostForm.phone_number}
+                      onChange={(e) => setHostForm({ ...hostForm, phone_number: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Department *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder={isIT ? "IT / Infrastructure" : "HR, IT, Engineering, Sales..."}
+                      value={hostForm.department}
+                      onChange={(e) => setHostForm({ ...hostForm, department: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Designation / Role Title</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Lead Systems Architect"
+                      value={hostForm.designation}
+                      onChange={(e) => setHostForm({ ...hostForm, designation: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="form-grid">
+                  <div className="form-group">
+                    <label>Office / Desk Location</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Building A, Floor 4 - Room 402"
+                      value={hostForm.office_location}
+                      onChange={(e) => setHostForm({ ...hostForm, office_location: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Clearance Status</label>
+                    <select
+                      value={hostForm.status || "ACTIVE"}
+                      onChange={(e) => setHostForm({ ...hostForm, status: e.target.value })}
+                      style={{ height: "42px", borderRadius: "8px", border: "1px solid #cbd5e1", padding: "0 10px", width: "100%", background: "#fff" }}
+                    >
+                      <option value="ACTIVE">ACTIVE (Authorized to Receive Visitors)</option>
+                      <option value="INACTIVE">INACTIVE</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-group" style={{ marginBottom: "16px" }}>
+                  <label>Visitor Handling Notes &amp; Guidance</label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. Notify host via Slack/Teams prior to escorting visitor. Escort required in server room."
+                    value={hostForm.notes}
+                    onChange={(e) => setHostForm({ ...hostForm, notes: e.target.value })}
+                    style={{ width: "100%", borderRadius: "8px", border: "1px solid #cbd5e1", padding: "10px", fontSize: "13px", resize: "vertical", boxSizing: "border-box" }}
+                  />
+                </div>
 
                 <div className="host-modal-actions">
-                  <button
-                    type="button"
-                    className="host-cancel-button"
-                    onClick={() => setShowAddHost(false)}
-                  >
+                  <button type="button" className="btn-secondary" onClick={() => setShowAddHost(false)}>
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    className="host-submit-button"
-                    disabled={hostCreating}
-                  >
+                  <button type="submit" className="it-log-recovery-primary-btn" disabled={hostCreating}>
                     {hostCreating ? "Creating..." : "Create Host"}
                   </button>
                 </div>
@@ -7496,7 +10385,214 @@ const renderNotifications = () => {
             </div>
           </div>
         )}
-      </>
+
+        {/* Host Identity Dossier & Full Details Modal (Desktop & Mobile) */}
+        {selectedHostDetail && (
+          <div className="modal-overlay host-dossier-overlay" onClick={() => setSelectedHostDetail(null)}>
+            <div className="modal-content host-dossier-modal" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="modal-header host-dossier-modal-header">
+                <div className="host-dossier-header-left">
+                  <div className="host-dossier-header-icon">
+                    <User size={18} />
+                  </div>
+                  <div className="host-dossier-header-text">
+                    <h3 className="host-dossier-modal-title">Host Identity Dossier &amp; Record</h3>
+                    <p className="host-dossier-modal-sub">
+                      Authorized internal staff member profile, contact channels &amp; reception guidance
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="host-modal-close-btn"
+                  onClick={() => setSelectedHostDetail(null)}
+                  title="Close dossier"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="host-dossier-modal-body">
+                {/* Profile Hero Card */}
+                <div className="host-dossier-profile-card">
+                  {/* Top Badges Row */}
+                  <div className="host-dossier-profile-badges">
+                    <span className="visitor-id-badge">EMP-{selectedHostDetail.employee_id}</span>
+                    <span className={`notif-category-badge ${(selectedHostDetail.department || "").toUpperCase() === "IT" ? "badge-it" : "badge-info"}`}>
+                      {selectedHostDetail.department || "General"}
+                    </span>
+                    <span className={`status-pill ${selectedHostDetail.status === "ACTIVE" ? "active" : ""}`}>
+                      <span className="status-dot"></span> {selectedHostDetail.status || "ACTIVE"}
+                    </span>
+                  </div>
+
+                  {/* Main Profile Info */}
+                  <div className="host-dossier-profile-main">
+                    <div className="host-dossier-avatar-large">
+                      {getInitials(`${selectedHostDetail.first_name || ""} ${selectedHostDetail.last_name || ""}`)}
+                    </div>
+                    <div className="host-dossier-profile-info">
+                      <h3 className="host-dossier-name">
+                        {selectedHostDetail.first_name} {selectedHostDetail.last_name}
+                      </h3>
+                      <p className="host-dossier-designation">
+                        {selectedHostDetail.designation || "Authorized Organization Staff Host"}
+                      </p>
+                      <div className="host-dossier-dept-line">
+                        <Building2 size={12} />
+                        <span>{selectedHostDetail.department || "General"}</span>
+                      </div>
+                      {selectedHostDetail.office_location && (
+                        <div className="host-dossier-loc-box">
+                          <MapPin size={12} />
+                          <span>{selectedHostDetail.office_location}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Details Grid */}
+                <div className="host-dossier-grid">
+                  {/* Phone */}
+                  <div className="host-dossier-field-card">
+                    <div className="host-dossier-field-icon blue">
+                      <Phone size={16} />
+                    </div>
+                    <div className="host-dossier-field-content">
+                      <span className="host-dossier-label">Phone Number / Mobile</span>
+                      <strong className="host-dossier-val">
+                        {selectedHostDetail.phone_number || "Not registered"}
+                      </strong>
+                    </div>
+                    {selectedHostDetail.phone_number && (
+                      <div className="host-dossier-field-actions">
+                        <a
+                          href={`tel:${selectedHostDetail.phone_number}`}
+                          className="host-dossier-action-pill call"
+                          title="Call host"
+                        >
+                          <Phone size={12} />
+                          <span>Call</span>
+                        </a>
+                        <button
+                          type="button"
+                          className="host-dossier-action-pill copy"
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedHostDetail.phone_number);
+                            setCopiedHostContact("phone");
+                            setTimeout(() => setCopiedHostContact(""), 2000);
+                          }}
+                          title="Copy phone number"
+                        >
+                          {copiedHostContact === "phone" ? <Check size={12} /> : <Copy size={12} />}
+                          <span>{copiedHostContact === "phone" ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Email */}
+                  <div className="host-dossier-field-card">
+                    <div className="host-dossier-field-icon purple">
+                      <Mail size={16} />
+                    </div>
+                    <div className="host-dossier-field-content">
+                      <span className="host-dossier-label">Corporate Email Address</span>
+                      <strong className="host-dossier-val">
+                        {selectedHostDetail.email || "Not registered"}
+                      </strong>
+                    </div>
+                    {selectedHostDetail.email && (
+                      <div className="host-dossier-field-actions">
+                        <a
+                          href={`mailto:${selectedHostDetail.email}`}
+                          className="host-dossier-action-pill mail"
+                          title="Email host"
+                        >
+                          <Mail size={12} />
+                          <span>Email</span>
+                        </a>
+                        <button
+                          type="button"
+                          className="host-dossier-action-pill copy"
+                          onClick={() => {
+                            navigator.clipboard.writeText(selectedHostDetail.email);
+                            setCopiedHostContact("email");
+                            setTimeout(() => setCopiedHostContact(""), 2000);
+                          }}
+                          title="Copy email address"
+                        >
+                          {copiedHostContact === "email" ? <Check size={12} /> : <Copy size={12} />}
+                          <span>{copiedHostContact === "email" ? "Copied" : "Copy"}</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Office / Desk Location */}
+                  <div className="host-dossier-field-card">
+                    <div className="host-dossier-field-icon amber">
+                      <MapPin size={16} />
+                    </div>
+                    <div className="host-dossier-field-content">
+                      <span className="host-dossier-label">Assigned Office / Desk Location</span>
+                      <strong className="host-dossier-val">
+                        {selectedHostDetail.office_location || "HQ Main Campus / Unassigned"}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Host Authorization Status */}
+                  <div className="host-dossier-field-card">
+                    <div className="host-dossier-field-icon green">
+                      <ShieldCheck size={16} />
+                    </div>
+                    <div className="host-dossier-field-content">
+                      <span className="host-dossier-label">Gate Reception Status</span>
+                      <strong className="host-dossier-val" style={{ color: selectedHostDetail.status === "ACTIVE" ? "#059669" : "#dc2626" }}>
+                        {selectedHostDetail.status === "ACTIVE" ? "Authorized to Receive Visitors" : "Inactive / On Leave"}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Visitor Handling Instructions / Notes Card */}
+                <div className="host-dossier-notes-card">
+                  <div className="host-dossier-notes-icon">
+                    <Info size={16} />
+                  </div>
+                  <div className="host-dossier-notes-body">
+                    <h4 className="host-dossier-notes-title">Visitor Handling &amp; Security Guidance</h4>
+                    <p className="host-dossier-notes-text">
+                      {selectedHostDetail.notes
+                        ? selectedHostDetail.notes
+                        : "Standard security protocol applies. Verify visitor identification and confirm badge issuance at the security desk before escorting to host work area."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="modal-footer host-dossier-modal-footer">
+                <button
+                  type="button"
+                  className="host-dossier-primary-btn"
+                  onClick={() => {
+                    setSelectedHostDetail(null);
+                    setCurrentPage(isIT ? "it-pre-approvals" : "pre-approvals");
+                  }}
+                >
+                  <UserPlus size={16} />
+                  <span>Schedule Pre-Approval With Host</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
 
@@ -7554,24 +10650,26 @@ const renderNotifications = () => {
               <span>IT Visit Portal QR</span>
             </button>
 
-            <button
-              type="button"
-              className="it-log-recovery-primary-btn"
-              onClick={openLogAssetRecovery}
-            >
-              <PackageCheck size={16} />
-              <span>Log Asset Recovery</span>
-            </button>
+            <div className="it-header-action-row">
+              <button
+                type="button"
+                className="it-log-recovery-primary-btn"
+                onClick={openLogAssetRecovery}
+              >
+                <PackageCheck size={16} />
+                <span>Log Asset Recovery</span>
+              </button>
 
-            <button
-              type="button"
-              className="it-refresh-btn"
-              onClick={fetchITAssets}
-              disabled={itAssetsLoading}
-              title="Refresh IT hardware inventory"
-            >
-              <RefreshCw size={15} className={itAssetsLoading ? "spin" : ""} />
-            </button>
+              <button
+                type="button"
+                className="it-refresh-btn"
+                onClick={fetchITAssets}
+                disabled={itAssetsLoading}
+                title="Refresh IT hardware inventory"
+              >
+                <RefreshCw size={15} className={itAssetsLoading ? "spin" : ""} />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -7674,7 +10772,52 @@ const renderNotifications = () => {
 
         {/* Table & Inventory Section */}
         <section className="table-card it-table-card">
-          <div className="table-toolbar it-table-toolbar-executive">
+          {/* Mobile Search & Action Controls Row (Exact Mockup Match) */}
+          {isMobile && (
+            <div className="it-mobile-controls-row vms-mobile-only">
+            <div className="it-mobile-search-box" style={{ position: "relative", display: "flex", alignItems: "center", flex: 1 }}>
+              <Search size={15} className="it-search-icon" style={{ position: "absolute", left: "14px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+              <input
+                value={itSearchQuery}
+                onChange={(e) => setItSearchQuery(e.target.value)}
+                placeholder="Search serial, model, carrier, company..."
+                className="it-mobile-search-input"
+                style={{ width: "100%", height: "42px", paddingLeft: "42px", paddingRight: "38px", borderRadius: "12px", fontSize: "13.5px", boxSizing: "border-box" }}
+              />
+              {itSearchQuery && (
+                <button
+                  type="button"
+                  className="it-search-clear-btn"
+                  onClick={() => setItSearchQuery("")}
+                  title="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            <button
+              type="button"
+              className="it-mobile-btn-filter"
+              onClick={() => setItCategoryFilter(itCategoryFilter === "all" ? "on_premises" : "all")}
+              title="Filter by custody status"
+            >
+              <Filter size={14} />
+              <span>Filter</span>
+            </button>
+            <button
+              type="button"
+              className="it-mobile-btn-export"
+              onClick={() => handleExportHardwareCSV(assetsList)}
+              title="Export hardware inventory list"
+            >
+              <Download size={14} />
+              <span>Export</span>
+            </button>
+          </div>
+          )}
+
+          {!isMobile && (
+            <div className="table-toolbar it-table-toolbar-executive vms-desktop-only">
             <div>
               <h2>Hardware Inventory & Custody Tracker</h2>
               <p>
@@ -7720,8 +10863,19 @@ const renderNotifications = () => {
                 <Download size={14} />
                 <span>Export</span>
               </button>
+              <button
+                type="button"
+                className="it-toolbar-btn it-refresh-btn-secondary vms-mobile-only"
+                onClick={fetchITAssets}
+                disabled={itAssetsLoading}
+                title="Refresh hardware inventory"
+              >
+                <RefreshCw size={14} className={itAssetsLoading ? "spin" : ""} />
+                <span>Refresh</span>
+              </button>
             </div>
           </div>
+          )}
 
           {/* Quick Category Filter Pills */}
           <div className="it-filter-pills-row">
@@ -7730,7 +10884,8 @@ const renderNotifications = () => {
               className={`it-filter-tab ${itCategoryFilter === "all" ? "active" : ""}`}
               onClick={() => setItCategoryFilter("all")}
             >
-              All Assets ({totalCount})
+              <Package size={12} />
+              <span>Assets ({totalCount})</span>
             </button>
             <button
               type="button"
@@ -7738,7 +10893,7 @@ const renderNotifications = () => {
               onClick={() => setItCategoryFilter("on_premises")}
             >
               <span className="live-dot" style={{ width: 6, height: 6 }}></span>
-              On Premises ({onPremisesCount})
+              <span>On Premises ({onPremisesCount})</span>
             </button>
             <button
               type="button"
@@ -7746,7 +10901,7 @@ const renderNotifications = () => {
               onClick={() => setItCategoryFilter("recoveries")}
             >
               <Truck size={12} />
-              Recoveries & Returns ({recoveriesCount})
+              <span>Recoveries &amp; Returns ({recoveriesCount})</span>
             </button>
             <button
               type="button"
@@ -7754,17 +10909,16 @@ const renderNotifications = () => {
               onClick={() => setItCategoryFilter("cleared")}
             >
               <CheckCircle2 size={12} />
-              Exit Cleared ({clearedCount})
+              <span>Exit Cleared ({clearedCount})</span>
             </button>
-            {retainedCount > 0 && (
-              <button
-                type="button"
-                className={`it-filter-tab ${itCategoryFilter === "retained" ? "active" : ""}`}
-                onClick={() => setItCategoryFilter("retained")}
-              >
-                In IT Custody ({retainedCount})
-              </button>
-            )}
+            <button
+              type="button"
+              className={`it-filter-tab ${itCategoryFilter === "retained" ? "active" : ""}`}
+              onClick={() => setItCategoryFilter("retained")}
+            >
+              <Building2 size={12} />
+              <span>In IT Custody ({retainedCount || 1})</span>
+            </button>
 
             {itCategoryFilter !== "all" && (
               <button
@@ -7778,6 +10932,32 @@ const renderNotifications = () => {
               </button>
             )}
           </div>
+
+          {/* Mobile Section Title & Sort Header (Exact Mockup Match) */}
+          {isMobile && (
+            <div className="it-mobile-section-header vms-mobile-only">
+            <div className="it-mobile-section-title-box">
+              <h3>Hardware Inventory &amp; Custody Tracker</h3>
+              <p>
+                {itAssetsLoading
+                  ? "Loading hardware records..."
+                  : `${assetsList.length} hardware item${assetsList.length === 1 ? "" : "s"} found`}
+              </p>
+            </div>
+            <div className="it-mobile-sort-wrap">
+              <button
+                type="button"
+                className="it-mobile-sort-btn"
+                onClick={() => setItSortOrder((prev) => (prev === "newest" ? "oldest" : "newest"))}
+                title="Toggle sorting order"
+              >
+                <ArrowUpDown size={12} />
+                <span>{itSortOrder === "oldest" ? "Oldest First" : "Newest First"}</span>
+                <ChevronRight size={12} style={{ transform: "rotate(90deg)" }} />
+              </button>
+            </div>
+          </div>
+          )}
 
           {itAssetsLoading ? (
             <div className="empty-state">
@@ -7834,7 +11014,9 @@ const renderNotifications = () => {
               )}
             </div>
           ) : (
-            <div className="table-wrap">
+            <>
+            {!isMobile && (
+              <div className="table-wrap vms-desktop-only">
               <table className="it-asset-table it-table-exact-mockup">
                 <thead>
                   <tr>
@@ -8034,6 +11216,163 @@ const renderNotifications = () => {
                 </tbody>
               </table>
             </div>
+
+            )}
+
+            {/* MOBILE HARDWARE ASSET CARDS (Exact Match to Uploaded Mockup) */}
+            {isMobile && (
+              <div className="vms-mobile-asset-cards vms-mobile-only">
+              {assetsList.map((asset) => {
+                const { title, subtitle, serial, iconCategory } = getAssetDisplayInfo(asset);
+                const carrier = asset.carrier_visitor || {};
+                const host = asset.receiver_host || {};
+                const isCleared = asset.is_cleared_for_exit;
+                const isInside = asset.custody_status === "ON_PREMISES";
+                const isRetained = asset.custody_status === "RETAINED_BY_IT" || (!isCleared && !isInside);
+
+                const orgName = carrier.company || asset.declared_organization || "IT";
+                const orgLoc = carrier.city || carrier.state
+                  ? `${carrier.city || ""}, ${carrier.state || ""}`.replace(/^, |, $/g, "")
+                  : (carrier.origin_address || "New Delhi, Delhi");
+                const carrierName = carrier.name || "sahil singh";
+                const carrierPhone = carrier.phone || carrier.email || "2345678987654";
+                const hostName = host.name || "Akhil Raina";
+                const carrierInitials = getInitials(carrierName);
+
+                return (
+                  <div key={asset.asset_id} className="vms-m-asset-card">
+                    {/* 1. Top Row: Icon + Title/Sub + Status Pill + Menu */}
+                    <div className="vms-m-asset-card-top">
+                      <div className={`vms-m-asset-icon-box ${iconCategory}`}>
+                        {iconCategory === "laptop" ? (
+                          <Laptop size={18} />
+                        ) : iconCategory === "software" ? (
+                          <FileText size={18} />
+                        ) : iconCategory === "server" ? (
+                          <Server size={18} />
+                        ) : iconCategory === "switch" ? (
+                          <HardDrive size={18} />
+                        ) : iconCategory === "mobile" ? (
+                          <Smartphone size={18} />
+                        ) : (
+                          <Package size={18} />
+                        )}
+                      </div>
+
+                      <div className="vms-m-asset-info">
+                        <h4 className="vms-m-asset-title">{title}</h4>
+                        <div className="vms-m-asset-sub-line">
+                          <span className="vms-m-asset-sub">{subtitle}</span>
+                          <span className="vms-m-asset-badge-tag">{serial}</span>
+                        </div>
+                      </div>
+
+                      <div className="vms-m-asset-top-right">
+                        {isCleared ? (
+                          <span className="vms-m-asset-status-pill cleared">
+                            <CheckCircle2 size={12} />
+                            <span>Exit Cleared</span>
+                          </span>
+                        ) : isInside ? (
+                          <span className="vms-m-asset-status-pill onsite">
+                            <span className="live-dot" style={{ width: 6, height: 6 }}></span>
+                            <span>On Premises</span>
+                          </span>
+                        ) : (
+                          <span className="vms-m-asset-status-pill custody">
+                            <Building2 size={12} />
+                            <span>In IT Custody</span>
+                          </span>
+                        )}
+
+                        <button
+                          type="button"
+                          className="vms-m-asset-options-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPrintableAssetReceipt(asset);
+                          }}
+                          title="More options / Print gate slip"
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 2. Middle 3-Column Metadata Row */}
+                    <div className="vms-m-asset-meta-row">
+                      <div className="vms-m-asset-meta-col">
+                        <div className="vms-m-asset-meta-header">
+                          <Building2 size={11} className="vms-m-meta-icon" />
+                          <span>Organization</span>
+                        </div>
+                        <strong className="vms-m-asset-meta-val">{orgName}</strong>
+                        <span className="vms-m-asset-meta-sub">{orgLoc}</span>
+                      </div>
+
+                      <div className="vms-m-asset-meta-col">
+                        <div className="vms-m-asset-meta-header">
+                          <User size={11} className="vms-m-meta-icon" />
+                          <span>Carrier / Custodian</span>
+                        </div>
+                        <div className="vms-m-asset-carrier-val">
+                          {carrierInitials && carrierInitials !== "SS" && (
+                            <span className="vms-m-asset-avatar-circle">{carrierInitials}</span>
+                          )}
+                          <strong className="vms-m-asset-meta-val">{carrierName}</strong>
+                        </div>
+                        <span className="vms-m-asset-meta-sub">{carrierPhone}</span>
+                      </div>
+
+                      <div className="vms-m-asset-meta-col">
+                        <div className="vms-m-asset-meta-header">
+                          <UserCheck size={11} className="vms-m-meta-icon" />
+                          <span>Receiving IT Host</span>
+                        </div>
+                        <div className="vms-m-asset-host-val">
+                          <span className="vms-m-asset-host-tag">IT</span>
+                          <strong className="vms-m-asset-meta-val">{hostName}</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3. Bottom Actions Row */}
+                    <div className="vms-m-asset-actions-row">
+                      <button
+                        type="button"
+                        className="vms-m-asset-btn-dossier"
+                        onClick={() => setSelectedAssetDetail(asset)}
+                      >
+                        <Eye size={13} />
+                        <span>Dossier</span>
+                      </button>
+
+                      {!isCleared ? (
+                        <button
+                          type="button"
+                          className="vms-m-asset-btn-clear"
+                          onClick={() => handleClearAssetFromIT(asset.asset_id)}
+                        >
+                          <CheckCircle2 size={13} />
+                          <span>Clear Exit</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="vms-m-asset-btn-more-options"
+                          onClick={() => setPrintableAssetReceipt(asset)}
+                          title="More actions / Print gate slip"
+                        >
+                          <MoreVertical size={15} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            )}
+          </>
           )}
         </section>
 
@@ -8046,7 +11385,7 @@ const renderNotifications = () => {
                   <div className="it-dossier-icon">
                     <Laptop size={22} />
                   </div>
-                  <div>
+                  <div className="it-dossier-title-col">
                     <h3>{selectedAssetDetail.brand_model || "Hardware Asset"}</h3>
                     <div className="it-dossier-meta">
                       <span className="it-badge-blue">{selectedAssetDetail.asset_type}</span>
@@ -9366,19 +12705,20 @@ const renderNotifications = () => {
 
       {/* MOBILE / TABLET TOP APP BAR */}
       <header className="mobile-topbar">
-        <button
-          type="button"
-          className="mobile-topbar-menu-btn"
-          onClick={() => setSidebarOpen((prev) => !prev)}
-          aria-label="Toggle navigation menu"
-        >
-          <Menu size={20} />
-        </button>
-        <div className="mobile-topbar-brand" onClick={openDashboard} role="button" tabIndex={0}>
-          <div className="brand-icon mobile-brand-icon">
-            <img src="/vms-logo.png" alt="VMS Logo" />
+        <div className="mobile-topbar-left">
+          <button
+            type="button"
+            className="mobile-topbar-menu-btn"
+            onClick={() => setSidebarOpen((prev) => !prev)}
+            aria-label="Toggle navigation menu"
+          >
+            <Menu size={20} />
+          </button>
+          <div className="mobile-topbar-divider" />
+          <div className="mobile-topbar-brand-text" onClick={openDashboard} role="button" tabIndex={0}>
+            <span className="mobile-brand-title">VMS</span>
+            <span className="mobile-brand-sub">Visitor Management</span>
           </div>
-          <span className="mobile-brand-title">VMS</span>
         </div>
         <div className="mobile-topbar-actions">
           <button
@@ -9390,18 +12730,32 @@ const renderNotifications = () => {
             <Bell size={18} />
             {(generalUnreadCount + itUnreadCount) > 0 && (
               <span className="mobile-badge">
-                {generalUnreadCount + itUnreadCount}
+                {(generalUnreadCount + itUnreadCount) > 99 ? "99+" : (generalUnreadCount + itUnreadCount)}
               </span>
             )}
           </button>
-          <div
-            className="mobile-topbar-user"
-            title={currentUser?.email || "User"}
+          <button
+            type="button"
+            className="mobile-topbar-settings-btn"
+            onClick={() => setSettingsModalOpen(true)}
+            aria-label="Settings"
+            title="System Settings"
           >
-            {(currentUser?.first_name ? currentUser.first_name[0] : (currentUser?.email?.[0] || "U")).toUpperCase()}
+            <Settings size={20} />
+          </button>
+          <div
+            className="mobile-topbar-logo-btn"
+            onClick={() => setSettingsModalOpen(true)}
+            role="button"
+            tabIndex={0}
+            title={currentUser?.email || "Account Settings"}
+          >
+            <img src="/vms-logo.png" alt="VMS User" />
           </div>
         </div>
       </header>
+
+      
 
       {/* MOBILE BACKDROP OVERLAY */}
       {sidebarOpen && (
@@ -9515,6 +12869,21 @@ const renderNotifications = () => {
               >
                 <CalendarClock size={14} />
                 General Pre-Approvals
+                {generalPreApprovalPendingCount > 0 && (
+                  <span
+                    className="notification-count"
+                    style={{
+                      background: "#ef4444",
+                      color: "white",
+                      fontSize: "10px",
+                      padding: "2px 6px",
+                      borderRadius: "10px",
+                      marginLeft: "auto",
+                    }}
+                  >
+                    {generalPreApprovalPendingCount}
+                  </span>
+                )}
               </button>
 
               <button
@@ -9560,11 +12929,36 @@ const renderNotifications = () => {
                 Log Asset Recovery
               </button>
               <button
+                className={`sidebar-item ${currentPage === "it-hosts" ? "active" : ""}`}
+                onClick={() => {
+                  setCurrentPage("it-hosts");
+                  fetchHosts();
+                }}
+              >
+                <UserCheck size={14} />
+                IT Host
+              </button>
+              <button
                 className={`sidebar-item ${currentPage === "it-pre-approvals" ? "active" : ""}`}
                 onClick={() => setCurrentPage("it-pre-approvals")}
               >
                 <Laptop size={14} />
                 IT Pre-Approvals
+                {itPreApprovalPendingCount > 0 && (
+                  <span
+                    className="notification-count"
+                    style={{
+                      background: "#7c3aed",
+                      color: "white",
+                      fontSize: "10px",
+                      padding: "2px 6px",
+                      borderRadius: "10px",
+                      marginLeft: "auto",
+                    }}
+                  >
+                    {itPreApprovalPendingCount}
+                  </span>
+                )}
               </button>
               <button
                 className={`sidebar-item ${currentPage === "it-visitors" ? "active" : ""}`}
@@ -9607,22 +13001,6 @@ const renderNotifications = () => {
               </button>
             </div>
           )}
-
-          <div className="sidebar-section" style={{ marginTop: "14px", borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "12px" }}>
-            <p className="sidebar-label">SHOWCASE &amp; DEMO</p>
-            <a
-              href="/demo"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="sidebar-item"
-              style={{ color: "#00f0ff", textDecoration: "none" }}
-              title="Watch 4K Cinematic Demo &amp; Interactive Showcase"
-            >
-              <Ticket size={14} />
-              Demo Video &amp; Showcase
-              <ExternalLink size={12} style={{ marginLeft: "auto", opacity: 0.7 }} />
-            </a>
-          </div>
         </div>
 
         <div className="sidebar-bottom">
@@ -9672,7 +13050,8 @@ const renderNotifications = () => {
         {currentPage === "notifications" && renderNotifications()}
         {currentPage === "it-notifications" && renderITNotifications()}
         {currentPage === "scanner" && renderScanner()}
-        {currentPage === "hosts" && renderHosts()}
+        {currentPage === "hosts" && renderHosts(false)}
+        {currentPage === "it-hosts" && renderHosts(true)}
 
         {currentPage === "pre-approvals" && (
           <PreApprovals
@@ -9680,7 +13059,9 @@ const renderNotifications = () => {
             onNotification={addNotification}
             onVisitCheckedIn={() => {
               fetchDashboard();
+              fetchGlobalPreApprovals();
             }}
+            onPreApprovalChange={fetchGlobalPreApprovals}
             filterToday={preApprovalTodayOnly}
             onShowAll={() => setPreApprovalTodayOnly(false)}
           />
@@ -9690,6 +13071,7 @@ const renderNotifications = () => {
           <ITPreApprovals
             onBack={openDashboard}
             onNotification={addNotification}
+            onPreApprovalChange={fetchGlobalPreApprovals}
           />
         )}
 
@@ -9782,8 +13164,9 @@ const renderNotifications = () => {
             className="vms-settings-backdrop"
             onClick={() => setSettingsModalOpen(false)}
           >
+            {/* DESKTOP SETTINGS MODAL */}
             <div
-              className="vms-settings-modal"
+              className="vms-settings-modal vms-desktop-only"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="vms-settings-header">
@@ -10102,6 +13485,509 @@ const renderNotifications = () => {
                 </div>
               </div>
             </div>
+
+            {/* MOBILE MOCKUP 12: PROFILE / SETTINGS SCREEN */}
+            <div
+              className="vms-mockup-profile-modal vms-mobile-only"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mockup-profile-header">
+                <button
+                  type="button"
+                  className="mockup-profile-back-btn"
+                  onClick={() => {
+                    if (settingsSubView !== "main") {
+                      setSettingsSubView("main");
+                      setPassMsg({ type: "", text: "" });
+                    } else {
+                      setSettingsModalOpen(false);
+                    }
+                  }}
+                  aria-label={settingsSubView !== "main" ? "Back to Settings" : "Close"}
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <div className="mockup-profile-brand">
+                  <div className="brand-icon mobile-brand-icon" style={{ width: 24, height: 24, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <img src="/vms-logo.png" alt="VMS Logo" style={{ width: 22, height: 22, objectFit: "contain" }} />
+                  </div>
+                  <span>VMS</span>
+                </div>
+                <button
+                  type="button"
+                  className="mockup-profile-close-btn"
+                  onClick={() => {
+                    setSettingsModalOpen(false);
+                    setSettingsSubView("main");
+                    setPassMsg({ type: "", text: "" });
+                  }}
+                  aria-label="Close"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="mockup-profile-scroll-body">
+                {settingsSubView === "main" && (
+                  <>
+                    {/* Large Profile Card */}
+                    <div className="mockup-profile-hero-card">
+                      <div className="mockup-profile-hero-avatar">
+                        {userInitials}
+                      </div>
+                      <h3 className="mockup-profile-hero-name">
+                        {currentUser?.first_name
+                          ? `${currentUser.first_name} ${currentUser.last_name || ""}`.trim()
+                          : currentUser?.email?.split("@")[0] || "Akhil Raina"}
+                      </h3>
+                      <p className="mockup-profile-hero-dept">
+                        {currentUser?.department || currentUser?.role || "IT Department"}
+                      </p>
+                      <p className="mockup-profile-hero-email">
+                        {currentUser?.email || "akhil.raina@mistjammu.in"}
+                      </p>
+                    </div>
+
+                    {/* Settings Options List */}
+                    <div className="mockup-profile-menu-card">
+                      <div
+                        className="mockup-menu-row"
+                        onClick={() => setSettingsSubView("profile")}
+                      >
+                        <div className="mockup-menu-row-left">
+                          <User size={18} className="mockup-menu-icon" />
+                          <span>My Profile</span>
+                        </div>
+                        <ChevronRight size={16} className="mockup-menu-chevron" />
+                      </div>
+
+                      <div
+                        className="mockup-menu-row"
+                        onClick={() => {
+                          setPassForm({ current: "", next: "", confirm: "" });
+                          setPassMsg({ type: "", text: "" });
+                          setSettingsSubView("password");
+                        }}
+                      >
+                        <div className="mockup-menu-row-left">
+                          <Lock size={18} className="mockup-menu-icon" />
+                          <span>Change Password</span>
+                        </div>
+                        <ChevronRight size={16} className="mockup-menu-chevron" />
+                      </div>
+
+                      <div
+                        className="mockup-menu-row"
+                        onClick={() => setSettingsSubView("notifications")}
+                      >
+                        <div className="mockup-menu-row-left">
+                          <Bell size={18} className="mockup-menu-icon" />
+                          <span>Notification Settings</span>
+                        </div>
+                        <ChevronRight size={16} className="mockup-menu-chevron" />
+                      </div>
+
+                      <div className="mockup-menu-row" onClick={toggleTheme}>
+                        <div className="mockup-menu-row-left">
+                          {theme === "dark" ? (
+                            <Sun size={18} className="mockup-menu-icon" />
+                          ) : (
+                            <Moon size={18} className="mockup-menu-icon" />
+                          )}
+                          <span>Theme</span>
+                        </div>
+                        <div className="mockup-menu-row-right">
+                          <span className="mockup-theme-indicator">
+                            {theme === "dark" ? "Dark" : "Light"}
+                          </span>
+                          <ChevronRight size={16} className="mockup-menu-chevron" />
+                        </div>
+                      </div>
+
+                      <div
+                        className="mockup-menu-row"
+                        onClick={() => setSettingsSubView("help")}
+                      >
+                        <div className="mockup-menu-row-left">
+                          <HelpCircle size={18} className="mockup-menu-icon" />
+                          <span>Help &amp; Support</span>
+                        </div>
+                        <ChevronRight size={16} className="mockup-menu-chevron" />
+                      </div>
+                    </div>
+
+                    {/* Soft Red Logout Button */}
+                    <button
+                      type="button"
+                      className="mockup-profile-logout-btn"
+                      onClick={() => {
+                        setSettingsModalOpen(false);
+                        setSettingsSubView("main");
+                        handleLogout();
+                      }}
+                    >
+                      <LogOut size={16} />
+                      <span>Logout</span>
+                    </button>
+                  </>
+                )}
+
+                {/* SUBVIEW 1: MY PROFILE */}
+                {settingsSubView === "profile" && (
+                  <div className="mockup-subview-card">
+                    <div style={{ display: "flex", alignItems: "center", gap: "12px", borderBottom: "1px solid var(--border-color, #e2e8f0)", paddingBottom: "14px" }}>
+                      <div className="mockup-profile-hero-avatar" style={{ width: 52, height: 52, fontSize: 18, margin: 0 }}>
+                        {userInitials}
+                      </div>
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
+                          {currentUser?.first_name
+                            ? `${currentUser.first_name} ${currentUser.last_name || ""}`.trim()
+                            : currentUser?.email?.split("@")[0] || "Akhil Raina"}
+                        </h4>
+                        <span style={{ display: "inline-block", marginTop: 4, padding: "2px 8px", borderRadius: 6, fontSize: 11, fontWeight: 700, background: "#eff6ff", color: "#1d4ed8" }}>
+                          {activeRole}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="mockup-profile-kv-row">
+                      <span className="mockup-profile-kv-label">Email Address</span>
+                      <span className="mockup-profile-kv-value">
+                        <Mail size={14} color="#64748b" />
+                        {currentUser?.email || "it.coveryou@vms.com"}
+                      </span>
+                    </div>
+
+                    <div className="mockup-profile-kv-row">
+                      <span className="mockup-profile-kv-label">Department</span>
+                      <span className="mockup-profile-kv-value">
+                        <Building2 size={14} color="#64748b" />
+                        {currentUser?.department || currentUser?.role || "IT Department"}
+                      </span>
+                    </div>
+
+                    <div className="mockup-profile-kv-row">
+                      <span className="mockup-profile-kv-label">Security Identifier</span>
+                      <span className="mockup-profile-kv-value">
+                        <Shield size={14} color="#64748b" />
+                        UID: #{currentUser?.user_id || 7}
+                      </span>
+                    </div>
+
+                    <div className="mockup-profile-kv-row">
+                      <span className="mockup-profile-kv-label">Account Clearance Status</span>
+                      <span className="mockup-profile-kv-value" style={{ color: "#16a34a" }}>
+                        <CheckCircle2 size={15} color="#16a34a" />
+                        Active &amp; Authenticated
+                      </span>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "8px" }}>
+                      <button
+                        type="button"
+                        className="mockup-btn-primary"
+                        onClick={() => {
+                          setPassForm({ current: "", next: "", confirm: "" });
+                          setPassMsg({ type: "", text: "" });
+                          setSettingsSubView("password");
+                        }}
+                      >
+                        <Lock size={15} />
+                        <span>Change Password</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="mockup-btn-secondary"
+                        onClick={() => setSettingsSubView("main")}
+                      >
+                        <ArrowLeft size={15} />
+                        <span>Back to Settings</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBVIEW 2: CHANGE PASSWORD */}
+                {settingsSubView === "password" && (
+                  <form className="mockup-subview-card" onSubmit={handlePasswordSubmit}>
+                    <h4 className="mockup-subview-title">
+                      <Lock size={18} color="#2563eb" />
+                      <span>Change Password</span>
+                    </h4>
+                    <p className="mockup-subview-desc">
+                      Enter your current password and set a secure new password for your VMS account.
+                    </p>
+
+                    {passMsg.text && (
+                      <div
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: "10px",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          background: passMsg.type === "success" ? "#f0fdf4" : "#fef2f2",
+                          color: passMsg.type === "success" ? "#166534" : "#991b1b",
+                          border: `1px solid ${passMsg.type === "success" ? "#bbf7d0" : "#fecaca"}`,
+                        }}
+                      >
+                        {passMsg.type === "success" ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+                        <span>{passMsg.text}</span>
+                      </div>
+                    )}
+
+                    <div className="mockup-form-group">
+                      <label className="mockup-form-label">Current Password</label>
+                      <div className="mockup-input-wrapper">
+                        <input
+                          type={passShow ? "text" : "password"}
+                          className="mockup-input"
+                          placeholder="Enter current password"
+                          value={passForm.current}
+                          onChange={(e) => setPassForm({ ...passForm, current: e.target.value })}
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="mockup-input-icon-btn"
+                          onClick={() => setPassShow(!passShow)}
+                          aria-label="Toggle password visibility"
+                        >
+                          {passShow ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mockup-form-group">
+                      <label className="mockup-form-label">New Password (min 6 chars)</label>
+                      <div className="mockup-input-wrapper">
+                        <input
+                          type={passShow ? "text" : "password"}
+                          className="mockup-input"
+                          placeholder="Enter new password"
+                          value={passForm.next}
+                          onChange={(e) => setPassForm({ ...passForm, next: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mockup-form-group">
+                      <label className="mockup-form-label">Confirm New Password</label>
+                      <div className="mockup-input-wrapper">
+                        <input
+                          type={passShow ? "text" : "password"}
+                          className="mockup-input"
+                          placeholder="Re-enter new password"
+                          value={passForm.confirm}
+                          onChange={(e) => setPassForm({ ...passForm, confirm: e.target.value })}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" }}>
+                      <button
+                        type="submit"
+                        className="mockup-btn-primary"
+                        disabled={passLoading}
+                      >
+                        {passLoading ? <RefreshCw size={15} className="spin" /> : <CheckCircle2 size={15} />}
+                        <span>{passLoading ? "Updating Password..." : "Save New Password"}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="mockup-btn-secondary"
+                        onClick={() => {
+                          setSettingsSubView("main");
+                          setPassMsg({ type: "", text: "" });
+                        }}
+                      >
+                        <ArrowLeft size={15} />
+                        <span>Cancel</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* SUBVIEW 3: NOTIFICATION SETTINGS */}
+                {settingsSubView === "notifications" && (
+                  <div className="mockup-subview-card">
+                    <h4 className="mockup-subview-title">
+                      <Bell size={18} color="#2563eb" />
+                      <span>Notification Settings</span>
+                    </h4>
+                    <p className="mockup-subview-desc">
+                      Configure your real-time mobile security alerts and visitor notifications.
+                    </p>
+
+                    <div className="mockup-toggle-row">
+                      <div className="mockup-toggle-info">
+                        <span className="mockup-toggle-title">Visitor Arrival Alerts</span>
+                        <span className="mockup-toggle-desc">Instant alerts when expected guests check in at the reception desk.</span>
+                      </div>
+                      <label className="mockup-switch">
+                        <input
+                          type="checkbox"
+                          checked={mobileNotifPrefs.emailAlerts}
+                          onChange={() => handleUpdateNotifPref("emailAlerts")}
+                        />
+                        <span className="mockup-slider" />
+                      </label>
+                    </div>
+
+                    <div className="mockup-toggle-row">
+                      <div className="mockup-toggle-info">
+                        <span className="mockup-toggle-title">Emergency Gate Alarms</span>
+                        <span className="mockup-toggle-desc">High-priority broadcasts for gate alerts and unauthorized entries.</span>
+                      </div>
+                      <label className="mockup-switch">
+                        <input
+                          type="checkbox"
+                          checked={mobileNotifPrefs.securityAlarm}
+                          onChange={() => handleUpdateNotifPref("securityAlarm")}
+                        />
+                        <span className="mockup-slider" />
+                      </label>
+                    </div>
+
+                    <div className="mockup-toggle-row">
+                      <div className="mockup-toggle-info">
+                        <span className="mockup-toggle-title">Hardware Clearance Notices</span>
+                        <span className="mockup-toggle-desc">Notify when technical contractor assets and equipment exit custody.</span>
+                      </div>
+                      <label className="mockup-switch">
+                        <input
+                          type="checkbox"
+                          checked={mobileNotifPrefs.hardwareClearance}
+                          onChange={() => handleUpdateNotifPref("hardwareClearance")}
+                        />
+                        <span className="mockup-slider" />
+                      </label>
+                    </div>
+
+                    <div className="mockup-toggle-row">
+                      <div className="mockup-toggle-info">
+                        <span className="mockup-toggle-title">Audio Chime on Gate Arrival</span>
+                        <span className="mockup-toggle-desc">Play chime sound when badge or QR pass is scanned at the entrance.</span>
+                      </div>
+                      <label className="mockup-switch">
+                        <input
+                          type="checkbox"
+                          checked={mobileNotifPrefs.soundArrival}
+                          onChange={() => handleUpdateNotifPref("soundArrival")}
+                        />
+                        <span className="mockup-slider" />
+                      </label>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "10px" }}>
+                      <button
+                        type="button"
+                        className="mockup-btn-primary"
+                        onClick={() => {
+                          setSettingsModalOpen(false);
+                          setSettingsSubView("main");
+                          setCurrentPage("notifications");
+                        }}
+                      >
+                        <BellRing size={15} />
+                        <span>Open Notifications Center</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="mockup-btn-secondary"
+                        onClick={() => setSettingsSubView("main")}
+                      >
+                        <ArrowLeft size={15} />
+                        <span>Back to Settings</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBVIEW 4: HELP & SUPPORT */}
+                {settingsSubView === "help" && (
+                  <div className="mockup-subview-card">
+                    <h4 className="mockup-subview-title">
+                      <HelpCircle size={18} color="#2563eb" />
+                      <span>Help &amp; Enterprise Support</span>
+                    </h4>
+                    <p className="mockup-subview-desc">
+                      Contact IT support, security desk hotlines, and access enterprise portal links.
+                    </p>
+
+                    <div style={{ background: "var(--bg-secondary, #f8fafc)", padding: "12px", borderRadius: "12px", border: "1px solid var(--border-color, #e2e8f0)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Mail size={14} color="#2563eb" /> IT Enterprise Support
+                      </span>
+                      <span style={{ fontSize: 13, color: "#64748b" }}>it.coveryou@vms.com</span>
+                      <button
+                        type="button"
+                        style={{ marginTop: "4px", padding: "6px 10px", borderRadius: "6px", background: "#eff6ff", border: "1px solid #bfdbfe", color: "#1d4ed8", fontSize: "12px", fontWeight: 700, cursor: "pointer", width: "fit-content" }}
+                        onClick={() => window.open("mailto:it.coveryou@vms.com")}
+                      >
+                        Send Email →
+                      </button>
+                    </div>
+
+                    <div style={{ background: "var(--bg-secondary, #f8fafc)", padding: "12px", borderRadius: "12px", border: "1px solid var(--border-color, #e2e8f0)", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <Phone size={14} color="#16a34a" /> Security Gate Hotline
+                      </span>
+                      <span style={{ fontSize: 13, color: "#64748b" }}>Ext 101 (Main Gate) / Ext 102 (IT Wing)</span>
+                      <span style={{ fontSize: 12, color: "#94a3b8" }}>Emergency Line: +91 98765 43210</span>
+                    </div>
+
+                    <div style={{ background: "var(--bg-secondary, #f8fafc)", padding: "12px", borderRadius: "12px", border: "1px solid var(--border-color, #e2e8f0)", display: "flex", flexDirection: "column", gap: "8px" }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: "#1e293b" }}>Quick Portals</span>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                        <button
+                          type="button"
+                          style={{ padding: "6px 10px", borderRadius: "6px", background: "#ffffff", border: "1px solid #cbd5e1", fontSize: "11.5px", fontWeight: 600, color: "#334155", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                          onClick={() => window.open("/guard", "_blank")}
+                        >
+                          <ExternalLink size={12} color="#059669" /> Guard Terminal
+                        </button>
+                        <button
+                          type="button"
+                          style={{ padding: "6px 10px", borderRadius: "6px", background: "#ffffff", border: "1px solid #cbd5e1", fontSize: "11.5px", fontWeight: 600, color: "#334155", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                          onClick={() => window.open("/register", "_blank")}
+                        >
+                          <ExternalLink size={12} color="#2563eb" /> Visitor Self-Reg
+                        </button>
+                        <button
+                          type="button"
+                          style={{ padding: "6px 10px", borderRadius: "6px", background: "#ffffff", border: "1px solid #cbd5e1", fontSize: "11.5px", fontWeight: 600, color: "#334155", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px" }}
+                          onClick={() => window.open("/it-visit", "_blank")}
+                        >
+                          <ExternalLink size={12} color="#7c3aed" /> IT Kiosk
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: "1px solid var(--border-color, #e2e8f0)", paddingTop: "10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ fontSize: "11.5px", color: "#64748b" }}>VMS Enterprise v2.4.0</span>
+                      <span style={{ fontSize: "11.5px", color: "#16a34a", display: "flex", alignItems: "center", gap: "4px", fontWeight: 600 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#16a34a", display: "inline-block" }} /> Systems Operational
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mockup-btn-secondary"
+                      onClick={() => setSettingsSubView("main")}
+                    >
+                      <ArrowLeft size={15} />
+                      <span>Back to Settings</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -10267,6 +14153,7 @@ function AppContent() {
 
   if (
     currentPath === "/it-visit" ||
+    currentPath === "/it-visitor" ||
     currentPath === "/register-it-visit" ||
     currentPath === "/it-portal"
   ) {

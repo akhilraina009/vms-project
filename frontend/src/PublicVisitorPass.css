@@ -1233,6 +1233,9 @@
 
   .pass-lanyard-notch,
   .pass-action-print,
+  .pass-actions-row,
+  .pass-action-download,
+  .pass-download-toast,
   .pass-lightbox-backdrop,
   .pass-badge-copy-icon {
     display: none !important;
@@ -1255,5 +1258,81 @@
     grid-template-columns: 1fr 1fr !important;
     gap: 8px !important;
     padding: 12px 14px !important;
+  }
+}
+
+
+/* Download & Auto-Download Actions */
+.pass-actions-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  max-width: 440px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 12px auto 16px;
+}
+
+.pass-action-download {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.28);
+  flex: 1 1 180px;
+  max-width: 220px;
+}
+
+.pass-action-download:hover {
+  background: #1d4ed8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.38);
+}
+
+.pass-action-download:active {
+  transform: scale(0.98);
+}
+
+.pass-download-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #334155;
+  padding: 11px 22px;
+  border-radius: 99px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.3);
+  z-index: 99999;
+  animation: passToastSlide 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pass-download-toast svg {
+  color: #10b981;
+}
+
+@keyframes passToastSlide {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
   }
 }

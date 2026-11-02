@@ -38,3 +38,23 @@ class Employee(Base):
         default="ACTIVE",
         nullable=False
     )
+
+    phone_number: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True
+    )
+
+    designation: Mapped[str | None] = mapped_column(
+        String(150),
+        nullable=True
+    )
+
+    office_location: Mapped[str | None] = mapped_column(
+        String(150),
+        nullable=True
+    )
+
+    notes: Mapped[str | None] = mapped_column(
+        String(500),
+        nullable=True
+    )

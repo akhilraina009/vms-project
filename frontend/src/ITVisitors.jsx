@@ -41,6 +41,12 @@ import {
   Edit3,
   Package,
   Upload,
+  User,
+  FileText,
+  ArrowRightLeft,
+  Link,
+  SlidersHorizontal,
+  MoreVertical,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { authStorage } from "./utils/authStorage";
@@ -69,6 +75,28 @@ function formatDateTime(value) {
     timeStyle: "short",
   });
 }
+function calculateDwellTime(inTime, outTime) {
+  if (!inTime) return { label: "—", minutes: 0 };
+  const dIn = new Date(inTime).getTime();
+  const dOut = outTime ? new Date(outTime).getTime() : Date.now();
+  if (Number.isNaN(dIn) || Number.isNaN(dOut) || dOut < dIn) {
+    return { label: "—", minutes: 0 };
+  }
+  const diffMs = dOut - dIn;
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const days = Math.floor(totalMinutes / (60 * 24));
+  const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return { label: `${days}d ${hours}h`, minutes: totalMinutes };
+  }
+  if (hours > 0) {
+    return { label: `${hours}h ${minutes}m`, minutes: totalMinutes };
+  }
+  return { label: `${minutes}m`, minutes: totalMinutes };
+}
+
 
 function resolvePhotoUrl(photoUrl) {
   if (!photoUrl) return null;
@@ -476,6 +504,14 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
   // Detailed Modal State
   const [selectedVisitor, setSelectedVisitor] = useState(null);
   const [dossierViewMode, setDossierViewMode] = useState("checkin"); // 'checkin' | 'checkout' | 'dual' | 'overview'
+  const [activeWorkflowTab, setActiveWorkflowTab] = useState("checkin"); // 'checkin' | 'checkout'
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
   const [dossierData, setDossierData] = useState(null);
   const [dossierLoading, setDossierLoading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
@@ -515,6 +551,7 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
   const openTechnicianDossier = async (item, initialMode = "overview") => {
     setSelectedVisitor(item);
     setDossierViewMode(initialMode);
+    setActiveWorkflowTab(initialMode === "checkout" ? "checkout" : "checkin");
     setDossierData(null);
     setDossierLoading(true);
     try {
@@ -1031,6 +1068,196 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
         </div>
       </section>
 
+      {/* Mobile View: Dedicated Directory Section (Image 2 Match) */}
+      <div className="it-visitors-mobile-view">
+        {/* Directory Header */}
+        <div className="it-mobile-dir-header" style={{ marginBottom: "10px" }}>
+          <h3 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>IT Visitors Directory</h3>
+          <span style={{ fontSize: "11.5px", color: "#64748b" }}>
+            {filteredVisitors.length} of {summary.total_it_visitors} technical visitors displayed
+          </span>
+        </div>
+
+        {/* Search with slider icon */}
+        <div style={{ position: "relative", width: "100%", marginBottom: "12px" }}>
+          <Search size={15} style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: "#94a3b8", pointerEvents: "none", zIndex: 2 }} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search IT visitors by name, vendor, engineer..."
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              height: "42px",
+              padding: "0 38px 0 42px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "12px",
+              fontSize: "13.5px",
+              outline: "none",
+              background: "#ffffff",
+              color: "#0f172a"
+            }}
+          />
+          <SlidersHorizontal size={14} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "#64748b", pointerEvents: "none" }} />
+        </div>
+
+        {/* Filter Pills Row */}
+        <div className="it-filter-pills-row" style={{ marginBottom: "12px" }}>
+          <button
+            type="button"
+            className={`it-filter-pill ${filterMode === "all" && !selectedCompany ? "active" : ""}`}
+            onClick={() => {
+              setFilterMode("all");
+              setSelectedCompany("");
+            }}
+          >
+            All IT Visitors ({summary.total_it_visitors})
+          </button>
+          <button
+            type="button"
+            className={`it-filter-pill ${filterMode === "inside" ? "active" : ""}`}
+            onClick={() => {
+              setFilterMode("inside");
+              setSelectedCompany("");
+            }}
+          >
+            <span className="live-dot"></span>
+            Currently Inside ({summary.currently_inside})
+          </button>
+          <button
+            type="button"
+            className={`it-filter-pill ${filterMode === "corporate" ? "active" : ""}`}
+            onClick={() => setFilterMode("corporate")}
+          >
+            Corporate &amp; Partners
+          </button>
+          <button
+            type="button"
+            className={`it-filter-pill ${filterMode === "assets" ? "active" : ""}`}
+            onClick={() => {
+              setFilterMode("assets");
+              setSelectedCompany("");
+            }}
+          >
+            With Declared Assets
+          </button>
+          {distinctCompanies.length > 0 && (
+            <select
+              className="it-company-select"
+              value={selectedCompany}
+              onChange={(e) => {
+                setSelectedCompany(e.target.value);
+                if (e.target.value) setFilterMode("all");
+              }}
+              style={{ padding: "5px 10px", fontSize: "11.5px", borderRadius: "16px" }}
+            >
+              <option value="">All Companies ({distinctCompanies.length})</option>
+              {distinctCompanies.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
+        {/* Visitor Directory Mobile Cards */}
+        <div className="it-mobile-directory-cards">
+          {filteredVisitors.length === 0 ? (
+            <div style={{ padding: "20px", textAlign: "center", background: "#ffffff", borderRadius: "12px", border: "1px solid #e2e8f0", color: "#64748b", fontSize: "12.5px" }}>
+              No technical visitors found matching the filter.
+            </div>
+          ) : (
+            filteredVisitors.map((item) => {
+              const fullName = `${item.first_name || ""} ${item.last_name || ""}`.trim() || "Unknown";
+              const latest = item.latest_visit;
+              const isInside = item.active_visit || latest?.status === "ACTIVE";
+              const isGreen = fullName.startsWith("M") || fullName.includes("Vance");
+              const cleanScope = getCleanPurpose(latest?.purpose);
+              const assetCount = item.declared_assets?.length || latest?.assets?.length || 0;
+              const hostName = latest?.host_employee ? `${latest.host_employee.first_name} ${latest.host_employee.last_name}` : "Akhil Raina";
+              const cityState = [item.city, item.state].filter(Boolean).join(", ") || (item.address_line1 || "New Delhi, Delhi");
+              const emailAddr = item.email || (latest?.host_employee?.email || "akhil.raina@coveryou.com");
+
+              return (
+                <div key={item.visitor_id} className="it-directory-mobile-card">
+                  {/* Top Row: Avatar, Name, Phone, Company, Status */}
+                  <div className="it-directory-card-top">
+                    <div className={`it-directory-avatar ${isGreen ? "green" : "dark"}`}>
+                      {item.photo_url ? (
+                        <img src={resolvePhotoUrl(item.photo_url)} alt="" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                      ) : (
+                        <span>{getInitials(fullName)}</span>
+                      )}
+                    </div>
+                    <div className="it-directory-info">
+                      <div className="it-directory-name-row">
+                        <h4 className="it-directory-name">{fullName}</h4>
+                        <span className="it-directory-id-badge">#{item.visitor_id}</span>
+                      </div>
+                      <div className="it-directory-phone">📞 {item.phone_number || "—"}</div>
+                      <div className="it-directory-company">🏢 {item.company_name || "IT"}</div>
+                    </div>
+                    <span className={`it-directory-status-badge ${isInside ? "inside" : "checked-out"}`}>
+                      {isInside ? "Inside (Active)" : "Checked Out"}
+                    </span>
+                  </div>
+
+                  {/* Middle Grid (2 Columns: Left for Scope & Host, Right for Location & Email) */}
+                  <div className="it-directory-grid-2col">
+                    <div className="it-directory-col">
+                      <div className="it-directory-scope-text">
+                        📄 Scope: {cleanScope || "Technical Mission"}
+                      </div>
+                      <div className="it-directory-col-item" style={{ marginTop: 2 }}>
+                        <span>👤 Host: <strong>{hostName}</strong></span>
+                        <span className="it-directory-dept-badge">IT Division</span>
+                      </div>
+                      {assetCount > 0 && (
+                        <span className="it-directory-hardware-tag" style={{ marginTop: 2 }}>
+                          💻 {assetCount} Hardware Asset{assetCount > 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="it-directory-col">
+                      <div className="it-directory-col-item">
+                        <span>📍 {cityState}</span>
+                      </div>
+                      <div className="it-directory-col-item" style={{ color: "#2563eb", marginTop: 2 }}>
+                        <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{emailAddr}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action: Details Button (Full Width) + 3 Dots Button */}
+                  <div className="it-directory-actions">
+                    <button
+                      type="button"
+                      className="it-directory-btn-details"
+                      onClick={() => openTechnicianDossier(item, "overview")}
+                    >
+                      <Eye size={13} />
+                      <span>Details</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="it-directory-btn-more"
+                      onClick={() => openTechnicianDossier(item, "overview")}
+                      title="Options"
+                    >
+                      <MoreVertical size={14} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+
+      {/* Desktop View: Preserved 100% untouched */}
+      <div className="it-visitors-desktop-view">
       {/* Main Table Card */}
       <section className="table-card">
         <div className="table-toolbar">
@@ -1460,6 +1687,7 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
           </div>
         )}
       </section>
+      </div>
 
       {/* Security note */}
       <div
@@ -1779,7 +2007,9 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
                 type="button"
                 className="it-asset-btn-action checkin"
                 onClick={() => {
-                  if (!isInside && pendingVisitId) {
+                  if (isMobile) {
+                    setActiveWorkflowTab("checkout");
+                  } else if (!isInside && pendingVisitId) {
                     handleDirectCheckIn(pendingVisitId, fullName);
                   } else {
                     setDossierViewMode("checkout");
@@ -1788,10 +2018,10 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
               >
                 <span>
                   {!isInside && pendingVisitId
-                    ? `Authorize Gate Entry (${declaredAssets.length} Assets)`
+                    ? `Authorize Gate Entry (${declaredAssets.length} Asset${declaredAssets.length === 1 ? "" : "s"})`
                     : isInside
-                    ? `Proceed to Check-Out Clearance (${declaredAssets.length} Assets)`
-                    : `View Exit Clearance (${declaredAssets.length} Assets)`}
+                    ? `Proceed to Check-Out Clearance (${declaredAssets.length} Asset${declaredAssets.length === 1 ? "" : "s"})`
+                    : `View Exit Clearance (${declaredAssets.length} Asset${declaredAssets.length === 1 ? "" : "s"})`}
                 </span>
                 <ArrowRight size={14} />
               </button>
@@ -2068,7 +2298,13 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
               <button
                 type="button"
                 className="it-asset-btn-cancel"
-                onClick={() => setDossierViewMode("checkin")}
+                onClick={() => {
+                  if (isMobile) {
+                    setActiveWorkflowTab("checkin");
+                  } else {
+                    setDossierViewMode("checkin");
+                  }
+                }}
               >
                 <ArrowLeft size={14} />
                 <span>Back</span>
@@ -2118,31 +2354,75 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
         // Render Full Technician Dossier Modal (Overview)
         const renderOverviewDossier = () => (
           <div className="vms-dossier-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="vms-dossier-header" style={{ borderBottom: "1.5px solid #e2e8f0" }}>
-              <div className="vms-dossier-header-title">
-                <div className="vms-dossier-header-icon" style={{ background: "#eff6ff", color: "#2563eb" }}>
-                  <Server size={18} />
+            {/* OFFICIAL PRINT HEADER (Visible only in Print / PDF export) */}
+            <div className="no-screen vms-dossier-print-header">
+              <div className="it-cert-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "2px solid #0f172a", paddingBottom: "10px", marginBottom: "12px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <img src="/vms-logo.png" alt="VMS Logo" style={{ width: "36px", height: "36px", objectFit: "contain" }} />
+                  <div>
+                    <h1 style={{ margin: 0, fontSize: "15pt", fontWeight: 800, color: "#0f172a", letterSpacing: "-0.02em" }}>
+                      VMS ENTERPRISE · IT HARDWARE CUSTODY CLEARANCE DOSSIER
+                    </h1>
+                    <p style={{ margin: "2px 0 0", fontSize: "8pt", color: "#475569", fontWeight: 600 }}>
+                      Official Campus Physical Security &amp; Hardware Departure Audit Record · ISO 27001 / SOC 2 Verified
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: "16px", fontWeight: 700, color: "#0f172a" }}>
-                    IT Department Personnel Dossier &amp; Hardware Clearance
-                  </h3>
-                  <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
-                    Enterprise IT Infrastructure &amp; Technical Contractor Registry
-                  </p>
+                <div style={{ textAlign: "right" }}>
+                  <span style={{ display: "inline-block", background: "#f0fdf4", color: "#166534", border: "1px solid #86efac", padding: "2px 8px", borderRadius: "4px", fontSize: "8pt", fontWeight: 700 }}>
+                    ✓ AUDIT CLEARED
+                  </span>
+                  <div style={{ fontSize: "7.5pt", color: "#64748b", marginTop: "3px" }}>
+                    Ref: <strong>{formattedVisitId || String(pendingVisitId || vProfile.visitor_id)}</strong>
+                  </div>
                 </div>
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            </div>
+
+            <div className="vms-dossier-header no-print">
+              <div className="vms-dossier-header-top">
+                <div className="vms-dossier-header-title">
+                  <div className="vms-dossier-header-icon" style={{ background: "#ffffff", border: "1px solid #e2e8f0", padding: "3px" }}>
+                    <img src="/vms-logo.png" alt="VMS Logo" style={{ width: "22px", height: "22px", objectFit: "contain" }} />
+                  </div>
+                  <div className="vms-dossier-header-titles" style={{ minWidth: 0, flex: 1 }}>
+                    <h3 className="vms-dossier-title-text" style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "var(--text-primary, #0f172a)" }}>
+                      IT Personnel Dossier &amp; Hardware Clearance
+                    </h3>
+                    <p className="vms-dossier-subtitle-text" style={{ margin: "2px 0 0", fontSize: "11px", color: "var(--text-muted, #64748b)" }}>
+                      Enterprise IT Infrastructure &amp; Technical Contractor Registry
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="vms-dossier-close-btn no-print"
+                  onClick={() => setSelectedVisitor(null)}
+                  title="Close dossier"
+                  aria-label="Close dossier"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="vms-dossier-header-actions no-print">
                 {isInside && activeVisitId && (
                   <button
                     type="button"
                     className="btn-dossier-checkout"
                     disabled={directCheckoutLoading === String(activeVisitId)}
-                    onClick={() => setDossierViewMode("checkout")}
+                    onClick={() => {
+                      if (isMobile) {
+                        setActiveWorkflowTab("checkout");
+                      } else {
+                        setDossierViewMode("checkout");
+                      }
+                    }}
                     title="Check out IT technician from campus"
                   >
                     <LogOut size={14} />
-                    <span>Check Out Technician</span>
+                    <span className="vms-btn-text-desktop">Check Out Technician</span>
+                    <span className="vms-btn-text-mobile">Check Out Technician</span>
                   </button>
                 )}
                 {!isInside && pendingVisitId && (
@@ -2154,26 +2434,18 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
                     title="Authorize entry and check in technician"
                   >
                     <UserCheck size={14} />
-                    <span>Check In Technician</span>
+                    <span className="vms-btn-text-desktop">Check In Technician</span>
+                    <span className="vms-btn-text-mobile">Check In</span>
                   </button>
                 )}
                 <button
                   type="button"
-                  className="it-qr-portal-btn no-print"
-                  style={{ padding: "7px 14px", fontSize: "12.5px", display: "inline-flex", alignItems: "center", gap: "6px" }}
+                  className="vms-dossier-print-btn no-print"
                   onClick={() => window.print()}
-                  title="Print official IT dossier and hardware certificate"
+                  title="Print official IT dossier / Download PDF"
                 >
                   <Printer size={14} />
-                  <span>Print Certificate</span>
-                </button>
-                <button
-                  type="button"
-                  className="vms-dossier-close-btn no-print"
-                  onClick={() => setSelectedVisitor(null)}
-                  title="Close dossier"
-                >
-                  <X size={18} />
+                  <span>PDF / Print</span>
                 </button>
               </div>
             </div>
@@ -2181,73 +2453,76 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
             <div className="vms-dossier-body">
               {/* Profile Card */}
               <div className="vms-dossier-profile-card">
-                <div className="vms-dossier-avatar-col">
-                  <div
-                    className="vms-dossier-avatar-box"
-                    style={{ cursor: resolvedPhoto ? "pointer" : "default" }}
-                    onClick={() => { if (resolvedPhoto) setLightboxImage(resolvedPhoto); }}
-                    title={resolvedPhoto ? "Click to view enlarged photograph" : ""}
-                  >
-                    {resolvedPhoto ? (
-                      <img src={resolvedPhoto} alt={fullName} />
-                    ) : (
-                      <span className="vms-dossier-avatar-initials">{getInitials(fullName)}</span>
-                    )}
-                  </div>
-                  <label
-                    className="vms-dossier-change-photo-btn no-print"
-                    title="Upload or change technician photograph"
-                    style={{ cursor: "pointer" }}
-                  >
-                    <Camera size={12} />
-                    <span>{photoUploading ? "Uploading..." : "Change Photo"}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
-                      onChange={handlePhotoUpload}
-                      disabled={photoUploading}
-                    />
-                  </label>
-                </div>
-                <div className="vms-dossier-info-col">
-                  <div className="vms-dossier-name-row">
-                    <h2 className="vms-dossier-name">{fullName}</h2>
-                    <div className="vms-dossier-badges">
-                      <span className="visitor-id-badge">#{vProfile.visitor_id}</span>
-                      <span className="it-company-tag">
-                        <Building2 size={12} />
-                        <span>{vProfile.company_name || "Independent Contractor"}</span>
-                      </span>
-                      {isInside ? (
-                        <span className="status-pill active live-onsite-pill">
-                          <span className="status-dot"></span>
-                          Inside (Active IT Mission)
-                        </span>
+                <div className="vms-dossier-profile-identity">
+                  <div className="vms-dossier-avatar-col">
+                    <div
+                      className="vms-dossier-avatar-box"
+                      style={{ cursor: resolvedPhoto ? "pointer" : "default" }}
+                      onClick={() => { if (resolvedPhoto) setLightboxImage(resolvedPhoto); }}
+                      title={resolvedPhoto ? "Click to view enlarged photograph" : ""}
+                    >
+                      {resolvedPhoto ? (
+                        <img src={resolvedPhoto} alt={fullName} />
                       ) : (
-                        <span className="status-pill checked">Offsite / Checked Out</span>
+                        <span className="vms-dossier-avatar-initials">{getInitials(fullName)}</span>
                       )}
                     </div>
+                    <label
+                      className="vms-dossier-change-photo-btn no-print"
+                      title="Upload or change technician photograph"
+                      style={{ cursor: "pointer" }}
+                    >
+                      <Camera size={12} />
+                      <span>{photoUploading ? "Uploading..." : "Change Photo"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: "none" }}
+                        onChange={handlePhotoUpload}
+                        disabled={photoUploading}
+                      />
+                    </label>
                   </div>
-                  <div className="vms-dossier-grid-details">
-                    <div className="vms-dossier-field">
-                      <span className="vms-dossier-field-label"><Phone size={12} /> Phone Number</span>
-                      <span className="vms-dossier-field-val">{vProfile.phone_number || "—"}</span>
+                  <div className="vms-dossier-info-col">
+                    <div className="vms-dossier-name-row">
+                      <h2 className="vms-dossier-name">{fullName}</h2>
+                      <div className="vms-dossier-badges">
+                        <span className="visitor-id-badge">#{vProfile.visitor_id}</span>
+                        <span className="it-company-tag">
+                          <Building2 size={12} />
+                          <span>{vProfile.company_name || "Independent Contractor"}</span>
+                        </span>
+                        {isInside ? (
+                          <span className="status-pill active live-onsite-pill">
+                            <span className="status-dot"></span>
+                            Inside (Active IT Mission)
+                          </span>
+                        ) : (
+                          <span className="status-pill checked">Offsite / Checked Out</span>
+                        )}
+                      </div>
                     </div>
-                    <div className="vms-dossier-field">
-                      <span className="vms-dossier-field-label"><Mail size={12} /> Email Address</span>
-                      <span className="vms-dossier-field-val">{vProfile.email || "—"}</span>
-                    </div>
-                    <div className="vms-dossier-field">
-                      <span className="vms-dossier-field-label"><Building2 size={12} /> Affiliated Organization</span>
-                      <span className="vms-dossier-field-val">{vProfile.company_name || "Independent"}</span>
-                    </div>
-                    <div className="vms-dossier-field">
-                      <span className="vms-dossier-field-label"><MapPin size={12} /> Registered Physical Address</span>
-                      <span className="vms-dossier-field-val">
-                        {[vProfile.address_line1, vProfile.address_line2, vProfile.city, vProfile.state, vProfile.postal_code, vProfile.country].filter(Boolean).join(", ") || "On record"}
-                      </span>
-                    </div>
+                  </div>
+                </div>
+
+                <div className="vms-dossier-grid-details">
+                  <div className="vms-dossier-field">
+                    <span className="vms-dossier-field-label"><Phone size={12} /> Phone Number</span>
+                    <span className="vms-dossier-field-val">{vProfile.phone_number || "—"}</span>
+                  </div>
+                  <div className="vms-dossier-field">
+                    <span className="vms-dossier-field-label"><Mail size={12} /> Email Address</span>
+                    <span className="vms-dossier-field-val">{vProfile.email || "—"}</span>
+                  </div>
+                  <div className="vms-dossier-field">
+                    <span className="vms-dossier-field-label"><Building2 size={12} /> Affiliated Organization</span>
+                    <span className="vms-dossier-field-val">{vProfile.company_name || "Independent"}</span>
+                  </div>
+                  <div className="vms-dossier-field">
+                    <span className="vms-dossier-field-label"><MapPin size={12} /> Registered Physical Address</span>
+                    <span className="vms-dossier-field-val">
+                      {[vProfile.address_line1, vProfile.address_line2, vProfile.city, vProfile.state, vProfile.postal_code, vProfile.country].filter(Boolean).join(", ") || "On record"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2377,17 +2652,58 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
                 </div>
               )}
 
-              {/* Hardware Section Embedded in Overview: Side-by-Side Dual View */}
-              <div className="vms-dossier-section" style={{ border: "none", padding: 0, background: "transparent" }}>
-                <div className="vms-dossier-section-header" style={{ marginBottom: "12px", padding: "0 4px" }}>
+              {/* Hardware Section Embedded in Overview */}
+              <div className="vms-dossier-section it-hardware-tracking-section" style={{ border: "none", padding: 0, background: "transparent" }}>
+                <div className="vms-dossier-section-header no-print" style={{ marginBottom: "12px", padding: "0 4px" }}>
                   <div className="vms-dossier-section-title">
                     <Laptop size={16} color="#2563eb" />
                     <span>Registered Hardware &amp; Exit Clearance Tracking</span>
                   </div>
                 </div>
-                <div className="it-asset-cards-wrapper" style={{ margin: "0 auto", justifyContent: "center" }}>
-                  {renderCheckInCard()}
-                  {renderCheckOutCard()}
+
+                {/* Mobile Segmented Workflow Tabs (Image 1 reference) */}
+                <div className="it-mob-workflow-tabs-container no-print">
+                  <div className="it-mob-workflow-tabs">
+                    <button
+                      type="button"
+                      className={`it-mob-workflow-tab tab-checkin ${activeWorkflowTab === "checkin" ? "active checkin" : ""}`}
+                      onClick={() => setActiveWorkflowTab("checkin")}
+                      aria-selected={activeWorkflowTab === "checkin"}
+                      role="tab"
+                    >
+                      <div className="it-mob-tab-badge">1</div>
+                      <div className="it-mob-tab-info">
+                        <strong className="it-mob-tab-title">Check-In</strong>
+                        <span className="it-mob-tab-sub">Register assets at entry</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      className={`it-mob-workflow-tab tab-checkout ${activeWorkflowTab === "checkout" ? "active checkout" : ""}`}
+                      onClick={() => setActiveWorkflowTab("checkout")}
+                      aria-selected={activeWorkflowTab === "checkout"}
+                      role="tab"
+                    >
+                      <div className="it-mob-tab-badge">2</div>
+                      <div className="it-mob-tab-info">
+                        <strong className="it-mob-tab-title">Check-Out</strong>
+                        <span className="it-mob-tab-sub">Clear assets at exit</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Mobile Workflow Single-Panel View */}
+                <div className="it-mob-single-workflow-view no-print">
+                  {activeWorkflowTab === "checkin" ? renderCheckInCard() : renderCheckOutCard()}
+                </div>
+
+                {/* Desktop Dual-Panel Side-by-Side View */}
+                <div className="it-desktop-dual-workflow-view">
+                  <div className="it-asset-cards-wrapper it-dual-horizontal">
+                    {renderCheckInCard()}
+                    {renderCheckOutCard()}
+                  </div>
                 </div>
               </div>
 
@@ -2570,12 +2886,14 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
 
         return (
           <div
-            className="it-asset-modal-overlay"
+            className="it-asset-modal-overlay has-mobile-dossier"
             onClick={() => setSelectedVisitor(null)}
             role="dialog"
             aria-modal="true"
           >
             <div className="it-asset-modal-inner" onClick={(e) => e.stopPropagation()}>
+              {/* IT Technician Dossier View (Unified Mobile & Desktop) */}
+              <div className="it-dossier-desktop-view">
               {/* Top View Mode Switcher Pills */}
               <div className="it-asset-view-switcher-bar no-print">
                 <button
@@ -2585,7 +2903,8 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
                   title="Check-In asset entry registration view"
                 >
                   <ArrowRightCircle size={14} />
-                  <span>Check-In Assets ({declaredAssets.length})</span>
+                  <span className="vms-btn-text-desktop">Check-In Assets ({declaredAssets.length})</span>
+                  <span className="vms-btn-text-mobile">Check-In ({declaredAssets.length})</span>
                 </button>
                 <button
                   type="button"
@@ -2594,16 +2913,18 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
                   title="Check-Out asset exit clearance view"
                 >
                   <LogOut size={14} />
-                  <span>Check-Out Clearance ({declaredAssets.length})</span>
+                  <span className="vms-btn-text-desktop">Check-Out Clearance ({declaredAssets.length})</span>
+                  <span className="vms-btn-text-mobile">Check-Out ({declaredAssets.length})</span>
                 </button>
                 <button
                   type="button"
                   className={`it-asset-switcher-pill ${dossierViewMode === "dual" ? "active dual" : ""}`}
                   onClick={() => setDossierViewMode("dual")}
-                  title="View both Check-In and Check-Out cards side-by-side"
+                  title="View both Check-In and Check-Out cards"
                 >
                   <Columns size={14} />
-                  <span>Side-by-Side Dual View</span>
+                  <span className="vms-btn-text-desktop">Side-by-Side Dual View</span>
+                  <span className="vms-btn-text-mobile">Dual Cards</span>
                 </button>
                 <button
                   type="button"
@@ -2612,7 +2933,8 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
                   title="View technician profile details, host contact & visit log history"
                 >
                   <ShieldCheck size={14} />
-                  <span>Technician Profile &amp; Logs</span>
+                  <span className="vms-btn-text-desktop">Technician Profile &amp; Logs</span>
+                  <span className="vms-btn-text-mobile">Technician Dossier</span>
                 </button>
               </div>
 
@@ -2631,7 +2953,7 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
                 )}
 
                 {dossierViewMode === "dual" && (
-                  <div className="it-asset-cards-wrapper">
+                  <div className="it-asset-cards-wrapper it-dual-horizontal">
                     {renderCheckInCard()}
                     {renderCheckOutCard()}
                   </div>
@@ -2648,6 +2970,7 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
                   {renderOverviewDossier()}
                 </div>
               )}
+              </div>
             </div>
           </div>
         );

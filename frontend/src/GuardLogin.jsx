@@ -78,8 +78,9 @@ export default function GuardLogin({ onLogin }) {
 
       const user = await userResponse.json();
 
-      if (user.role !== "GUARD" && user.role !== "ADMIN") {
-        throw new Error("Access restricted to Security Personnel (GUARD) or ADMIN.");
+      const userRole = String(user?.role || "").toUpperCase();
+      if (userRole !== "GUARD" && userRole !== "SECURITY" && userRole !== "ADMIN") {
+        throw new Error("Access restricted to Security Personnel (GUARD / SECURITY) or ADMIN.");
       }
 
       authStorage.setGuardToken(data.access_token);
