@@ -48,6 +48,12 @@ import {
   SwitchCamera,
   SlidersHorizontal,
   Eye,
+  EyeOff,
+  Save,
+  Volume2,
+  VolumeX,
+  HelpCircle,
+  Check,
   Settings,
   Link2,
   Copy,
@@ -214,6 +220,175 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
   const showToast = (msg) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(""), 4500);
+  };
+
+  // Mobile More / Settings Interactive Modal State
+  const [activeSettingsModal, setActiveSettingsModal] = useState(null); // 'profile' | 'terminal' | 'notifications' | 'password' | 'support' | 'signout' | null
+
+  // 1. Guard Profile Settings
+  const [guardProfile, setGuardProfile] = useState(() => ({
+    name: localStorage.getItem("vms_guard_name") || currentUser?.full_name || "Security Officer",
+    badgeId: localStorage.getItem("vms_guard_badge") || "SEC-01",
+    gate: localStorage.getItem("vms_guard_gate") || "Main Reception (Gate 01)",
+    phone: localStorage.getItem("vms_guard_phone") || "+91 98765 43210",
+    shift: localStorage.getItem("vms_guard_shift") || "Shift A (08:00 - 16:00)",
+  }));
+
+  // 2. Gate Terminal Settings
+  const [terminalSettings, setTerminalSettings] = useState(() => ({
+    terminalId: localStorage.getItem("vms_term_id") || "GT-TERM-NORTH-01",
+    gateLocation: localStorage.getItem("vms_term_gate") || "Main Reception (Gate 01)",
+    autoScan: localStorage.getItem("vms_term_autoscan") !== "false",
+    playChime: localStorage.getItem("vms_term_chime") !== "false",
+    autoPrint: localStorage.getItem("vms_term_autoprint") === "true",
+    offlineSync: localStorage.getItem("vms_term_offline") !== "false",
+  }));
+
+  // 3. Notification Preferences
+  const [notifPreferences, setNotifPreferences] = useState(() => ({
+    vipArrivals: localStorage.getItem("vms_pref_vip") !== "false",
+    hostDecisions: localStorage.getItem("vms_pref_host") !== "false",
+    itHardwareAlerts: localStorage.getItem("vms_pref_ithw") !== "false",
+    overstayWarnings: localStorage.getItem("vms_pref_overstay") !== "false",
+    gateEmergency: localStorage.getItem("vms_pref_emergency") !== "false",
+    soundMuted: localStorage.getItem("vms_pref_muted") === "true",
+  }));
+
+  // 4. Change Password State
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+    showCurrent: false,
+    showNew: false,
+    showConfirm: false,
+    submitting: false,
+    error: "",
+    success: "",
+  });
+
+  // 5. Help & Support State
+  const [supportTicket, setSupportTicket] = useState({
+    category: "Scanner Hardware Issue",
+    details: "",
+    submitting: false,
+    ticketNumber: "",
+  });
+
+  const handleSaveProfile = (e) => {
+    if (e) e.preventDefault();
+    localStorage.setItem("vms_guard_name", guardProfile.name);
+    localStorage.setItem("vms_guard_badge", guardProfile.badgeId);
+    localStorage.setItem("vms_guard_gate", guardProfile.gate);
+    localStorage.setItem("vms_guard_phone", guardProfile.phone);
+    localStorage.setItem("vms_guard_shift", guardProfile.shift);
+    showToast("Profile settings saved successfully!");
+    setActiveSettingsModal(null);
+  };
+
+  const handleSaveTerminalSettings = (e) => {
+    if (e) e.preventDefault();
+    localStorage.setItem("vms_term_id", terminalSettings.terminalId);
+    localStorage.setItem("vms_term_gate", terminalSettings.gateLocation);
+    localStorage.setItem("vms_term_autoscan", String(terminalSettings.autoScan));
+    localStorage.setItem("vms_term_chime", String(terminalSettings.playChime));
+    localStorage.setItem("vms_term_autoprint", String(terminalSettings.autoPrint));
+    localStorage.setItem("vms_term_offline", String(terminalSettings.offlineSync));
+    if (terminalSettings.playChime && typeof playAlertChime === "function") {
+      playAlertChime();
+    }
+    showToast("Terminal configuration applied!");
+    setActiveSettingsModal(null);
+  };
+
+  const handleSaveNotifPreferences = (e) => {
+    if (e) e.preventDefault();
+    localStorage.setItem("vms_pref_vip", String(notifPreferences.vipArrivals));
+    localStorage.setItem("vms_pref_host", String(notifPreferences.hostDecisions));
+    localStorage.setItem("vms_pref_ithw", String(notifPreferences.itHardwareAlerts));
+    localStorage.setItem("vms_pref_overstay", String(notifPreferences.overstayWarnings));
+    localStorage.setItem("vms_pref_emergency", String(notifPreferences.gateEmergency));
+    localStorage.setItem("vms_pref_muted", String(notifPreferences.soundMuted));
+    showToast("Notification preferences updated!");
+    setActiveSettingsModal(null);
+  };
+
+  const handleChangePassword = async (e) => {
+    if (e) e.preventDefault();
+    setPasswordForm((prev) => ({ ...prev, error: "", success: "" }));
+
+    if (!passwordForm.currentPassword) {
+      setPasswordForm((prev) => ({ ...prev, error: "Please enter your current password." }));
+      return;
+    }
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordForm((prev) => ({ ...prev, error: "New password must be at least 6 characters." }));
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordForm((prev) => ({ ...prev, error: "New passwords do not match." }));
+      return;
+    }
+
+    setPasswordForm((prev) => ({ ...prev, submitting: true }));
+    try {
+      const token = await getValidToken();
+      const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          current_password: passwordForm.currentPassword,
+          new_password: passwordForm.newPassword,
+        }),
+      });
+
+      if (res.ok) {
+        showToast("Password changed successfully!");
+        setPasswordForm({
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+          showCurrent: false,
+          showNew: false,
+          showConfirm: false,
+          submitting: false,
+          error: "",
+          success: "Password updated successfully!",
+        });
+        setTimeout(() => setActiveSettingsModal(null), 1200);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setPasswordForm((prev) => ({
+          ...prev,
+          submitting: false,
+          error: errData.detail || "Failed to update password. Please check your current password.",
+        }));
+      }
+    } catch (err) {
+      setPasswordForm((prev) => ({
+        ...prev,
+        submitting: false,
+        error: "Network error while changing password. Please try again.",
+      }));
+    }
+  };
+
+  const handleSupportTicketSubmit = (e) => {
+    if (e) e.preventDefault();
+    if (!supportTicket.details.trim()) {
+      showToast("Please describe the issue before submitting.");
+      return;
+    }
+    const tktNum = `VMS-SUP-${Math.floor(10000 + Math.random() * 90000)}`;
+    setSupportTicket((prev) => ({
+      ...prev,
+      ticketNumber: tktNum,
+      submitting: false,
+    }));
+    showToast(`Support Ticket ${tktNum} submitted to IT Helpdesk!`);
   };
 
   // Real-time Visit & Pre-Approval Notifications State
@@ -3870,10 +4045,10 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
               {/* Security Officer Profile Card */}
               <div className="sgp-mob-profile-card">
                 <div className="sgp-mob-profile-avatar">
-                  {currentUser?.email ? currentUser.email[0].toUpperCase() : "A"}
+                  {guardProfile?.name ? guardProfile.name[0].toUpperCase() : (currentUser?.email ? currentUser.email[0].toUpperCase() : "G")}
                 </div>
                 <div className="sgp-mob-profile-info">
-                  <h3>Security Officer</h3>
+                  <h3>{guardProfile.name}</h3>
                   <p>{currentUser?.email || "guard@vms.com"}</p>
                   <span className="sgp-mob-pill-online-sm">● Online</span>
                 </div>
@@ -3881,7 +4056,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
 
               {/* Settings Menu List */}
               <div className="sgp-mob-menu-card">
-                <div className="sgp-mob-menu-item" onClick={() => showToast("Opening Profile Settings")}>
+                <div className="sgp-mob-menu-item" onClick={() => setActiveSettingsModal("profile")}>
                   <div className="sgp-mob-menu-left">
                     <User size={18} color="#64748b" />
                     <span>Profile Settings</span>
@@ -3889,7 +4064,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                   <ChevronRight size={16} color="#94a3b8" />
                 </div>
 
-                <div className="sgp-mob-menu-item" onClick={() => showToast("Opening Gate Terminal Settings")}>
+                <div className="sgp-mob-menu-item" onClick={() => setActiveSettingsModal("terminal")}>
                   <div className="sgp-mob-menu-left">
                     <ShieldCheck size={18} color="#64748b" />
                     <span>Gate Terminal Settings</span>
@@ -3897,7 +4072,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                   <ChevronRight size={16} color="#94a3b8" />
                 </div>
 
-                <div className="sgp-mob-menu-item" onClick={() => setNotifDrawerOpen(true)}>
+                <div className="sgp-mob-menu-item" onClick={() => setActiveSettingsModal("notifications")}>
                   <div className="sgp-mob-menu-left">
                     <Bell size={18} color="#64748b" />
                     <span>Notification Preferences</span>
@@ -3905,7 +4080,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                   <ChevronRight size={16} color="#94a3b8" />
                 </div>
 
-                <div className="sgp-mob-menu-item" onClick={() => showToast("Change Password option available on Admin dashboard")}>
+                <div className="sgp-mob-menu-item" onClick={() => setActiveSettingsModal("password")}>
                   <div className="sgp-mob-menu-left">
                     <Lock size={18} color="#64748b" />
                     <span>Change Password</span>
@@ -3913,7 +4088,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                   <ChevronRight size={16} color="#94a3b8" />
                 </div>
 
-                <div className="sgp-mob-menu-item" onClick={() => showToast("CoverYou VMS Enterprise Support: support@coveryou.in")}>
+                <div className="sgp-mob-menu-item" onClick={() => setActiveSettingsModal("support")}>
                   <div className="sgp-mob-menu-left">
                     <AlertTriangle size={18} color="#64748b" />
                     <span>Help &amp; Support</span>
@@ -3931,9 +4106,578 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
               </div>
 
               {/* Sign Out Button */}
-              <button type="button" className="sgp-mob-signout-btn" onClick={onLogout}>
+              <button type="button" className="sgp-mob-signout-btn" onClick={() => setActiveSettingsModal("signout")}>
                 <LogOut size={16} /> Sign Out
               </button>
+
+              {/* MODAL 1: PROFILE SETTINGS */}
+              {activeSettingsModal === "profile" && (
+                <div className="sgp-mob-sheet-overlay" onClick={() => setActiveSettingsModal(null)}>
+                  <div className="sgp-mob-sheet-container" onClick={(e) => e.stopPropagation()}>
+                    <div className="sgp-mob-sheet-drag-handle" />
+                    <div className="sgp-mob-sheet-header">
+                      <div className="sgp-mob-sheet-title-group">
+                        <div className="sgp-mob-sheet-icon">
+                          <User size={20} />
+                        </div>
+                        <div>
+                          <h3 className="sgp-mob-sheet-title">Profile Settings</h3>
+                          <p className="sgp-mob-sheet-subtitle">Gate officer identity & credentials</p>
+                        </div>
+                      </div>
+                      <button type="button" className="sgp-mob-sheet-close" onClick={() => setActiveSettingsModal(null)}>
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveProfile} className="sgp-mob-sheet-body">
+                      <div className="sgp-mob-info-box">
+                        <ShieldCheck size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <div>
+                          <strong>Clearance Level: Tier 1 Gate Security</strong>
+                          <div style={{ marginTop: 2 }}>Badge ID: <code>{guardProfile.badgeId}</code> · Station Active</div>
+                        </div>
+                      </div>
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">Officer Full Name</label>
+                        <input
+                          type="text"
+                          className="sgp-mob-field-input"
+                          value={guardProfile.name}
+                          onChange={(e) => setGuardProfile({ ...guardProfile, name: e.target.value })}
+                          placeholder="e.g. Security Officer"
+                          required
+                        />
+                      </div>
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">Email Address (System Account)</label>
+                        <input
+                          type="email"
+                          className="sgp-mob-field-input"
+                          value={currentUser?.email || "guard@vms.com"}
+                          disabled
+                          style={{ opacity: 0.7, cursor: "not-allowed" }}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">Contact / Intercom Number</label>
+                        <input
+                          type="tel"
+                          className="sgp-mob-field-input"
+                          value={guardProfile.phone}
+                          onChange={(e) => setGuardProfile({ ...guardProfile, phone: e.target.value })}
+                          placeholder="+91 98765 43210"
+                        />
+                      </div>
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">Assigned Gate Station</label>
+                        <select
+                          className="sgp-mob-field-select"
+                          value={guardProfile.gate}
+                          onChange={(e) => setGuardProfile({ ...guardProfile, gate: e.target.value })}
+                        >
+                          <option value="Main Reception (Gate 01)">Main Reception (Gate 01)</option>
+                          <option value="Gate 02 - IT & Staff Lane">Gate 02 - IT & Staff Lane</option>
+                          <option value="Gate 03 - Service & Delivery">Gate 03 - Service & Delivery</option>
+                          <option value="Gate 04 - VIP Entrance">Gate 04 - VIP Entrance</option>
+                        </select>
+                      </div>
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">Duty Shift Schedule</label>
+                        <select
+                          className="sgp-mob-field-select"
+                          value={guardProfile.shift}
+                          onChange={(e) => setGuardProfile({ ...guardProfile, shift: e.target.value })}
+                        >
+                          <option value="Shift A (08:00 - 16:00)">Shift A (08:00 - 16:00) · Day Duty</option>
+                          <option value="Shift B (16:00 - 00:00)">Shift B (16:00 - 00:00) · Evening Duty</option>
+                          <option value="Shift C (00:00 - 08:00)">Shift C (00:00 - 08:00) · Night Duty</option>
+                        </select>
+                      </div>
+
+                      <div className="sgp-mob-sheet-footer" style={{ padding: "14px 0 0", margin: 0 }}>
+                        <button type="button" className="sgp-mob-sheet-btn-secondary" onClick={() => setActiveSettingsModal(null)}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="sgp-mob-sheet-btn-primary">
+                          <Save size={16} /> Save Changes
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL 2: GATE TERMINAL SETTINGS */}
+              {activeSettingsModal === "terminal" && (
+                <div className="sgp-mob-sheet-overlay" onClick={() => setActiveSettingsModal(null)}>
+                  <div className="sgp-mob-sheet-container" onClick={(e) => e.stopPropagation()}>
+                    <div className="sgp-mob-sheet-drag-handle" />
+                    <div className="sgp-mob-sheet-header">
+                      <div className="sgp-mob-sheet-title-group">
+                        <div className="sgp-mob-sheet-icon">
+                          <ShieldCheck size={20} />
+                        </div>
+                        <div>
+                          <h3 className="sgp-mob-sheet-title">Gate Terminal Settings</h3>
+                          <p className="sgp-mob-sheet-subtitle">Hardware station & clearance parameters</p>
+                        </div>
+                      </div>
+                      <button type="button" className="sgp-mob-sheet-close" onClick={() => setActiveSettingsModal(null)}>
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveTerminalSettings} className="sgp-mob-sheet-body">
+                      <div className="sgp-mob-info-box">
+                        <Laptop size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+                        <div>
+                          <strong>Terminal ID: {terminalSettings.terminalId}</strong>
+                          <div style={{ marginTop: 2 }}>Build: v2.4 Enterprise · Web Camera OCR Engine Active</div>
+                        </div>
+                      </div>
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">Active Terminal Gate</label>
+                        <select
+                          className="sgp-mob-field-select"
+                          value={terminalSettings.gateLocation}
+                          onChange={(e) => setTerminalSettings({ ...terminalSettings, gateLocation: e.target.value })}
+                        >
+                          <option value="Main Reception (Gate 01)">Main Reception (Gate 01)</option>
+                          <option value="Gate 02 - IT & Staff Lane">Gate 02 - IT & Staff Lane</option>
+                          <option value="Gate 03 - Service & Delivery">Gate 03 - Service & Delivery</option>
+                          <option value="Gate 04 - VIP Entrance">Gate 04 - VIP Entrance</option>
+                        </select>
+                      </div>
+
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">Camera Auto-Scan</span>
+                          <span className="sgp-mob-switch-desc">Instantly decode QR badges without clicking capture</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${terminalSettings.autoScan ? "active" : ""}`}
+                          onClick={() => setTerminalSettings({ ...terminalSettings, autoScan: !terminalSettings.autoScan })}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">Gate Chime Audio</span>
+                          <span className="sgp-mob-switch-desc">Play auditory tone upon badge approval or verification</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${terminalSettings.playChime ? "active" : ""}`}
+                          onClick={() => setTerminalSettings({ ...terminalSettings, playChime: !terminalSettings.playChime })}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">Auto-Print Badge Slip</span>
+                          <span className="sgp-mob-switch-desc">Open physical pass print dialogue immediately upon check-in</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${terminalSettings.autoPrint ? "active" : ""}`}
+                          onClick={() => setTerminalSettings({ ...terminalSettings, autoPrint: !terminalSettings.autoPrint })}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">Offline Clearance Cache</span>
+                          <span className="sgp-mob-switch-desc">Buffer visitor logs locally if gate Wi-Fi connection drops</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${terminalSettings.offlineSync ? "active" : ""}`}
+                          onClick={() => setTerminalSettings({ ...terminalSettings, offlineSync: !terminalSettings.offlineSync })}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-sheet-footer" style={{ padding: "14px 0 0", margin: 0 }}>
+                        <button type="button" className="sgp-mob-sheet-btn-secondary" onClick={() => setActiveSettingsModal(null)}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="sgp-mob-sheet-btn-primary">
+                          <Save size={16} /> Save Terminal Settings
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL 3: NOTIFICATION PREFERENCES */}
+              {activeSettingsModal === "notifications" && (
+                <div className="sgp-mob-sheet-overlay" onClick={() => setActiveSettingsModal(null)}>
+                  <div className="sgp-mob-sheet-container" onClick={(e) => e.stopPropagation()}>
+                    <div className="sgp-mob-sheet-drag-handle" />
+                    <div className="sgp-mob-sheet-header">
+                      <div className="sgp-mob-sheet-title-group">
+                        <div className="sgp-mob-sheet-icon">
+                          <Bell size={20} />
+                        </div>
+                        <div>
+                          <h3 className="sgp-mob-sheet-title">Notification Preferences</h3>
+                          <p className="sgp-mob-sheet-subtitle">Real-time gate and security triggers</p>
+                        </div>
+                      </div>
+                      <button type="button" className="sgp-mob-sheet-close" onClick={() => setActiveSettingsModal(null)}>
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleSaveNotifPreferences} className="sgp-mob-sheet-body">
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">VIP &amp; Executive Arrivals</span>
+                          <span className="sgp-mob-switch-desc">Priority alerts when pre-approved VIP visitors arrive at gate</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${notifPreferences.vipArrivals ? "active" : ""}`}
+                          onClick={() => setNotifPreferences({ ...notifPreferences, vipArrivals: !notifPreferences.vipArrivals })}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">Host Approval Updates</span>
+                          <span className="sgp-mob-switch-desc">Alert when employee approves or rejects walk-in requests</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${notifPreferences.hostDecisions ? "active" : ""}`}
+                          onClick={() => setNotifPreferences({ ...notifPreferences, hostDecisions: !notifPreferences.hostDecisions })}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">IT Contractor Hardware Alerts</span>
+                          <span className="sgp-mob-switch-desc">Notify when technician brings serial-tracked company assets</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${notifPreferences.itHardwareAlerts ? "active" : ""}`}
+                          onClick={() => setNotifPreferences({ ...notifPreferences, itHardwareAlerts: !notifPreferences.itHardwareAlerts })}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">Overstay &amp; Asset Departure Alerts</span>
+                          <span className="sgp-mob-switch-desc">Warn if visitor exceeds pass window or leaves unreturned assets</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${notifPreferences.overstayWarnings ? "active" : ""}`}
+                          onClick={() => setNotifPreferences({ ...notifPreferences, overstayWarnings: !notifPreferences.overstayWarnings })}
+                        />
+                      </div>
+
+                      <div className="sgp-mob-switch-row">
+                        <div className="sgp-mob-switch-label-group">
+                          <span className="sgp-mob-switch-title">Emergency Gate Broadcasts</span>
+                          <span className="sgp-mob-switch-desc">Audible alarms for building evacuation & security lockouts</span>
+                        </div>
+                        <button
+                          type="button"
+                          className={`sgp-mob-toggle-switch ${notifPreferences.gateEmergency ? "active" : ""}`}
+                          onClick={() => setNotifPreferences({ ...notifPreferences, gateEmergency: !notifPreferences.gateEmergency })}
+                        />
+                      </div>
+
+                      <div style={{ display: "flex", gap: "10px", marginTop: "4px" }}>
+                        <button
+                          type="button"
+                          className="sgp-mob-sheet-btn-secondary"
+                          style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}
+                          onClick={() => {
+                            if (typeof playAlertChime === "function") playAlertChime();
+                            showToast("Sound chime test played!");
+                          }}
+                        >
+                          <Volume2 size={16} /> Test Chime Sound
+                        </button>
+                      </div>
+
+                      <div className="sgp-mob-sheet-footer" style={{ padding: "14px 0 0", margin: 0 }}>
+                        <button type="button" className="sgp-mob-sheet-btn-secondary" onClick={() => setActiveSettingsModal(null)}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="sgp-mob-sheet-btn-primary">
+                          <Save size={16} /> Save Preferences
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL 4: CHANGE PASSWORD */}
+              {activeSettingsModal === "password" && (
+                <div className="sgp-mob-sheet-overlay" onClick={() => setActiveSettingsModal(null)}>
+                  <div className="sgp-mob-sheet-container" onClick={(e) => e.stopPropagation()}>
+                    <div className="sgp-mob-sheet-drag-handle" />
+                    <div className="sgp-mob-sheet-header">
+                      <div className="sgp-mob-sheet-title-group">
+                        <div className="sgp-mob-sheet-icon">
+                          <Lock size={20} />
+                        </div>
+                        <div>
+                          <h3 className="sgp-mob-sheet-title">Change Password</h3>
+                          <p className="sgp-mob-sheet-subtitle">Update gate terminal access password</p>
+                        </div>
+                      </div>
+                      <button type="button" className="sgp-mob-sheet-close" onClick={() => setActiveSettingsModal(null)}>
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <form onSubmit={handleChangePassword} className="sgp-mob-sheet-body">
+                      {passwordForm.error && (
+                        <div className="sgp-mob-danger-box">
+                          <AlertTriangle size={16} style={{ flexShrink: 0 }} />
+                          <div>{passwordForm.error}</div>
+                        </div>
+                      )}
+
+                      {passwordForm.success && (
+                        <div className="sgp-mob-info-box">
+                          <CheckCircle2 size={16} style={{ flexShrink: 0, color: "#16a34a" }} />
+                          <div>{passwordForm.success}</div>
+                        </div>
+                      )}
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">Current Password</label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type={passwordForm.showCurrent ? "text" : "password"}
+                            className="sgp-mob-field-input"
+                            value={passwordForm.currentPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                            placeholder="Enter current password"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPasswordForm({ ...passwordForm, showCurrent: !passwordForm.showCurrent })}
+                            style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
+                          >
+                            {passwordForm.showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">New Password (Min 6 characters)</label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type={passwordForm.showNew ? "text" : "password"}
+                            className="sgp-mob-field-input"
+                            value={passwordForm.newPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                            placeholder="Enter new strong password"
+                            minLength={6}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPasswordForm({ ...passwordForm, showNew: !passwordForm.showNew })}
+                            style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
+                          >
+                            {passwordForm.showNew ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="sgp-mob-field-group">
+                        <label className="sgp-mob-field-label">Confirm New Password</label>
+                        <div style={{ position: "relative" }}>
+                          <input
+                            type={passwordForm.showConfirm ? "text" : "password"}
+                            className="sgp-mob-field-input"
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                            placeholder="Re-type new password"
+                            minLength={6}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setPasswordForm({ ...passwordForm, showConfirm: !passwordForm.showConfirm })}
+                            style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#64748b", cursor: "pointer" }}
+                          >
+                            {passwordForm.showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="sgp-mob-sheet-footer" style={{ padding: "14px 0 0", margin: 0 }}>
+                        <button type="button" className="sgp-mob-sheet-btn-secondary" onClick={() => setActiveSettingsModal(null)}>
+                          Cancel
+                        </button>
+                        <button type="submit" className="sgp-mob-sheet-btn-primary" disabled={passwordForm.submitting}>
+                          <Lock size={16} /> {passwordForm.submitting ? "Updating..." : "Update Password"}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL 5: HELP & SUPPORT */}
+              {activeSettingsModal === "support" && (
+                <div className="sgp-mob-sheet-overlay" onClick={() => setActiveSettingsModal(null)}>
+                  <div className="sgp-mob-sheet-container" onClick={(e) => e.stopPropagation()}>
+                    <div className="sgp-mob-sheet-drag-handle" />
+                    <div className="sgp-mob-sheet-header">
+                      <div className="sgp-mob-sheet-title-group">
+                        <div className="sgp-mob-sheet-icon">
+                          <HelpCircle size={20} />
+                        </div>
+                        <div>
+                          <h3 className="sgp-mob-sheet-title">Help &amp; Support Desk</h3>
+                          <p className="sgp-mob-sheet-subtitle">Enterprise emergency contacts & IT assistance</p>
+                        </div>
+                      </div>
+                      <button type="button" className="sgp-mob-sheet-close" onClick={() => setActiveSettingsModal(null)}>
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <div className="sgp-mob-sheet-body">
+                      <div className="sgp-mob-contact-card">
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: "13.5px" }}>Emergency Gate Control</div>
+                          <div style={{ fontSize: "11.5px", color: "#64748b", marginTop: "2px" }}>+91 1800 200 4567 (Toll-Free 24/7)</div>
+                        </div>
+                        <a href="tel:18002004567" className="sgp-mob-contact-btn">
+                          <Phone size={13} /> Call
+                        </a>
+                      </div>
+
+                      <div className="sgp-mob-contact-card">
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: "13.5px" }}>IT Security Operations Desk</div>
+                          <div style={{ fontSize: "11.5px", color: "#64748b", marginTop: "2px" }}>support@coveryou.in</div>
+                        </div>
+                        <a href="mailto:support@coveryou.in" className="sgp-mob-contact-btn">
+                          <Mail size={13} /> Email
+                        </a>
+                      </div>
+
+                      <form onSubmit={handleSupportTicketSubmit} style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "6px" }}>
+                        <div style={{ fontWeight: 700, fontSize: "14px" }}>Report Gate / Scanner Incident</div>
+
+                        {supportTicket.ticketNumber && (
+                          <div className="sgp-mob-info-box">
+                            <CheckCircle2 size={16} style={{ color: "#16a34a", flexShrink: 0 }} />
+                            <div>
+                              <strong>Ticket Submitted: {supportTicket.ticketNumber}</strong>
+                              <div style={{ marginTop: "2px" }}>An IT engineer has been dispatched to assist your station.</div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="sgp-mob-field-group">
+                          <label className="sgp-mob-field-label">Issue Category</label>
+                          <select
+                            className="sgp-mob-field-select"
+                            value={supportTicket.category}
+                            onChange={(e) => setSupportTicket({ ...supportTicket, category: e.target.value })}
+                          >
+                            <option value="Scanner Hardware Issue">Scanner Camera / Hardware Failure</option>
+                            <option value="Visitor Badge Discrepancy">Visitor QR Badge Verification Issue</option>
+                            <option value="Hardware Asset Tracking Dispute">IT Contractor Hardware Asset Mismatch</option>
+                            <option value="Printer & Pass Slip">Gate Printer / Pass Slip Malfunction</option>
+                            <option value="Network Connectivity">Terminal Network / Sync Lag</option>
+                          </select>
+                        </div>
+
+                        <div className="sgp-mob-field-group">
+                          <label className="sgp-mob-field-label">Describe Incident</label>
+                          <textarea
+                            className="sgp-mob-field-input"
+                            rows={3}
+                            value={supportTicket.details}
+                            onChange={(e) => setSupportTicket({ ...supportTicket, details: e.target.value })}
+                            placeholder="Detail what happened at the gate..."
+                            style={{ resize: "none" }}
+                          />
+                        </div>
+
+                        <button type="submit" className="sgp-mob-sheet-btn-primary" style={{ marginTop: "4px" }}>
+                          <Check size={16} /> Submit Incident Ticket
+                        </button>
+                      </form>
+                    </div>
+
+                    <div className="sgp-mob-sheet-footer">
+                      <button type="button" className="sgp-mob-sheet-btn-secondary" onClick={() => setActiveSettingsModal(null)} style={{ flex: 1 }}>
+                        Close
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* MODAL 6: SIGN OUT CONFIRMATION */}
+              {activeSettingsModal === "signout" && (
+                <div className="sgp-mob-sheet-overlay" onClick={() => setActiveSettingsModal(null)}>
+                  <div className="sgp-mob-sheet-container" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "420px" }}>
+                    <div className="sgp-mob-sheet-drag-handle" />
+                    <div className="sgp-mob-sheet-header">
+                      <div className="sgp-mob-sheet-title-group">
+                        <div className="sgp-mob-sheet-icon" style={{ background: "#fef2f2", color: "#ef4444" }}>
+                          <LogOut size={20} />
+                        </div>
+                        <div>
+                          <h3 className="sgp-mob-sheet-title">Sign Out of Terminal?</h3>
+                          <p className="sgp-mob-sheet-subtitle">Conclude active gate shift session</p>
+                        </div>
+                      </div>
+                      <button type="button" className="sgp-mob-sheet-close" onClick={() => setActiveSettingsModal(null)}>
+                        <X size={18} />
+                      </button>
+                    </div>
+
+                    <div className="sgp-mob-sheet-body">
+                      <p style={{ margin: 0, fontSize: "13.5px", color: "#64748b", lineHeight: 1.5 }}>
+                        Are you sure you want to log out of <strong>{terminalSettings.gateLocation}</strong>? You will need your security credentials to access the terminal again.
+                      </p>
+                    </div>
+
+                    <div className="sgp-mob-sheet-footer">
+                      <button type="button" className="sgp-mob-sheet-btn-secondary" onClick={() => setActiveSettingsModal(null)}>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="sgp-mob-sheet-btn-primary sgp-mob-sheet-btn-danger"
+                        onClick={() => {
+                          setActiveSettingsModal(null);
+                          if (onLogout) onLogout();
+                        }}
+                      >
+                        <LogOut size={16} /> Sign Out Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
