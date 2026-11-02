@@ -3883,59 +3883,26 @@ html.dark .sgp-action-footer p {
 
   .sgp-mob-viewfinder-lens {
     width: 100% !important;
-    max-width: 320px !important;
-    height: 230px !important;
-    max-height: 240px !important;
-    aspect-ratio: 4 / 3 !important;
+    max-width: 325px !important;
+    height: 205px !important;
+    max-height: 215px !important;
+    aspect-ratio: 16 / 10 !important;
     background: #000000 !important;
-    border-radius: 18px !important;
+    border-radius: 16px !important;
     position: relative !important;
     overflow: hidden !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     border: 2px solid #0284c7 !important;
-    box-shadow: 0 0 24px rgba(2, 132, 199, 0.22) inset !important;
+    box-shadow: 0 0 30px rgba(2, 132, 199, 0.25) inset !important;
   }
 
-  .sgp-mob-camera-box,
-  #security-camera-reader-mob,
-  #security-camera-reader-mob__scan_region {
-    width: 100% !important;
-    height: 100% !important;
-    position: relative !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    overflow: hidden !important;
-    border-radius: 16px !important;
-  }
-
-  .sgp-mob-camera-box video,
-  #security-camera-reader-mob video {
+  .sgp-mob-camera-box video {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
-    border-radius: 16px !important;
-  }
-
-  #security-camera-reader-mob canvas {
-    display: none !important;
-  }
-
-  #security-camera-reader-mob__dashboard,
-  #security-camera-reader-mob__dashboard_section,
-  #security-camera-reader-mob__dashboard_section_csr,
-  #security-camera-reader-mob__dashboard_section_fsr,
-  #security-camera-reader-mob__header_message {
-    display: none !important;
-  }
-
-  #qr-shaded-region {
-    position: absolute !important;
-    inset: 0 !important;
-    box-sizing: border-box !important;
-    pointer-events: none !important;
+    border-radius: 14px !important;
   }
 
   .sgp-mob-camera-box {
