@@ -1589,7 +1589,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
           <div className="sgp-kpi-content">
             <span className="sgp-kpi-label">Self-Service Kiosks</span>
             <span className="sgp-kpi-value">2 Active QRs</span>
-            <span className="sgp-kpi-subtext">Reception &amp; IT Registration</span>
+            <span className="sgp-kpi-subtext">General Visit &amp; IT Registration</span>
           </div>
         </div>
 
@@ -3146,7 +3146,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                 <Users size={14} /> GENERAL VISITOR REGISTRATION
               </div>
               <h3 style={{ margin: "0 0 6px", fontSize: "19px", color: "#0f172a", fontWeight: 800 }}>
-                Reception Desk QR Code
+                General Visit QR Code
               </h3>
               <p style={{ margin: "0 0 10px", fontSize: "13px", color: "#64748b", maxWidth: "380px", marginLeft: "auto", marginRight: "auto" }}>
                 Instruct walk-in corporate or general visitors to scan this code on their smartphone camera to fill out their identity credentials and request entry clearance.
@@ -3832,7 +3832,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                   onClick={() => setKioskSubTab("reception-qr")}
                 >
                   <QrCode size={16} />
-                  <span>Reception QR</span>
+                  <span>General Visit</span>
                 </button>
                 <button
                   type="button"
@@ -3946,12 +3946,12 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                 <div className="sgp-mob-kiosk-qr-card">
                   <div className="sgp-mob-qr-preview-box">
                     {receptionQR ? (
-                      <img src={receptionQR} alt="Reception Registration QR" />
+                      <img src={receptionQR} alt="General Visit" />
                     ) : (
                       <QrCode size={140} color="#0f172a" />
                     )}
                   </div>
-                  <h3 className="sgp-mob-qr-title">Reception Registration QR</h3>
+                  <h3 className="sgp-mob-qr-title">General Visit</h3>
                   <p className="sgp-mob-qr-desc">Let visitors scan this QR to register themselves.</p>
 
                   <div className="sgp-mob-qr-btn-row">
@@ -3962,7 +3962,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                         if (receptionQR) {
                           const a = document.createElement("a");
                           a.href = receptionQR;
-                          a.download = "VMS-Reception-QR.png";
+                          a.download = "VMS-General-Visit-QR.png";
                           a.click();
                           showToast("QR code downloaded successfully");
                         }
