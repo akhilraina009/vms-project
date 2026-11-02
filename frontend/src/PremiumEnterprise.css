@@ -11505,6 +11505,139 @@ html.dark .reschedule-modal-card,
 }
 
 /* ==========================================================================
+   RESPONSIVE PRE-APPROVAL & IT CLEARANCE MODALS SYSTEM (MOBILE-FIRST)
+   Fixes centroid clipping, overflow scrolling, and action button stacking
+   ========================================================================== */
+@media (max-width: 640px) {
+  .vms-dialog-overlay,
+  .it-modal-overlay {
+    padding: 10px !important;
+    align-items: center !important;
+  }
+
+  .it-preapproval-modal,
+  .preapproval-modal-card {
+    max-height: 94vh !important;
+    border-radius: 14px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .it-preapproval-modal-header {
+    padding: 12px 14px !important;
+  }
+
+  .it-preapproval-modal-header h3 {
+    font-size: 15px !important;
+  }
+
+  .it-preapproval-modal-body,
+  .preapproval-modal-body {
+    padding: 14px 12px !important;
+  }
+
+  .preapproval-modal-profile-card {
+    padding: 12px 12px !important;
+    gap: 12px !important;
+  }
+
+  .it-modal-avatar-box {
+    width: 60px !important;
+    height: 60px !important;
+  }
+
+  .it-preapproval-modal-footer,
+  .preapproval-modal-footer {
+    padding: 12px 12px !important;
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .it-preapproval-modal-footer .it-modal-actions-group {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .it-preapproval-modal-footer .it-modal-actions-group button,
+  .it-preapproval-modal-footer .it-modal-btn-close,
+  .preapproval-modal-footer .back-button,
+  .preapproval-modal-footer .primary-button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* Specific IT Decision Action Button Color Safeguards */
+html[data-theme="dark"] body .it-preapproval-modal .it-btn-approve,
+html.dark body .it-preapproval-modal .it-btn-approve,
+body .it-preapproval-modal .it-btn-approve,
+.it-btn-approve {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  border: 1px solid #059669 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35) !important;
+}
+html[data-theme="dark"] body .it-preapproval-modal .it-btn-approve:hover,
+html.dark body .it-preapproval-modal .it-btn-approve:hover,
+body .it-preapproval-modal .it-btn-approve:hover,
+.it-btn-approve:hover {
+  background: #047857 !important;
+}
+
+html[data-theme="dark"] body .it-preapproval-modal .it-btn-wait,
+html.dark body .it-preapproval-modal .it-btn-wait,
+body .it-preapproval-modal .it-btn-wait,
+.it-btn-wait {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%) !important;
+  border: 1px solid #d97706 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.35) !important;
+}
+html[data-theme="dark"] body .it-preapproval-modal .it-btn-wait:hover,
+html.dark body .it-preapproval-modal .it-btn-wait:hover,
+body .it-preapproval-modal .it-btn-wait:hover,
+.it-btn-wait:hover {
+  background: #b45309 !important;
+}
+
+html[data-theme="dark"] body .it-preapproval-modal .it-btn-reschedule,
+html.dark body .it-preapproval-modal .it-btn-reschedule,
+body .it-preapproval-modal .it-btn-reschedule,
+.it-btn-reschedule {
+  background: rgba(2, 132, 199, 0.15) !important;
+  border: 1px solid rgba(2, 132, 199, 0.4) !important;
+  color: #38bdf8 !important;
+}
+
+html[data-theme="dark"] body .it-preapproval-modal .it-btn-reject,
+html.dark body .it-preapproval-modal .it-btn-reject,
+body .it-preapproval-modal .it-btn-reject,
+.it-btn-reject {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border: 1px solid rgba(239, 68, 68, 0.35) !important;
+  color: #f87171 !important;
+}
+
+html[data-theme="light"] body .it-preapproval-modal .it-btn-reschedule,
+html:not(.dark) body .it-preapproval-modal .it-btn-reschedule {
+  background: #f0f9ff !important;
+  border: 1px solid #bae6fd !important;
+  color: #0284c7 !important;
+}
+
+html[data-theme="light"] body .it-preapproval-modal .it-btn-reject,
+html:not(.dark) body .it-preapproval-modal .it-btn-reject {
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  color: #dc2626 !important;
+}
+
+/* ==========================================================================
    MASTER EXECUTIVE PDF & PRINT PASS SYSTEM (UNIVERSAL & A4 FIT)
    Applies to Normal Visit Pass, IT Visit Pass, Checkout Dossier, and Gate Receipts
    ========================================================================== */

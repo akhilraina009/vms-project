@@ -564,11 +564,15 @@ export default function PreApprovals({
           onClick={() => setSelectedApproval(null)}
         >
           <div
+            className="vms-dialog-card preapproval-modal-card"
             style={{
               background: "#ffffff",
               borderRadius: "18px",
               maxWidth: "760px",
               width: "100%",
+              maxHeight: "min(92vh, 880px)",
+              display: "flex",
+              flexDirection: "column",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
               overflow: "hidden",
               border: "1px solid #e2e8f0",
@@ -578,23 +582,26 @@ export default function PreApprovals({
           >
             {/* Modal Header */}
             <div
+              className="it-preapproval-modal-header"
               style={{
                 background: "linear-gradient(135deg, #1e293b, #0f172a)",
                 color: "#ffffff",
-                padding: "20px 24px",
+                padding: "16px 20px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                flexShrink: 0,
+                borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
               }}
             >
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                  <ShieldCheck size={18} color="#38bdf8" />
+                  <ShieldCheck size={16} color="#38bdf8" />
                   <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.8px", color: "#38bdf8" }}>
                     VISITOR VERIFICATION DESK
                   </span>
                 </div>
-                <h3 style={{ margin: 0, fontSize: "19px", fontWeight: 700 }}>
+                <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 700 }}>
                   Cross-Check Visitor Details &amp; Pass
                 </h3>
               </div>
@@ -610,12 +617,15 @@ export default function PreApprovals({
                   cursor: "pointer",
                 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div style={{ padding: "24px", maxHeight: "72vh", overflowY: "auto" }}>
+            <div
+              className="preapproval-modal-body"
+              style={{ padding: "20px", flex: "1 1 auto", overflowY: "auto", WebkitOverflowScrolling: "touch" }}
+            >
               {/* Profile Card */}
               <div
                 style={{
@@ -876,15 +886,17 @@ export default function PreApprovals({
 
             {/* Modal Actions Footer */}
             <div
+              className="preapproval-modal-footer"
               style={{
                 background: "#f8fafc",
-                padding: "16px 24px",
+                padding: "14px 18px",
                 borderTop: "1px solid #e2e8f0",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
                 flexWrap: "wrap",
                 gap: "10px",
+                flexShrink: 0,
               }}
             >
               <button

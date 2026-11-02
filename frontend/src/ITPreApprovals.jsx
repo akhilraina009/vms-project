@@ -482,16 +482,18 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
       {/* IT CROSS-CHECK MODAL */}
       {selectedApproval && (
         <div
+          className="vms-dialog-overlay it-modal-overlay"
           style={{
             position: "fixed",
             inset: 0,
             background: "rgba(15, 23, 42, 0.75)",
-            backdropFilter: "blur(4px)",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
             zIndex: 9999,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "20px",
+            padding: "16px",
             overflowY: "auto",
           }}
           onClick={() => setSelectedApproval(null)}
@@ -499,33 +501,52 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
           <div
             className="vms-dialog-card preapproval-modal-card it-preapproval-modal"
             style={{
-              borderRadius: "18px",
-              maxWidth: "780px",
+              borderRadius: "16px",
+              maxWidth: "760px",
               width: "100%",
-              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+              maxHeight: "min(92vh, 880px)",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
               overflow: "hidden",
+              position: "relative",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div
+              className="it-preapproval-modal-header"
               style={{
                 background: "linear-gradient(135deg, #0f172a, #1e1b4b)",
                 color: "#ffffff",
-                padding: "20px 24px",
+                padding: "16px 20px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
+                gap: "12px",
+                flexShrink: 0,
+                borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
               }}
             >
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
-                  <Server size={18} color="#818cf8" />
-                  <span style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.8px", color: "#818cf8" }}>
-                    IT SECURITY &amp; CONTRACTOR CLEARANCE
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "3px" }}>
+                  <Server size={14} color="#818cf8" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.8px", color: "#818cf8", textTransform: "uppercase" }}>
+                    IT Security &amp; Contractor Clearance
                   </span>
                 </div>
-                <h3 style={{ margin: 0, fontSize: "19px", fontWeight: 700 }}>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: "17px",
+                    fontWeight: 700,
+                    lineHeight: 1.25,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                  title="IT Visitor & Hardware Verification"
+                >
                   IT Visitor &amp; Hardware Verification
                 </h3>
               </div>
@@ -533,26 +554,43 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
                 type="button"
                 onClick={() => setSelectedApproval(null)}
                 style={{
-                  background: "rgba(255, 255, 255, 0.1)",
+                  background: "rgba(255, 255, 255, 0.12)",
                   border: "none",
                   color: "#cbd5e1",
                   borderRadius: "8px",
-                  padding: "6px",
+                  padding: "7px",
                   cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                  width: "34px",
+                  height: "34px",
+                  transition: "background 0.15s ease",
                 }}
+                aria-label="Close"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div style={{ padding: "24px", maxHeight: "72vh", overflowY: "auto" }}>
+            <div
+              className="preapproval-modal-body it-preapproval-modal-body"
+              style={{
+                padding: "20px",
+                flex: "1 1 auto",
+                overflowY: "auto",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
               {/* Profile Card */}
               <div className="preapproval-modal-profile-card">
                 <div
+                  className="it-modal-avatar-box"
                   style={{
-                    width: "80px",
-                    height: "80px",
+                    width: "68px",
+                    height: "68px",
                     borderRadius: "12px",
                     overflow: "hidden",
                     background: "#e2e8f0",
@@ -795,8 +833,10 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
 
             {/* Modal Actions */}
             <div
+              className="preapproval-modal-footer it-preapproval-modal-footer"
               style={{
-                background: "#0b1120", padding: "16px 24px", borderTop: "1px solid #1e293b",
+                padding: "14px 18px",
+                flexShrink: 0,
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
@@ -806,19 +846,27 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
             >
               <button
                 type="button"
-                className="back-button"
+                className="back-button it-modal-btn-close"
                 onClick={() => setSelectedApproval(null)}
               >
                 Close Inspection
               </button>
 
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <div
+                className="it-modal-actions-group"
+                style={{
+                  display: "flex",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
                 {/* 1. APPROVE BUTTON */}
                 {selectedApproval.status !== "APPROVED" && selectedApproval.status !== "CHECKED_IN" && (
                   <button
                     type="button"
-                    className="primary-button"
-                    style={{ background: "#059669" }}
+                    className="primary-button it-btn-approve"
+                    style={{ background: "#059669", color: "#ffffff", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "8px", padding: "9px 16px", cursor: "pointer", border: "none" }}
                     disabled={actionLoading === selectedApproval.pre_approval_id}
                     onClick={() => handleDecision(selectedApproval, "approve")}
                   >
@@ -831,8 +879,8 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
                 {(selectedApproval.status === "PENDING" || selectedApproval.status === "RESCHEDULED") && (
                   <button
                     type="button"
-                    className="primary-button"
-                    style={{ background: "#d97706" }}
+                    className="primary-button it-btn-wait"
+                    style={{ background: "#d97706", color: "#ffffff", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "8px", padding: "9px 14px", cursor: "pointer", border: "none" }}
                     disabled={actionLoading === selectedApproval.pre_approval_id}
                     onClick={() => handleDecision(selectedApproval, "wait")}
                     title="Notify technician that IT host is busy in server room"
@@ -846,8 +894,8 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
                 {selectedApproval.status !== "APPROVED" && selectedApproval.status !== "CHECKED_IN" && selectedApproval.status !== "REJECTED" && (
                   <button
                     type="button"
-                    className="secondary-action-btn"
-                    style={{ background: "rgba(2, 132, 199, 0.15)", border: "1px solid rgba(2, 132, 199, 0.4)", color: "#38bdf8", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "8px", padding: "8px 14px", cursor: "pointer" }}
+                    className="secondary-action-btn it-btn-reschedule"
+                    style={{ background: "rgba(2, 132, 199, 0.12)", border: "1px solid rgba(2, 132, 199, 0.4)", color: "#0284c7", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "8px", padding: "8px 14px", cursor: "pointer" }}
                     onClick={() => openRescheduleModal(selectedApproval)}
                     title="Host is absent. Reschedule visit to tomorrow or custom date/time."
                   >
@@ -860,8 +908,8 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
                 {selectedApproval.status !== "REJECTED" && selectedApproval.status !== "CHECKED_IN" && (
                   <button
                     type="button"
-                    className="back-button"
-                    style={{ color: "#f87171", borderColor: "rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.1)" }}
+                    className="back-button it-btn-reject"
+                    style={{ color: "#ef4444", borderColor: "rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.08)", fontWeight: 700, display: "inline-flex", alignItems: "center", gap: "6px", borderRadius: "8px", padding: "8px 14px", cursor: "pointer" }}
                     disabled={actionLoading === selectedApproval.pre_approval_id}
                     onClick={() => handleDecision(selectedApproval, "reject")}
                   >
