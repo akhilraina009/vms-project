@@ -1784,109 +1784,163 @@
   width: 100% !important;
 }
 
-/* Row 1: Bell Icon + Title + Live Badge */
-.sgp-notif-drawer-title-group {
+/* ==========================================================================
+   REAL-TIME NOTIFICATIONS DRAWER HEADER (Refactored Clean 2-Row Design)
+   ========================================================================== */
+.sgp-notif-drawer-header {
+  position: relative !important;
   display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 8px !important;
-  min-width: 0 !important;
-  width: 100% !important;
-  padding-right: 42px !important; /* clear room for absolute close button */
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 16px 18px 14px !important;
+  background: linear-gradient(180deg, #131c2e 0%, #0f172a 100%) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09) !important;
   box-sizing: border-box !important;
-  flex-wrap: nowrap !important;
+  width: 100% !important;
 }
 
-.sgp-notif-drawer-title-group > svg {
+/* Row 1: Title + Live Badge on Left, Action Icons on Right */
+.sgp-notif-header-top-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  gap: 10px !important;
+}
+
+.sgp-notif-title-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  flex: 1 1 auto !important;
+}
+
+.sgp-notif-bell-icon {
+  width: 26px !important;
+  height: 26px !important;
+  border-radius: 7px !important;
+  background: rgba(56, 189, 248, 0.12) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   flex-shrink: 0 !important;
-  color: #38bdf8 !important;
-  width: 18px !important;
-  height: 18px !important;
 }
 
 .sgp-notif-drawer-title {
   margin: 0 !important;
-  font-size: 15px !important;
-  font-weight: 800 !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
   color: #f8fafc !important;
   white-space: nowrap !important;
-  line-height: 1.2 !important;
   letter-spacing: -0.01em !important;
   flex-shrink: 0 !important;
 }
 
-.sgp-notif-drawer-title-group .sgp-badge-live {
+.sgp-notif-title-wrap .sgp-badge-live {
   display: inline-flex !important;
   align-items: center !important;
-  gap: 5px !important;
-  padding: 3px 8px !important;
-  font-size: 10px !important;
+  gap: 4px !important;
+  padding: 1px 6px !important;
+  font-size: 8.5px !important;
   font-weight: 800 !important;
-  border-radius: 20px !important;
+  border-radius: 99px !important;
   white-space: nowrap !important;
   background: rgba(16, 185, 129, 0.16) !important;
   color: #34d399 !important;
   border: 1px solid rgba(16, 185, 129, 0.4) !important;
-  letter-spacing: 0.5px !important;
-  height: 22px !important;
-  box-sizing: border-box !important;
-  margin-left: 2px !important;
+  letter-spacing: 0.3px !important;
+  height: 18px !important;
   flex-shrink: 0 !important;
 }
 
-/* Row 2: Mark read and Refresh action buttons */
-.sgp-notif-drawer-header > div:last-child {
-  position: static !important;
+.sgp-notif-top-actions {
   display: flex !important;
   align-items: center !important;
-  justify-content: flex-end !important;
-  gap: 8px !important;
-  width: 100% !important;
-  margin-top: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
+  gap: 5px !important;
+  flex-shrink: 0 !important;
 }
 
-.sgp-notif-drawer-header > div:last-child button {
-  white-space: nowrap !important;
-  flex-shrink: 0 !important;
+.sgp-notif-icon-btn {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 7px !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  color: #94a3b8 !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  gap: 5px !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  border-radius: 7px !important;
-  padding: 4px 10px !important;
-  height: 26px !important;
-  box-sizing: border-box !important;
   cursor: pointer !important;
   transition: all 0.15s ease !important;
+  padding: 0 !important;
 }
 
-/* Close (X) button positioned top-right */
-.sgp-notif-drawer-header > div:last-child button:last-child {
-  position: absolute !important;
-  top: 13px !important;
-  right: 14px !important;
-  width: 32px !important;
-  height: 32px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border-radius: 8px !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: #cbd5e1 !important;
-  cursor: pointer !important;
+.sgp-notif-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #ffffff !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+}
+
+.sgp-notif-icon-btn.close:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+
+/* Row 2: Sub-row status badge and mark read action */
+.sgp-notif-header-sub-row {
   display: flex !important;
   align-items: center !important;
-  justify-content: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  padding-top: 4px !important;
+  gap: 8px !important;
 }
 
-.sgp-notif-drawer-header > div:last-child button:last-child:hover {
-  background: rgba(239, 68, 68, 0.2) !important;
-  border-color: rgba(239, 68, 68, 0.4) !important;
-  color: #ef4444 !important;
+.sgp-notif-status-badge {
+  font-size: 12px !important;
+  color: #94a3b8 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+}
+
+.sgp-notif-unread-text strong {
+  color: #38bdf8 !important;
+}
+
+.sgp-notif-all-read-text {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  color: #10b981 !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+}
+
+.sgp-notif-mark-read-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  padding: 5px 12px !important;
+  border-radius: 99px !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  background: rgba(56, 189, 248, 0.14) !important;
+  border: 1px solid rgba(56, 189, 248, 0.4) !important;
+  color: #38bdf8 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  white-space: nowrap !important;
+}
+
+.sgp-notif-mark-read-btn:hover {
+  background: rgba(56, 189, 248, 0.24) !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(56, 189, 248, 0.25) !important;
 }
 
 .sgp-notif-drawer-body {

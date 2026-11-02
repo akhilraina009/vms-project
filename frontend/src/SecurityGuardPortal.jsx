@@ -1363,14 +1363,54 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
         <div className="sgp-notif-drawer-backdrop" onClick={() => setNotifDrawerOpen(false)}>
           <div className="sgp-notif-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="sgp-notif-drawer-header">
-              <div className="sgp-notif-drawer-title-group">
-                <Bell size={18} color="#38bdf8" />
-                <h3 className="sgp-notif-drawer-title">Live Registration Alerts</h3>
-                <span className="sgp-badge-live">
-                  <span className="pulse-dot"></span> REALTIME
-                </span>
+              {/* Row 1: Title + Live Badge on Left, Action Buttons (Refresh & Close) on Right */}
+              <div className="sgp-notif-header-top-row">
+                <div className="sgp-notif-title-wrap">
+                  <div className="sgp-notif-bell-icon">
+                    <Bell size={17} color="#38bdf8" />
+                  </div>
+                  <h3 className="sgp-notif-drawer-title">Live Registration Alerts</h3>
+                  <span className="sgp-badge-live">
+                    <span className="pulse-dot"></span> REALTIME
+                  </span>
+                </div>
+
+                <div className="sgp-notif-top-actions">
+                  <button
+                    type="button"
+                    onClick={fetchGuardNotifications}
+                    className="sgp-notif-icon-btn"
+                    title="Refresh alerts"
+                    aria-label="Refresh alerts"
+                  >
+                    <RefreshCw size={15} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNotifDrawerOpen(false)}
+                    className="sgp-notif-icon-btn close"
+                    title="Close"
+                    aria-label="Close"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
               </div>
-              <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+
+              {/* Row 2: Status / Count & Mark Read Button */}
+              <div className="sgp-notif-header-sub-row">
+                <div className="sgp-notif-status-badge">
+                  {unreadCount > 0 ? (
+                    <span className="sgp-notif-unread-text">
+                      <strong>{unreadCount}</strong> unread {unreadCount === 1 ? "alert" : "alerts"}
+                    </span>
+                  ) : (
+                    <span className="sgp-notif-all-read-text">
+                      <CheckCircle2 size={13} /> All alerts up to date
+                    </span>
+                  )}
+                </div>
+
                 {unreadCount > 0 && (
                   <button
                     type="button"
@@ -1379,51 +1419,12 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                       localStorage.setItem("vms_guard_read_ids", JSON.stringify(allIds));
                       setUnreadCount(0);
                     }}
-                    style={{
-                      background: "rgba(56, 189, 248, 0.15)",
-                      border: "1px solid rgba(56, 189, 248, 0.4)",
-                      color: "#38bdf8",
-                      borderRadius: "6px",
-                      padding: "4px 8px",
-                      fontSize: "11px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
+                    className="sgp-notif-mark-read-btn"
                     title="Mark all as read"
                   >
-                    Mark read
+                    <Check size={13} /> Mark read
                   </button>
                 )}
-                <button
-                  type="button"
-                  onClick={fetchGuardNotifications}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.08)",
-                    border: "none",
-                    color: "#94a3b8",
-                    borderRadius: "6px",
-                    padding: "6px",
-                    cursor: "pointer",
-                  }}
-                  title="Refresh alerts"
-                >
-                  <RefreshCw size={15} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNotifDrawerOpen(false)}
-                  style={{
-                    background: "rgba(255, 255, 255, 0.08)",
-                    border: "none",
-                    color: "#cbd5e1",
-                    borderRadius: "6px",
-                    padding: "6px",
-                    cursor: "pointer",
-                  }}
-                  title="Close"
-                >
-                  <X size={18} />
-                </button>
               </div>
             </div>
 
