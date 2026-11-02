@@ -3884,9 +3884,8 @@ html.dark .sgp-action-footer p {
   .sgp-mob-viewfinder-lens {
     width: 100% !important;
     max-width: 325px !important;
-    height: 205px !important;
-    max-height: 215px !important;
-    aspect-ratio: 16 / 10 !important;
+    height: 220px !important;
+    max-height: 230px !important;
     background: #000000 !important;
     border-radius: 16px !important;
     position: relative !important;
@@ -3898,16 +3897,37 @@ html.dark .sgp-action-footer p {
     box-shadow: 0 0 30px rgba(2, 132, 199, 0.25) inset !important;
   }
 
-  .sgp-mob-camera-box video {
+  .sgp-mob-camera-box,
+  #security-camera-reader-mob {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border-radius: 14px !important;
+  }
+
+  #security-camera-reader-mob__scan_region {
+    width: 100% !important;
+    height: 100% !important;
+    position: relative !important;
+    overflow: hidden !important;
+    border-radius: 14px !important;
+  }
+
+  .sgp-mob-camera-box video,
+  #security-camera-reader-mob video {
     width: 100% !important;
     height: 100% !important;
     object-fit: cover !important;
     border-radius: 14px !important;
+    display: block !important;
   }
 
-  .sgp-mob-camera-box {
-    width: 100% !important;
-    height: 100% !important;
+  #html5-qrcode-anchor-scan-type-change,
+  #security-camera-reader-mob__dashboard_section_fsr,
+  #security-camera-reader-mob__header_message,
+  #html5-qrcode-button-camera-stop {
+    display: none !important;
   }
 
   .sgp-mob-viewfinder-placeholder {

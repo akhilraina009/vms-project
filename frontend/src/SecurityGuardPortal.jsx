@@ -1120,15 +1120,18 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
   // Start Camera QR Scanner
   useEffect(() => {
     let scanner = null;
-    if (activeTab === "checkin" && scannerActive) {
+    const isScanTabActive = isMobile ? mobileTab === "scan" : activeTab === "checkin";
+    if (isScanTabActive && scannerActive) {
       try {
         const scannerId = isMobile ? "security-camera-reader-mob" : "security-camera-reader";
         scanner = new Html5QrcodeScanner(scannerId, {
           fps: 10,
           qrbox: (viewfinderWidth, viewfinderHeight) => {
             const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const edgeRatio = isMobile ? 0.65 : 0.72;
-            const qrboxSize = Math.max(120, Math.floor(minEdge * edgeRatio));
+            const edgeRatio = isMobile ? 0.58 : 0.70;
+            const qrboxSize = isMobile
+              ? Math.max(120, Math.min(145, Math.floor(minEdge * edgeRatio)))
+              : Math.max(160, Math.floor(minEdge * edgeRatio));
             return { width: qrboxSize, height: qrboxSize };
           },
           rememberLastUsedCamera: true,
@@ -1158,7 +1161,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
         scanner.clear().catch(() => {});
       }
     };
-  }, [activeTab, scannerActive, facingMode, isMobile]);
+  }, [activeTab, mobileTab, scannerActive, facingMode, isMobile]);
 
   const rawStatus = String(verifiedVisit?.status || "").trim().toUpperCase();
   const isIT = (verifiedVisit?.purpose || "").includes("[IT_VISIT]");
