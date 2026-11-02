@@ -3782,14 +3782,15 @@ html.dark .sgp-action-footer p {
 
   .sgp-mob-segmented-control button {
     flex: 1 1 0 !important;
+    min-width: 0 !important;
     border: none !important;
     background: transparent !important;
-    padding: 8px 6px !important;
+    padding: 9px 8px !important;
     border-radius: 10px !important;
-    font-size: 11px !important;
+    font-size: 12px !important;
     font-weight: 600 !important;
     color: #475569 !important;
-    display: flex !important;
+    display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 6px !important;
@@ -3797,6 +3798,8 @@ html.dark .sgp-action-footer p {
     cursor: pointer !important;
     transition: all 0.15s ease !important;
     line-height: 1.25 !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
   }
 
   [data-theme="dark"] .sgp-mob-segmented-control button,
@@ -3826,9 +3829,9 @@ html.dark .sgp-action-footer p {
 
   .sgp-mob-viewfinder-lens {
     width: 100% !important;
-    max-width: 320px !important;
-    height: 190px !important;
-    max-height: 200px !important;
+    max-width: 325px !important;
+    height: 205px !important;
+    max-height: 215px !important;
     aspect-ratio: 16 / 10 !important;
     background: #000000 !important;
     border-radius: 16px !important;
@@ -3839,6 +3842,13 @@ html.dark .sgp-action-footer p {
     justify-content: center !important;
     border: 2px solid #0284c7 !important;
     box-shadow: 0 0 30px rgba(2, 132, 199, 0.25) inset !important;
+  }
+
+  .sgp-mob-camera-box video {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    border-radius: 14px !important;
   }
 
   .sgp-mob-camera-box {

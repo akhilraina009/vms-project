@@ -1125,10 +1125,15 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
         const scannerId = isMobile ? "security-camera-reader-mob" : "security-camera-reader";
         scanner = new Html5QrcodeScanner(scannerId, {
           fps: 10,
-          qrbox: { width: 250, height: 250 },
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+            const edgeRatio = isMobile ? 0.65 : 0.72;
+            const qrboxSize = Math.max(120, Math.floor(minEdge * edgeRatio));
+            return { width: qrboxSize, height: qrboxSize };
+          },
           rememberLastUsedCamera: true,
           videoConstraints: {
-            facingMode: { ideal: "environment" },
+            facingMode: { ideal: facingMode || "environment" },
           },
         });
 
@@ -1153,7 +1158,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
         scanner.clear().catch(() => {});
       }
     };
-  }, [activeTab, scannerActive]);
+  }, [activeTab, scannerActive, facingMode, isMobile]);
 
   const rawStatus = String(verifiedVisit?.status || "").trim().toUpperCase();
   const isIT = (verifiedVisit?.purpose || "").includes("[IT_VISIT]");
