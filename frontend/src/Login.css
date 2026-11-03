@@ -138,7 +138,7 @@
   top: 0;
   left: 0;
   height: 100%;
-  width: 260px;
+  width: 320px;
   background: #e43b24;
   border-radius: 0 2px 2px 0;
 }
@@ -367,7 +367,8 @@
 .vms-stage-backdrop-gradient {
   position: absolute;
   inset: 0;
-  background: linear-gradient(to right, rgba(15, 23, 42, 0.15) 0%, rgba(15, 23, 42, 0.05) 50%, transparent 100%);
+  background: linear-gradient(to right, rgba(10, 16, 30, 0.42) 0%, rgba(10, 16, 30, 0.30) 42%, rgba(10, 16, 30, 0.08) 75%, transparent 100%);
+  pointer-events: none;
 }
 
 /* Mobile Hero Banner (Hidden on Desktop) */
@@ -414,36 +415,36 @@
 }
 
 .vms-hero-headline-white {
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 800;
   letter-spacing: -0.4px;
   color: #ffffff;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.7);
 }
 
 .vms-hero-headline-red {
-  font-size: 28px;
+  font-size: 34px;
   font-weight: 800;
   letter-spacing: -0.4px;
   color: #e43b24;
-  text-shadow: 0 2px 12px rgba(228, 59, 36, 0.35);
+  text-shadow: 0 2px 14px rgba(228, 59, 36, 0.4);
 }
 
 .vms-hero-red-line {
-  width: 44px;
-  height: 3px;
+  width: 48px;
+  height: 3.5px;
   background: #e43b24;
   border-radius: 2px;
-  margin: 0 0 12px;
+  margin: 10px 0 14px;
 }
 
 .vms-hero-description {
-  font-size: 13.5px;
+  font-size: 14.5px;
   line-height: 1.45;
-  color: #f1f5f9;
-  max-width: 460px;
+  color: #f8fafc;
+  max-width: 490px;
   margin: 0;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.65);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.7);
 }
 
 /* 4 Capability Cards (Horizontal row on desktop) */
@@ -460,21 +461,21 @@
   display: none;
 }
 
+/* Hide prefix icon on desktop, show only on mobile */
 .vms-btn-prefix-icon {
-  flex-shrink: 0;
-  margin-right: 2px;
+  display: none;
 }
 
 .vms-capability-card {
   background: #ffffff;
   border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: 14px;
-  padding: 12px 6px 10px;
+  padding: 14px 8px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(0, 0, 0, 0.05);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -484,14 +485,14 @@
 }
 
 .vms-cap-icon-box {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: rgba(228, 59, 36, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .vms-cap-icon {
@@ -730,9 +731,9 @@
   margin-top: 4px;
   background: #e43b24;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   color: #ffffff;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
@@ -800,8 +801,8 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 420px;
-  height: 90px;
+  width: 480px;
+  height: 105px;
   pointer-events: none;
   z-index: 5;
   overflow: hidden;
@@ -838,13 +839,21 @@
   }
 
   .vms-login-content-grid {
+    max-width: 1380px;
     height: 100%;
     max-height: 100%;
     min-height: 0;
+    grid-template-columns: 1.35fr 0.85fr;
+    gap: 28px;
+    padding: 10px 16px;
   }
 
   .vms-login-hero-col {
-    padding-left: 140px;
+    padding-left: 240px; /* Aligns neatly to the right of the stone pillar branding */
+  }
+
+  .vms-capability-cards-grid {
+    max-width: 530px;
   }
 }
 
