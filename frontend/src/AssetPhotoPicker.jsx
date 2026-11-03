@@ -33,6 +33,7 @@ export default function AssetPhotoPicker({
 }) {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const [facingMode, setFacingMode] = useState("environment");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -45,7 +46,17 @@ export default function AssetPhotoPicker({
     };
   }, []);
 
-  const startCamera = async () => {
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.onloadedmetadata = () => {
+        videoRef.current?.play().catch(() => {});
+      };
+    }
+  }, [cameraActive]);
+
+  const startCamera = async (requestedMode) => {
+    const mode = typeof requestedMode === "string" ? requestedMode : facingMode;
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError("Camera requires a modern browser and secure context (HTTPS/localhost).");
@@ -55,38 +66,53 @@ export default function AssetPhotoPicker({
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
       }
 
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
+          video: {
+            facingMode: { ideal: mode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           audio: false,
         });
       } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: mode } },
+            audio: false,
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
       }
 
       streamRef.current = stream;
       setCameraActive(true);
 
-      setTimeout(async () => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          try {
-            await videoRef.current.play();
-          } catch (e) {
-            console.error("Video play error:", e);
-          }
-        }
-      }, 60);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch((e) => console.warn("Video play error:", e));
+        };
+      }
     } catch (err) {
       console.error("Camera access error:", err);
       setCameraError("Camera permission was denied or camera is in use.");
+      setCameraActive(false);
     }
+  };
+
+  const toggleCameraFacing = async () => {
+    const nextMode = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(nextMode);
+    await startCamera(nextMode);
   };
 
   const capturePhoto = () => {
@@ -100,9 +126,15 @@ export default function AssetPhotoPicker({
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
+
+    if (facingMode === "user") {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
     onPhotoChange(dataUrl);
     stopCamera();
   };
@@ -181,26 +213,48 @@ export default function AssetPhotoPicker({
       />
 
       {cameraActive && (
-        <div style={{ background: "#000000", borderRadius: "8px", overflow: "hidden", marginBottom: "10px", position: "relative" }}>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            style={{ width: "100%", maxHeight: "240px", objectFit: "cover", display: "block" }}
-          />
-          <div style={{ display: "flex", justifyContent: "center", gap: "10px", padding: "10px", background: "rgba(0,0,0,0.75)" }}>
+        <div style={{ background: "#090d16", borderRadius: "10px", overflow: "hidden", marginBottom: "12px", border: "1px solid #1e293b", boxShadow: "0 4px 14px rgba(0,0,0,0.25)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#0f172a", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <span style={{ fontSize: "11px", fontWeight: 700, color: "#38bdf8", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#10b981", display: "inline-block" }}></span>
+              Live Asset Camera
+            </span>
+            <button
+              type="button"
+              onClick={toggleCameraFacing}
+              style={{ padding: "4px 9px", background: "rgba(255,255,255,0.12)", color: "#f8fafc", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "6px", fontSize: "11px", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "5px" }}
+              title="Switch camera"
+            >
+              <RefreshCw size={11} /> Switch Camera
+            </button>
+          </div>
+          <div style={{ position: "relative", width: "100%", maxHeight: "240px", overflow: "hidden", background: "#000" }}>
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              style={{
+                width: "100%",
+                maxHeight: "240px",
+                objectFit: "cover",
+                display: "block",
+                transform: facingMode === "user" ? "scaleX(-1)" : "none",
+              }}
+            />
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", gap: "10px", padding: "10px", background: "#0f172a", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
             <button
               type="button"
               onClick={capturePhoto}
-              style={{ padding: "8px 18px", background: "#16a34a", color: "white", border: "none", borderRadius: "6px", fontSize: "12.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}
+              style={{ padding: "8px 18px", background: "#2563eb", color: "white", border: "none", borderRadius: "6px", fontSize: "12.5px", fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", boxShadow: "0 2px 6px rgba(37,99,235,0.3)" }}
             >
               <Camera size={14} /> Snap Photo
             </button>
             <button
               type="button"
               onClick={stopCamera}
-              style={{ padding: "8px 14px", background: "#475569", color: "white", border: "none", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
+              style={{ padding: "8px 14px", background: "rgba(255,255,255,0.12)", color: "#e2e8f0", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "6px", fontSize: "12px", fontWeight: 600, cursor: "pointer" }}
             >
               Cancel
             </button>

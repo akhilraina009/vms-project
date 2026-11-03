@@ -33,6 +33,7 @@ const API_BASE_URL = "";
 function AssetPhotoCapture({ index, photo, onPhotoChange }) {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const [facingMode, setFacingMode] = useState("environment");
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -48,11 +49,14 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
   useEffect(() => {
     if (cameraActive && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
-      videoRef.current.play().catch(() => {});
+      videoRef.current.onloadedmetadata = () => {
+        videoRef.current?.play().catch(() => {});
+      };
     }
   }, [cameraActive]);
 
-  async function startCamera() {
+  async function startCamera(requestedMode) {
+    const mode = typeof requestedMode === "string" ? requestedMode : facingMode;
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError("Camera access requires HTTPS or localhost.");
@@ -62,19 +66,31 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
 
       let stream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
+          video: {
+            facingMode: { ideal: mode },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
           audio: false,
         });
       } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: mode } },
+            audio: false,
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
       }
 
       streamRef.current = stream;
@@ -82,16 +98,21 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        try {
-          await videoRef.current.play();
-        } catch (e) {
-          console.error("Video play error:", e);
-        }
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch((e) => console.warn("Asset video play error:", e));
+        };
       }
     } catch (err) {
       console.error("Camera access error:", err);
       setCameraError("Camera permission denied or camera not available.");
+      setCameraActive(false);
     }
+  }
+
+  async function toggleCameraFacing() {
+    const nextMode = facingMode === "environment" ? "user" : "environment";
+    setFacingMode(nextMode);
+    await startCamera(nextMode);
   }
 
   function capturePhoto() {
@@ -105,9 +126,15 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
+
+    if (facingMode === "user") {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
     onPhotoChange(dataUrl);
     stopCamera();
   }
@@ -173,36 +200,64 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
       />
 
       {cameraActive && (
-        <div className="public-live-camera-view" style={{ marginBottom: "12px" }}>
-          <video
-            ref={(el) => {
-              videoRef.current = el;
-              if (el && streamRef.current && el.srcObject !== streamRef.current) {
-                el.srcObject = streamRef.current;
-                el.play().catch(() => {});
-              }
-            }}
-            autoPlay
-            playsInline
-            muted
-            className="public-live-video"
-          />
-          <div className="public-live-controls">
+        <div className="public-live-camera-viewfinder-card" style={{ marginBottom: "14px" }}>
+          <div className="public-camera-topbar">
+            <div className="public-camera-status-pill">
+              <span className="public-camera-pulse-dot" />
+              <span>Live Asset Camera</span>
+            </div>
             <button
               type="button"
-              className="public-submit-btn"
-              style={{ width: "auto", padding: "8px 16px", fontSize: "13px" }}
+              className="public-camera-flip-btn"
+              onClick={toggleCameraFacing}
+              title="Switch camera"
+            >
+              <RefreshCw size={13} /> Switch Camera
+            </button>
+          </div>
+
+          <div className="public-camera-screen-wrap" style={{ height: "240px" }}>
+            <video
+              ref={(el) => {
+                videoRef.current = el;
+                if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                  el.srcObject = streamRef.current;
+                  el.onloadedmetadata = () => {
+                    el.play().catch(() => {});
+                  };
+                }
+              }}
+              autoPlay
+              playsInline
+              muted
+              className={`public-live-video ${facingMode === "user" ? "mirrored" : ""}`}
+            />
+            <div className="public-camera-reticle">
+              <div className="public-camera-corner top-left" />
+              <div className="public-camera-corner top-right" />
+              <div className="public-camera-corner bottom-left" />
+              <div className="public-camera-corner bottom-right" />
+              <div className="public-camera-face-guide">
+                <Laptop size={44} stroke="rgba(255,255,255,0.45)" strokeWidth={1.3} />
+                <span className="public-camera-hint">Align asset / device label inside frame</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="public-camera-action-bar">
+            <button
+              type="button"
+              className="public-camera-snap-btn"
               onClick={capturePhoto}
             >
-              <Camera size={15} /> Snap Photo
+              <Camera size={16} /> Snap Asset Photo
             </button>
             <button
               type="button"
-              className="public-clear-btn"
-              style={{ width: "auto", padding: "8px 14px", fontSize: "13px", margin: 0 }}
+              className="public-camera-cancel-btn"
               onClick={stopCamera}
             >
-              Cancel
+              <X size={15} /> Cancel
             </button>
           </div>
         </div>
@@ -432,7 +487,7 @@ export default function PublicRegistration() {
   }
 
   async function startCamera(requestedMode) {
-    const mode = requestedMode || facingMode;
+    const mode = typeof requestedMode === "string" ? requestedMode : facingMode;
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError("Camera access requires HTTPS or localhost.");
@@ -449,17 +504,24 @@ export default function PublicRegistration() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: mode,
+            facingMode: { ideal: mode },
             width: { ideal: 1280 },
             height: { ideal: 720 },
           },
           audio: false,
         });
       } catch {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: mode },
-          audio: false,
-        });
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: mode } },
+            audio: false,
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
       }
 
       streamRef.current = stream;
@@ -467,11 +529,11 @@ export default function PublicRegistration() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        try {
-          await videoRef.current.play();
-        } catch (err) {
-          console.warn("Video play warning:", err);
-        }
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch((err) => {
+            console.warn("Video play warning:", err);
+          });
+        };
       }
     } catch {
       setCameraError("Camera access was denied or the camera is unavailable.");
