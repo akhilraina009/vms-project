@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 900" width="100%" height="100%" preserveAspectRatio="none">
+  <defs>
+    <!-- Base Warm Peach Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff5f4" />
+      <stop offset="40%" stop-color="#fef0ee" />
+      <stop offset="70%" stop-color="#fdf4f5" />
+      <stop offset="100%" stop-color="#f4f6fb" />
+    </linearGradient>
+
+    <!-- Coral Wave Gradient 1 -->
+    <linearGradient id="coralWave1" x1="0%" y1="100%" x2="60%" y2="50%">
+      <stop offset="0%" stop-color="#f87171" stop-opacity="0.85" />
+      <stop offset="50%" stop-color="#fb923c" stop-opacity="0.65" />
+      <stop offset="100%" stop-color="#fca5a5" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Coral Wave Gradient 2 -->
+    <linearGradient id="coralWave2" x1="0%" y1="80%" x2="50%" y2="40%">
+      <stop offset="0%" stop-color="#fecdd3" stop-opacity="0.9" />
+      <stop offset="50%" stop-color="#fed7aa" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#fff1f2" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Soft Peach Highlight Wave -->
+    <linearGradient id="peachWave3" x1="0%" y1="60%" x2="40%" y2="20%">
+      <stop offset="0%" stop-color="#ffe4e6" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+
+    <!-- Top Right Lavender-Slate Wave -->
+    <linearGradient id="slateWaveTop" x1="50%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#e0e7ff" stop-opacity="0.5" />
+      <stop offset="50%" stop-color="#e2e8f0" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background Base -->
+  <rect width="1440" height="900" fill="url(#bgGrad)" />
+
+  <!-- Top Right Soft Slate Wave Ribbons -->
+  <path d="M 680,0 Q 880,120 1140,80 T 1440,160 L 1440,0 Z" fill="url(#slateWaveTop)" />
+  <path d="M 850,0 Q 1060,180 1320,110 T 1440,240 L 1440,0 Z" fill="#e2e8f0" fill-opacity="0.25" />
+
+  <!-- Bottom Left Layered Coral / Peach Organic Curves -->
+  <!-- Layer 1: Wide Soft Coral Sweep -->
+  <path d="M 0,380 C 180,420 340,580 440,720 C 490,790 540,860 620,900 L 0,900 Z" fill="url(#peachWave3)" />
+  
+  <!-- Layer 2: Medium Fluid Curve -->
+  <path d="M 0,520 C 140,540 280,640 380,760 C 430,820 480,880 540,900 L 0,900 Z" fill="url(#coralWave2)" />
+
+  <!-- Layer 3: Vibrant Bottom-Left Coral Wave -->
+  <path d="M 0,680 C 100,690 220,760 300,830 C 340,865 380,890 420,900 L 0,900 Z" fill="url(#coralWave1)" />
+
+  <!-- Subtle Bottom Edge Ribbon -->
+  <path d="M 0,810 C 80,810 160,840 220,880 C 240,895 260,900 280,900 L 0,900 Z" fill="#ef4444" fill-opacity="0.4" />
+</svg>
