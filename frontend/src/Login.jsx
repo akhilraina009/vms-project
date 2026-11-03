@@ -321,22 +321,22 @@ export default function Login({ onLogin }) {
           <div className="vms-stage-backdrop-gradient" />
         </div>
 
-        {/* Mobile Entrance Hero Banner */}
+        {/* Mobile Reception Hero Banner */}
         <div className="vms-mobile-hero-banner">
           <img
-            src="/vms_corporate_entrance_mob.png"
-            alt="Corporate Entrance"
+            src="/vms_corporate_reception_mob.png"
+            alt="Corporate Reception"
             className="vms-mobile-hero-img"
           />
           <div className="vms-mobile-hero-overlay" />
           <div className="vms-mobile-hero-caption">
             <h2 className="vms-mobile-caption-heading">
-              <span className="vms-mob-head-white">Enterprise-Grade</span>
+              <span className="vms-mob-head-white">Smart &amp; Secure</span>
               <span className="vms-mob-head-red">Visitor Management</span>
             </h2>
             <div className="vms-mobile-hero-red-line" />
             <p className="vms-mobile-caption-sub">
-              Secure entry, approvals, asset tracking, and gate operations — all in one place.
+              Manage visitor registration, pre-approvals, check-in, asset tracking, and reports — all in one place.
             </p>
           </div>
         </div>
@@ -425,9 +425,9 @@ export default function Login({ onLogin }) {
 
               {/* Welcome Back & Subtitle */}
               <div className="vms-card-welcome-header">
-                <h3 className="vms-card-welcome-title">Welcome Back</h3>
+                <h3 className="vms-card-welcome-title">Welcome back</h3>
                 <p className="vms-card-welcome-sub">
-                  Sign in to access your security dashboard and gate operations.
+                  Sign in to access your VMS dashboard.
                 </p>
               </div>
 
@@ -506,7 +506,6 @@ export default function Login({ onLogin }) {
                     </>
                   ) : (
                     <>
-                      <LogIn size={17} className="vms-btn-prefix-icon" />
                       <span>Sign In to VMS</span>
                       <ArrowRight size={17} className="vms-btn-arrow" />
                     </>
@@ -514,49 +513,61 @@ export default function Login({ onLogin }) {
                 </button>
               </form>
 
-              {/* Mobile-Only Key Capabilities Section */}
-              <div className="vms-mobile-capabilities-wrap">
-                <div className="vms-capabilities-divider">
-                  <span className="vms-divider-line" />
-                  <span className="vms-divider-text">Key Capabilities</span>
-                  <span className="vms-divider-line" />
-                </div>
-
-                <div className="vms-mobile-cap-cards-row">
-                  <div className="vms-mob-cap-card">
-                    <div className="vms-mob-cap-icon-box">
-                      <Users size={18} className="vms-mob-cap-icon" />
-                    </div>
-                    <span className="vms-mob-cap-label">Visitor<br />Registration</span>
-                  </div>
-
-                  <div className="vms-mob-cap-card">
-                    <div className="vms-mob-cap-icon-box">
-                      <CalendarCheck size={18} className="vms-mob-cap-icon" />
-                    </div>
-                    <span className="vms-mob-cap-label">Pre-Approvals<br />&amp; Scheduling</span>
-                  </div>
-
-                  <div className="vms-mob-cap-card">
-                    <div className="vms-mob-cap-icon-box">
-                      <Package size={18} className="vms-mob-cap-icon" />
-                    </div>
-                    <span className="vms-mob-cap-label">Asset<br />Management</span>
-                  </div>
-
-                  <div className="vms-mob-cap-card">
-                    <div className="vms-mob-cap-icon-box">
-                      <BarChart3 size={18} className="vms-mob-cap-icon" />
-                    </div>
-                    <span className="vms-mob-cap-label">Reports<br />&amp; Audit Logs</span>
-                  </div>
-                </div>
-              </div>
-
               {/* RBAC Security Footer Note */}
               <div className="vms-card-rbac-footer">
                 <ShieldCheck size={15} className="vms-rbac-icon" />
                 <span>Protected by Role-Based Access Control (RBAC)</span>
+              </div>
+            </div>
+
+            {/* Mobile-Only Key Capabilities Section (Outside Card, below in page flow) */}
+            <div className="vms-mobile-capabilities-wrap">
+              <div className="vms-capabilities-divider">
+                <span className="vms-divider-line" />
+                <span className="vms-divider-text">Key Capabilities</span>
+                <span className="vms-divider-line" />
+              </div>
+
+              <div className="vms-mobile-cap-grid">
+                <div className="vms-mob-cap-card">
+                  <div className="vms-mob-cap-icon-box">
+                    <Users size={22} className="vms-mob-cap-icon" />
+                  </div>
+                  <div className="vms-mob-cap-text">
+                    <strong className="vms-mob-cap-title">Visitor Registration</strong>
+                    <span className="vms-mob-cap-desc">Quick visitor check-in</span>
+                  </div>
+                </div>
+
+                <div className="vms-mob-cap-card">
+                  <div className="vms-mob-cap-icon-box">
+                    <CalendarCheck size={22} className="vms-mob-cap-icon" />
+                  </div>
+                  <div className="vms-mob-cap-text">
+                    <strong className="vms-mob-cap-title">Pre-Approvals &amp; Scheduling</strong>
+                    <span className="vms-mob-cap-desc">Plan and approve visits</span>
+                  </div>
+                </div>
+
+                <div className="vms-mob-cap-card">
+                  <div className="vms-mob-cap-icon-box">
+                    <Package size={22} className="vms-mob-cap-icon" />
+                  </div>
+                  <div className="vms-mob-cap-text">
+                    <strong className="vms-mob-cap-title">Asset Management</strong>
+                    <span className="vms-mob-cap-desc">Track items entering and leaving</span>
+                  </div>
+                </div>
+
+                <div className="vms-mob-cap-card">
+                  <div className="vms-mob-cap-icon-box">
+                    <BarChart3 size={22} className="vms-mob-cap-icon" />
+                  </div>
+                  <div className="vms-mob-cap-text">
+                    <strong className="vms-mob-cap-title">Reports &amp; Audit Logs</strong>
+                    <span className="vms-mob-cap-desc">Review activity and security history</span>
+                  </div>
+                </div>
               </div>
             </div>
           </section>

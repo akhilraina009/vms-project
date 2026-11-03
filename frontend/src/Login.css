@@ -928,8 +928,8 @@
     display: block;
     width: 100%;
     position: relative;
-    height: 195px;
-    max-height: 195px;
+    height: 220px;
+    max-height: 220px;
     overflow: hidden;
   }
 
@@ -944,15 +944,15 @@
   .vms-mobile-hero-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(to right, rgba(10, 16, 29, 0.92) 0%, rgba(10, 16, 29, 0.65) 50%, rgba(10, 16, 29, 0.1) 100%);
+    background: linear-gradient(to right, rgba(10, 16, 29, 0.88) 0%, rgba(10, 16, 29, 0.58) 54%, rgba(10, 16, 29, 0.10) 100%);
     pointer-events: none;
   }
 
   .vms-mobile-hero-caption {
     position: absolute;
-    top: 20px;
+    top: 22px;
     left: 18px;
-    right: 125px; /* Leaves CCTV camera and Gate Terminal sign visible on right */
+    right: 145px; /* Leaves reception desk and VMS wall logo visible on right */
     z-index: 5;
     text-align: left;
   }
@@ -965,42 +965,45 @@
   }
 
   .vms-mob-head-white {
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 800;
     color: #ffffff;
     letter-spacing: -0.3px;
     line-height: 1.15;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
   }
 
   .vms-mob-head-red {
-    font-size: 19px;
+    font-size: 20px;
     font-weight: 800;
     color: #e43b24;
     letter-spacing: -0.3px;
     line-height: 1.15;
-    text-shadow: 0 2px 10px rgba(228, 59, 36, 0.3);
+    text-shadow: 0 2px 12px rgba(228, 59, 36, 0.4);
   }
 
   .vms-mobile-hero-red-line {
-    width: 38px;
+    width: 36px;
     height: 3px;
     background: #e43b24;
     border-radius: 2px;
-    margin: 0 0 8px;
+    margin: 2px 0 8px;
   }
 
   .vms-mobile-caption-sub {
-    font-size: 11px;
-    line-height: 1.35;
-    color: #cbd5e1;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: #f8fafc;
     margin: 0;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+    max-width: 250px;
   }
 
   .vms-login-main-stage {
     display: flex;
     flex-direction: column;
-    padding: 0 0 32px;
+    padding: 0 0 40px;
+    background: linear-gradient(180deg, #f8fafc 0%, #edf2f7 100%);
   }
 
   .vms-login-content-grid {
@@ -1016,18 +1019,22 @@
   }
 
   .vms-login-card-col {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     padding: 0;
     width: 100%;
   }
 
   .vms-login-card {
+    width: 100%;
     max-width: 100%;
     margin-top: -24px;
-    border-radius: 26px 26px 18px 18px;
-    padding: 22px 18px 18px;
+    border-radius: 26px 26px 20px 20px;
+    padding: 24px 20px 20px;
     position: relative;
     z-index: 10;
-    box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.08), 0 12px 30px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 -4px 20px rgba(15, 23, 42, 0.06), 0 12px 32px rgba(15, 23, 42, 0.08);
   }
 
   .vms-card-system-title {
@@ -1035,7 +1042,7 @@
   }
 
   .vms-card-welcome-title {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   /* 44px Touch Targets & 16px font to prevent auto-zoom in iOS Safari */
@@ -1048,82 +1055,99 @@
   .vms-sign-in-btn {
     height: 46px;
     font-size: 15px;
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
-  /* Mobile Key Capabilities inside Login Card */
+  /* Mobile Key Capabilities (Outside Card in 2x2 Grid) */
   .vms-mobile-capabilities-wrap {
     display: block;
-    margin-top: 18px;
+    margin-top: 20px;
+    width: 100%;
   }
 
   .vms-capabilities-divider {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
-    margin: 0 0 12px;
+    gap: 12px;
+    margin: 0 0 14px;
   }
 
   .vms-divider-line {
     flex: 1;
     height: 1px;
-    background: #e2e8f0;
+    background: #cbd5e1;
   }
 
   .vms-divider-text {
-    font-size: 11px;
-    font-weight: 600;
-    color: #64748b;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
     white-space: nowrap;
   }
 
-  .vms-mobile-cap-cards-row {
+  .vms-mobile-cap-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
     width: 100%;
+    box-sizing: border-box;
   }
 
   .vms-mob-cap-card {
     background: #ffffff;
-    border: 1px solid #eef2f6;
-    border-radius: 12px;
-    padding: 8px 3px 7px;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 12px 10px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
-    text-align: center;
-    box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.06);
+    gap: 10px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
     box-sizing: border-box;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
 
   .vms-mob-cap-icon-box {
-    width: 30px;
-    height: 30px;
-    border-radius: 8px;
-    background: rgba(228, 59, 36, 0.08);
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 5px;
   }
 
   .vms-mob-cap-icon {
     color: #e43b24;
   }
 
-  .vms-mob-cap-label {
-    font-size: 9px;
+  .vms-mob-cap-text {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    min-width: 0;
+  }
+
+  .vms-mob-cap-title {
+    font-size: 12px;
     font-weight: 700;
     color: #0f172a;
-    line-height: 1.22;
+    line-height: 1.25;
+    margin-bottom: 2px;
+    white-space: normal;
+  }
+
+  .vms-mob-cap-desc {
+    font-size: 10px;
+    color: #64748b;
+    line-height: 1.25;
+    white-space: normal;
   }
 
   /* Pill badge on Mobile */
   .vms-card-rbac-footer {
-    background: #f1f5f9;
-    border: none;
+    background: #f8fafc;
+    border: 1px solid #edf2f7;
     border-radius: 10px;
     padding: 9px 12px;
     margin-top: 14px;
@@ -1148,31 +1172,40 @@
   }
 
   .vms-mobile-hero-caption {
-    right: 95px;
+    right: 90px;
   }
 
   .vms-mob-head-white,
   .vms-mob-head-red {
-    font-size: 17px;
+    font-size: 17.5px;
   }
 
-  .vms-mobile-cap-cards-row {
-    gap: 4px;
+  .vms-mobile-cap-grid {
+    gap: 6px;
   }
 
   .vms-mob-cap-card {
-    padding: 6px 2px 6px;
-    border-radius: 10px;
+    padding: 8px 6px;
+    gap: 6px;
+    border-radius: 11px;
   }
 
   .vms-mob-cap-icon-box {
-    width: 26px;
-    height: 26px;
-    margin-bottom: 3px;
+    width: 28px;
+    height: 28px;
   }
 
-  .vms-mob-cap-label {
-    font-size: 8px;
+  .vms-mob-cap-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .vms-mob-cap-title {
+    font-size: 10.5px;
+  }
+
+  .vms-mob-cap-desc {
+    font-size: 9px;
   }
 
   .vms-login-card {
