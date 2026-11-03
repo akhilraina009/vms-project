@@ -87,13 +87,217 @@ html[data-theme="light"] body .vms-premium-login-container {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  padding: 8px;
   border-radius: 8px;
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
+  min-width: 40px;
+  min-height: 40px;
 }
 
-.vms-login-mob-menu-btn:hover {
+.vms-login-mob-menu-btn:hover,
+.vms-login-mob-menu-btn:focus-visible {
   background: #f1f5f9;
+  color: #0f172a;
+  outline: none;
+}
+
+/* Mobile Drawer Backdrop */
+.vms-login-mob-backdrop {
+  position: fixed;
+  inset: 0;
+  top: 53px;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 55;
+  animation: vmsFadeIn 0.2s ease-out;
+}
+
+/* Mobile Navigation Drawer */
+.vms-login-mob-drawer {
+  position: fixed;
+  top: 53px;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.16);
+  z-index: 58;
+  padding: 16px 18px 20px;
+  max-height: calc(100vh - 65px);
+  overflow-y: auto;
+  animation: vmsSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.vms-mob-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.vms-mob-drawer-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.vms-mob-drawer-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ef4444;
+  background: #fee2e2;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.vms-mob-drawer-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vms-mob-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  background: #ffffff;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.vms-mob-nav-item:hover,
+.vms-mob-nav-item:active {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  transform: translateX(2px);
+}
+
+.vms-mob-nav-icon-badge {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vms-mob-nav-icon-badge.badge-guest {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.vms-mob-nav-icon-badge.badge-it {
+  background: #e0e7ff;
+  color: #4f46e5;
+}
+
+.vms-mob-nav-icon-badge.badge-guard {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.vms-mob-nav-icon-badge.badge-coveryou {
+  background: #ffedd5;
+  color: #ea580c;
+}
+
+.vms-mob-nav-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.vms-mob-nav-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.vms-mob-nav-sub {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.vms-mob-nav-chevron {
+  color: #cbd5e1;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.vms-mob-nav-item:hover .vms-mob-nav-chevron {
+  color: #0f172a;
+  transform: translateX(2px);
+}
+
+.vms-mob-drawer-footer {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.vms-mob-drawer-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #16a34a;
+  margin-bottom: 6px;
+}
+
+.vms-mob-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
+.vms-mob-drawer-help {
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.vms-mob-drawer-help a {
+  color: #ef4444;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+@keyframes vmsSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vmsFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* --------------------------------------------------------------------------
