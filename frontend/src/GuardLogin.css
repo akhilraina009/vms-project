@@ -237,8 +237,15 @@ html.dark .gt-mobile-drawer {
 }
 
 @keyframes slideDownDrawer {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .gt-mobile-drawer-title {
@@ -303,13 +310,13 @@ html.dark .gt-mobile-drawer-footer {
    3. MAIN STAGE LAYOUT
    ========================================================================= */
 .gt-main-stage {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
   width: 100%;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 30px 24px 60px;
+  padding: 12px 24px 24px;
   box-sizing: border-box;
 }
 
@@ -317,7 +324,7 @@ html.dark .gt-mobile-drawer-footer {
 .gt-stage-background {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 30%, rgba(228, 59, 36, 0.04) 0%, transparent 45%),
     radial-gradient(circle at 85% 65%, rgba(15, 23, 42, 0.04) 0%, transparent 55%);
   pointer-events: none;
@@ -326,23 +333,23 @@ html.dark .gt-mobile-drawer-footer {
 
 html[data-theme="dark"] .gt-stage-background,
 html.dark .gt-stage-background {
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 30%, rgba(228, 59, 36, 0.08) 0%, transparent 45%),
     radial-gradient(circle at 85% 65%, rgba(2, 6, 23, 0.4) 0%, transparent 55%);
 }
 
-/* 3-Column Container */
+/* 2-Column Desktop Stage Container (Left: Guard & Gate, Right: Login Card) */
 .gt-stage-container {
-  max-width: 1320px;
+  max-width: 1140px;
   width: 100%;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
   align-items: center;
   gap: 36px;
   position: relative;
   z-index: 10;
-  min-height: calc(100vh - 140px);
+  padding: 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -350,16 +357,16 @@ html.dark .gt-stage-background {
    -------------------------------------------------------------------------- */
 .gt-guard-col {
   display: flex;
-  justify-content: flex-end;
-  align-items: flex-end;
+  justify-content: center;
+  align-items: center;
 }
 
 .gt-guard-image-wrap {
   width: 100%;
-  max-width: 360px;
+  max-width: 480px;
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: center;
   position: relative;
 }
 
@@ -368,7 +375,7 @@ html.dark .gt-stage-background {
   height: auto;
   max-height: 480px;
   object-fit: contain;
-  border-radius: 0;
+  border-radius: 16px;
 }
 
 /* Mobile Hero Banner (Hidden on Desktop) */
@@ -381,23 +388,24 @@ html.dark .gt-stage-background {
 }
 
 /* --------------------------------------------------------------------------
-   CENTER COLUMN: Premium White Login Card
+   RIGHT COLUMN: Premium White Login Card
    -------------------------------------------------------------------------- */
 .gt-card-col {
   display: flex;
   justify-content: center;
+  align-items: center;
   width: 100%;
 }
 
 .gt-login-card {
   width: 100%;
-  max-width: 360px;
+  max-width: 420px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  padding: 22px 24px 16px;
+  border-radius: 20px;
+  padding: 24px 28px 20px;
   box-shadow: 
-    0 20px 50px -10px rgba(15, 23, 42, 0.1),
+    0 20px 50px -10px rgba(15, 23, 42, 0.08),
     0 0 1px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   text-align: left;
@@ -409,7 +417,7 @@ html[data-theme="dark"] .gt-login-card,
 html.dark .gt-login-card {
   background: #0f172a;
   border-color: #1e293b;
-  box-shadow: 
+  box-shadow:
     0 25px 60px -15px rgba(0, 0, 0, 0.75),
     0 0 0 1px rgba(255, 255, 255, 0.05);
 }
@@ -657,9 +665,19 @@ html.dark .gt-form-error {
 }
 
 @keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-4px);
+  }
+
+  75% {
+    transform: translateX(4px);
+  }
 }
 
 /* Primary Action Button */
@@ -715,8 +733,13 @@ html.dark .gt-form-error {
 }
 
 @keyframes gtSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Card Security Note */
@@ -749,59 +772,73 @@ html.dark .gt-note-shield {
   color: #94a3b8;
 }
 
-/* --------------------------------------------------------------------------
-   RIGHT COLUMN: 4 Floating Feature Badges (Desktop)
-   -------------------------------------------------------------------------- */
-.gt-features-col {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-}
-
-.gt-features-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+/* ==========================================================================
+   4. BOTTOM 4-FEATURE STRIP (Horizontal row with red left swoop)
+   ========================================================================== */
+.gt-bottom-features-section {
   width: 100%;
-  max-width: 320px;
+  background: #ffffff;
+  position: relative;
+  z-index: 20;
+  margin-top: auto;
 }
 
-.gt-feature-badge {
+html[data-theme="dark"] .gt-bottom-features-section,
+html.dark .gt-bottom-features-section {
+  background: #0f172a;
+}
+
+.gt-bottom-wave-wrap {
+  width: 100%;
+  height: 38px;
+  position: absolute;
+  top: -37px;
+  left: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.gt-bottom-wave-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.gt-wave-path-fill {
+  fill: #ffffff;
+}
+
+html[data-theme="dark"] .gt-wave-path-fill,
+html.dark .gt-wave-path-fill {
+  fill: #0f172a;
+}
+
+.gt-bottom-features-container {
+  max-width: 1100px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.94);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 14px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
-  transition: all 0.2s ease;
+  justify-content: space-between;
+  padding: 14px 24px 12px;
 }
 
-.gt-feature-badge:hover {
-  transform: translateX(4px);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-  border-color: rgba(228, 59, 36, 0.3);
+.gt-bottom-feature-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: left;
+  transition: transform 0.15s ease;
 }
 
-html[data-theme="dark"] .gt-feature-badge,
-html.dark .gt-feature-badge {
-  background: rgba(15, 23, 42, 0.85);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+.gt-bottom-feature-item:hover {
+  transform: translateY(-2px);
 }
 
-html[data-theme="dark"] .gt-feature-badge:hover,
-html.dark .gt-feature-badge:hover {
-  border-color: rgba(228, 59, 36, 0.4);
-  background: rgba(15, 23, 42, 0.95);
-}
-
-.gt-badge-icon-box {
-  width: 38px;
-  height: 38px;
+.gt-bottom-feature-icon {
+  width: 36px;
+  height: 36px;
   border-radius: 9px;
   background: rgba(228, 59, 36, 0.08);
   border: 1.5px solid #e43b24;
@@ -812,160 +849,147 @@ html.dark .gt-feature-badge:hover {
   flex-shrink: 0;
 }
 
-html[data-theme="dark"] .gt-badge-icon-box,
-html.dark .gt-badge-icon-box {
+html[data-theme="dark"] .gt-bottom-feature-icon,
+html.dark .gt-bottom-feature-icon {
   background: rgba(228, 59, 36, 0.15);
   border-color: #ef4444;
   color: #f87171;
 }
 
-.gt-badge-text {
+.gt-bottom-feature-text {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.gt-badge-title {
+.gt-bottom-feature-title {
   font-size: 13.5px;
   font-weight: 700;
   color: #0f172a;
+  letter-spacing: -0.2px;
 }
 
-html[data-theme="dark"] .gt-badge-title,
-html.dark .gt-badge-title {
-  color: #ffffff;
+html[data-theme="dark"] .gt-bottom-feature-title,
+html.dark .gt-bottom-feature-title {
+  color: #f8fafc;
 }
 
-.gt-badge-subtitle {
-  font-size: 11.5px;
-  color: #64748b;
+.gt-bottom-feature-sub {
+  font-size: 11px;
   font-weight: 500;
+  color: #64748b;
 }
 
-html[data-theme="dark"] .gt-badge-subtitle,
-html.dark .gt-badge-subtitle {
+html[data-theme="dark"] .gt-bottom-feature-sub,
+html.dark .gt-bottom-feature-sub {
   color: #94a3b8;
 }
 
-/* --------------------------------------------------------------------------
-   BOTTOM RED WAVES (Desktop)
-   -------------------------------------------------------------------------- */
-.gt-desktop-waves {
-  position: absolute;
-  bottom: 0;
-  left: 0;
+.gt-bottom-feature-divider {
+  width: 1px;
+  height: 32px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+  margin: 0 10px;
+}
+
+html[data-theme="dark"] .gt-bottom-feature-divider,
+html.dark .gt-bottom-feature-divider {
+  background: #1e293b;
+}
+
+/* Bottom Red Accent Wave along the base */
+.gt-bottom-accent-wave {
   width: 100%;
-  height: 100px;
-  pointer-events: none;
-  z-index: 5;
+  height: 16px;
   overflow: hidden;
+  line-height: 0;
+  pointer-events: none;
 }
 
-.gt-desktop-wave-left {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 320px;
-  height: 100px;
-}
-
-.gt-desktop-wave-right {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  width: 350px;
-  height: 80px;
-}
-
-.gt-wave-svg {
+.gt-bottom-accent-svg {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-/* Mobile Shortcuts & Bottom Wave (Desktop Hidden) */
-.gt-mobile-shortcuts-wrap,
-.gt-mobile-bottom-wave {
-  display: none;
-}
-
-/* ==========================================================================
-   4. DESKTOP FOOTER BAR
-   ========================================================================== */
-.gt-footer-bar {
-  width: 100%;
-  background: #ffffff;
-  border-top: 1px solid #e2e8f0;
-  padding: 10px 24px;
-  box-sizing: border-box;
-  position: relative;
-  z-index: 20;
-}
-
-html[data-theme="dark"] .gt-footer-bar,
-html.dark .gt-footer-bar {
-  background: #0f172a;
-  border-top-color: #1e293b;
-}
-
-.gt-footer-inner {
-  max-width: 1320px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  font-size: 12px;
-  color: #64748b;
-}
-
-html[data-theme="dark"] .gt-footer-inner,
-html.dark .gt-footer-inner {
-  color: #94a3b8;
-}
-
-.gt-footer-shield {
-  color: #0f172a;
-}
-
-html[data-theme="dark"] .gt-footer-shield,
-html.dark .gt-footer-shield {
-  color: #cbd5e1;
-}
-
-.gt-footer-title {
-  font-weight: 700;
-  color: #0f172a;
-}
-
-html[data-theme="dark"] .gt-footer-title,
-html.dark .gt-footer-title {
-  color: #f1f5f9;
-}
-
-.gt-footer-dot {
-  color: #cbd5e1;
-}
-
-.gt-footer-pill {
-  font-weight: 500;
 }
 
 /* ==========================================================================
    5. RESPONSIVE BREAKPOINTS (Tablets & Mobile Viewports)
    ========================================================================== */
 
-/* Laptop / Mid-Desktop Adaptations (1024px - 1280px) */
-@media (max-width: 1280px) {
+/* Desktop Viewport-Fit Mode (min-width: 1024px) */
+@media (min-width: 1024px) {
+  .guard-terminal-access-page {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+    justify-content: space-between;
+  }
+
+  .gt-header {
+    height: 54px;
+    flex-shrink: 0;
+  }
+
+  .gt-header-inner {
+    padding: 8px 24px;
+    height: 51px;
+    box-sizing: border-box;
+  }
+
+  .gt-main-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 6px 24px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .gt-stage-container {
-    gap: 24px;
+    max-width: 1100px;
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
   }
+
+  .gt-guard-col {
+    height: 100%;
+    max-height: 100%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gt-guard-image-wrap {
+    height: 100%;
+    max-height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .gt-guard-image {
-    max-height: 440px;
+    max-height: min(470px, calc(100vh - 210px));
   }
+
   .gt-login-card {
-    max-width: 360px;
-    padding: 22px 24px 16px;
+    max-width: 410px;
+    padding: 20px 26px 16px;
+  }
+
+  .gt-bottom-features-section {
+    flex-shrink: 0;
+  }
+
+  .gt-bottom-wave-wrap {
+    height: 30px;
+    top: -29px;
+  }
+
+  .gt-bottom-features-container {
+    padding: 8px 24px 6px;
   }
 }
 
@@ -973,19 +997,16 @@ html.dark .gt-footer-title {
 @media (max-width: 1023px) {
   .gt-stage-container {
     grid-template-columns: 1fr;
-    max-width: 500px;
+    max-width: 480px;
+    padding: 10px 16px 24px;
+    min-height: auto;
   }
+
   .gt-guard-col {
     display: none;
   }
-  .gt-features-col {
-    display: none;
-  }
-  .gt-desktop-waves {
-    display: none;
-  }
 
-  /* Show Mobile Elements on Tablet / Small Screen */
+  /* Show Mobile Hero Banner on Tablet */
   .gt-mobile-hero-banner {
     display: block;
     width: 100%;
@@ -998,7 +1019,7 @@ html.dark .gt-footer-title {
 
   .gt-mobile-hero-image {
     width: 100%;
-    height: 180px;
+    height: 160px;
     object-fit: cover;
     object-position: center top;
     display: block;
@@ -1018,67 +1039,22 @@ html.dark .gt-footer-title {
     z-index: 15;
   }
 
-  .gt-mobile-shortcuts-wrap {
-    display: block;
-    width: 100%;
-    max-width: 480px;
-    margin: 20px auto 0;
-  }
-
-  .gt-mobile-shortcuts-grid {
+  .gt-bottom-features-container {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 8px;
+    padding: 14px 16px 18px;
   }
 
-  .gt-mobile-shortcut-item {
-    display: flex;
+  .gt-bottom-feature-item {
     flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    padding: 10px 4px;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
     text-align: center;
+    gap: 4px;
+    padding: 8px 4px;
   }
 
-  html[data-theme="dark"] .gt-mobile-shortcut-item,
-  html.dark .gt-mobile-shortcut-item {
-    background: #0f172a;
-    border-color: #1e293b;
-  }
-
-  .gt-mobile-shortcut-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 7px;
-    background: rgba(228, 59, 36, 0.08);
-    border: 1.5px solid #e43b24;
-    color: #e43b24;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  html[data-theme="dark"] .gt-mobile-shortcut-icon,
-  html.dark .gt-mobile-shortcut-icon {
-    background: rgba(228, 59, 36, 0.15);
-    border-color: #ef4444;
-    color: #f87171;
-  }
-
-  .gt-mobile-shortcut-label {
-    font-size: 10.5px;
-    font-weight: 700;
-    color: #0f172a;
-    line-height: 1.25;
-  }
-
-  html[data-theme="dark"] .gt-mobile-shortcut-label,
-  html.dark .gt-mobile-shortcut-label {
-    color: #ffffff;
+  .gt-bottom-feature-divider {
+    display: none;
   }
 }
 
@@ -1105,11 +1081,13 @@ html.dark .gt-footer-title {
   }
 
   .gt-theme-toggle-btn {
-    display: none; /* Keep mobile header clean */
+    display: none;
+    /* Keep mobile header clean */
   }
 
   .gt-header-actions .gt-terminal-pill {
-    display: none; /* Relocated to mobile hero banner matching mockup */
+    display: none;
+    /* Relocated to mobile hero banner matching mockup */
   }
 
   .gt-mobile-hero-badge {
@@ -1198,7 +1176,8 @@ html.dark .gt-footer-title {
     height: 44px !important;
     padding-left: 44px !important;
     padding-right: 42px !important;
-    font-size: 16px !important; /* Prevents auto-zoom in iOS safari */
+    font-size: 16px !important;
+    /* Prevents auto-zoom in iOS safari */
   }
 
   .gt-submit-btn {
@@ -1206,51 +1185,44 @@ html.dark .gt-footer-title {
     font-size: 14px;
   }
 
-  .gt-mobile-shortcuts-wrap {
-    display: block;
-    padding: 0 14px;
-    margin-top: 14px;
-    width: 100%;
-    box-sizing: border-box;
-  }
-
-  .gt-mobile-shortcuts-grid {
+  .gt-bottom-features-container {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: 6px;
+    padding: 12px 10px 16px;
   }
 
-  .gt-mobile-shortcut-item {
-    padding: 8px 3px;
-    border-radius: 10px;
+  .gt-bottom-feature-item {
+    flex-direction: column;
+    text-align: center;
+    gap: 4px;
+    padding: 6px 2px;
+    border-radius: 8px;
   }
 
-  .gt-mobile-shortcut-icon {
-    width: 30px;
-    height: 30px;
+  .gt-bottom-feature-icon {
+    width: 28px;
+    height: 28px;
   }
 
-  .gt-mobile-shortcut-label {
-    font-size: 9.5px;
-    font-weight: 700;
+  .gt-bottom-feature-title {
+    font-size: 9px;
+    line-height: 1.15;
   }
 
-  .gt-mobile-bottom-wave {
-    display: block;
-    width: 100%;
-    height: 32px;
-    margin-top: 14px;
+  .gt-bottom-feature-sub {
+    font-size: 8px;
   }
 
-  .gt-footer-bar {
-    display: none; /* Hide bottom desktop bar on mobile to prioritize screen */
+  .gt-bottom-feature-divider {
+    display: none;
   }
 }
 
 /* Extra small devices (<= 360px: iPhone SE, Galaxy S8, etc.) */
 @media (max-width: 360px) {
   .gt-brand-subtitle {
-    display: none; /* Save space for logo and title */
+    display: none;
   }
 
   .gt-card-col {
@@ -1261,11 +1233,16 @@ html.dark .gt-footer-title {
     padding: 18px 14px 14px;
   }
 
-  .gt-mobile-shortcuts-grid {
+  .gt-bottom-features-container {
     gap: 4px;
+    padding: 10px 6px 14px;
   }
 
-  .gt-mobile-shortcut-label {
-    font-size: 9px;
+  .gt-bottom-feature-title {
+    font-size: 8.5px;
+  }
+
+  .gt-bottom-feature-sub {
+    font-size: 7.5px;
   }
 }

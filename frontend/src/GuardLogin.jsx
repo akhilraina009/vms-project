@@ -201,6 +201,12 @@ export default function GuardLogin({ onLogin }) {
 
           {/* 1.5 MOBILE HERO: Guard & Gate Banner (Mobile Only) */}
           <div className="gt-mobile-hero-banner">
+            <div className="gt-mobile-hero-badge">
+              <div className="gt-terminal-pill">
+                <ShieldCheck size={13} className="gt-pill-icon" />
+                <span>Gate Terminal</span>
+              </div>
+            </div>
             <img
               src="/guard_hero_mobile_clean.png"
               alt="Gate Terminal Guard"
@@ -313,131 +319,80 @@ export default function GuardLogin({ onLogin }) {
               </div>
             </div>
           </div>
-
-          {/* 3. RIGHT HERO: 4 Floating Feature Badges (Desktop) */}
-          <div className="gt-features-col">
-            <div className="gt-features-list">
-              {/* Feature 1 */}
-              <div className="gt-feature-badge">
-                <div className="gt-badge-icon-box">
-                  <Scan size={18} />
-                </div>
-                <div className="gt-badge-text">
-                  <strong className="gt-badge-title">Scan Visitor Pass</strong>
-                  <span className="gt-badge-subtitle">QR / Barcode Verification</span>
-                </div>
-              </div>
-
-              {/* Feature 2 */}
-              <div className="gt-feature-badge">
-                <div className="gt-badge-icon-box">
-                  <ShieldCheck size={18} />
-                </div>
-                <div className="gt-badge-text">
-                  <strong className="gt-badge-title">Verify Visit</strong>
-                  <span className="gt-badge-subtitle">Approval &amp; Validity</span>
-                </div>
-              </div>
-
-              {/* Feature 3 */}
-              <div className="gt-feature-badge">
-                <div className="gt-badge-icon-box">
-                  <Package size={18} />
-                </div>
-                <div className="gt-badge-text">
-                  <strong className="gt-badge-title">Manage Assets</strong>
-                  <span className="gt-badge-subtitle">Entry &amp; Exit Clearance</span>
-                </div>
-              </div>
-
-              {/* Feature 4 */}
-              <div className="gt-feature-badge">
-                <div className="gt-badge-icon-box">
-                  <FileText size={18} />
-                </div>
-                <div className="gt-badge-text">
-                  <strong className="gt-badge-title">Record Activity</strong>
-                  <span className="gt-badge-subtitle">Real-time Logs</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 4. MOBILE SHORTCUTS ROW (Rendered beneath the card on phone screens) */}
-        <div className="gt-mobile-shortcuts-wrap">
-          <div className="gt-mobile-shortcuts-grid">
-            {/* Shortcut 1 */}
-            <div className="gt-mobile-shortcut-item">
-              <div className="gt-mobile-shortcut-icon">
-                <Scan size={18} />
-              </div>
-              <span className="gt-mobile-shortcut-label">Scan Visitor Pass</span>
-            </div>
-
-            {/* Shortcut 2 */}
-            <div className="gt-mobile-shortcut-item">
-              <div className="gt-mobile-shortcut-icon">
-                <ShieldCheck size={18} />
-              </div>
-              <span className="gt-mobile-shortcut-label">Verify Visit</span>
-            </div>
-
-            {/* Shortcut 3 */}
-            <div className="gt-mobile-shortcut-item">
-              <div className="gt-mobile-shortcut-icon">
-                <Package size={18} />
-              </div>
-              <span className="gt-mobile-shortcut-label">Manage Assets</span>
-            </div>
-
-            {/* Shortcut 4 */}
-            <div className="gt-mobile-shortcut-item">
-              <div className="gt-mobile-shortcut-icon">
-                <FileText size={18} />
-              </div>
-              <span className="gt-mobile-shortcut-label">Record Activity</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Desktop Red Wave Accents (Bottom Left & Right) */}
-        <div className="gt-desktop-waves">
-          <div className="gt-desktop-wave-left">
-            <svg viewBox="0 0 320 120" preserveAspectRatio="none" className="gt-wave-svg">
-              <path d="M0,120 L0,30 C60,5 140,45 220,105 C260,135 300,120 320,120 Z" fill="#e43b24" />
-            </svg>
-          </div>
-          <div className="gt-desktop-wave-right">
-            <svg viewBox="0 0 350 100" preserveAspectRatio="none" className="gt-wave-svg">
-              <path d="M0,100 C80,85 180,60 260,75 C310,85 340,95 350,100 Z" fill="#e43b24" opacity="0.85" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Mobile Red Bottom Wave Accent */}
-        <div className="gt-mobile-bottom-wave">
-          <svg viewBox="0 0 400 40" preserveAspectRatio="none" className="gt-wave-svg">
-            <path d="M0,40 C100,15 300,15 400,40 Z" fill="#e43b24" />
-          </svg>
         </div>
       </main>
 
       {/* =========================================================================
-          DESKTOP FOOTER BAR
+          BOTTOM 4-FEATURE STRIP (Matching new reference design)
           ========================================================================= */}
-      <footer className="gt-footer-bar">
-        <div className="gt-footer-inner">
-          <ShieldCheck size={14} className="gt-footer-shield" />
-          <span className="gt-footer-title">VMS Gate Operations</span>
-          <span className="gt-footer-dot">·</span>
-          <span className="gt-footer-pill">Secure</span>
-          <span className="gt-footer-dot">·</span>
-          <span className="gt-footer-pill">Compliant</span>
-          <span className="gt-footer-dot">·</span>
-          <span className="gt-footer-pill">Monitored</span>
+      <section className="gt-bottom-features-section">
+        {/* Soft Wave with Left Red Swoop Accent */}
+        <div className="gt-bottom-wave-wrap">
+          <svg viewBox="0 0 1200 65" preserveAspectRatio="none" className="gt-bottom-wave-svg">
+            <path d="M0,65 L0,22 C140,5 280,38 420,65 Z" fill="#e43b24" />
+            <path d="M0,65 C320,55 640,24 1200,32 L1200,65 Z" className="gt-wave-path-fill" />
+          </svg>
         </div>
-      </footer>
+
+        <div className="gt-bottom-features-container">
+          {/* Feature 1 */}
+          <div className="gt-bottom-feature-item">
+            <div className="gt-bottom-feature-icon">
+              <Scan size={20} />
+            </div>
+            <div className="gt-bottom-feature-text">
+              <strong className="gt-bottom-feature-title">Scan Visitor Pass</strong>
+              <span className="gt-bottom-feature-sub">QR / Barcode</span>
+            </div>
+          </div>
+
+          <div className="gt-bottom-feature-divider" />
+
+          {/* Feature 2 */}
+          <div className="gt-bottom-feature-item">
+            <div className="gt-bottom-feature-icon">
+              <ShieldCheck size={20} />
+            </div>
+            <div className="gt-bottom-feature-text">
+              <strong className="gt-bottom-feature-title">Verify Visit</strong>
+              <span className="gt-bottom-feature-sub">Approval &amp; Validity</span>
+            </div>
+          </div>
+
+          <div className="gt-bottom-feature-divider" />
+
+          {/* Feature 3 */}
+          <div className="gt-bottom-feature-item">
+            <div className="gt-bottom-feature-icon">
+              <Package size={20} />
+            </div>
+            <div className="gt-bottom-feature-text">
+              <strong className="gt-bottom-feature-title">Manage Assets</strong>
+              <span className="gt-bottom-feature-sub">Entry &amp; Exit Clearance</span>
+            </div>
+          </div>
+
+          <div className="gt-bottom-feature-divider" />
+
+          {/* Feature 4 */}
+          <div className="gt-bottom-feature-item">
+            <div className="gt-bottom-feature-icon">
+              <FileText size={20} />
+            </div>
+            <div className="gt-bottom-feature-text">
+              <strong className="gt-bottom-feature-title">Record Activity</strong>
+              <span className="gt-bottom-feature-sub">Real-time Logs</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Red Accent Wave along the base */}
+        <div className="gt-bottom-accent-wave">
+          <svg viewBox="0 0 1200 35" preserveAspectRatio="none" className="gt-bottom-accent-svg">
+            <path d="M0,35 L0,5 C300,30 650,33 950,20 C1080,14 1150,7 1200,0 L1200,35 Z" fill="#e43b24" />
+          </svg>
+        </div>
+      </section>
     </div>
   );
 }
