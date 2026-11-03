@@ -241,55 +241,47 @@ export default function GuardLogin({ onLogin }) {
                 </p>
               </div>
 
-              {/* Form */}
+              {/* Form with Clean Search-Box Inputs */}
               <form onSubmit={handleSubmit} className="gt-login-form">
-                {/* Guard Email / ID */}
-                <div className="gt-form-group">
-                  <label htmlFor="gt-email" className="gt-form-label">
-                    Guard Email / ID
-                  </label>
-                  <div className="gt-input-wrap">
-                    <Mail size={16} className="gt-input-icon" />
-                    <input
-                      id="gt-email"
-                      type="email"
-                      className="gt-form-input"
-                      placeholder="guard@vms.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      autoComplete="username"
-                    />
-                  </div>
+                {/* Search Box 1: Guard Email / ID */}
+                <div className="gt-search-box-wrap">
+                  <Mail size={16} className="gt-search-box-icon" />
+                  <input
+                    id="gt-email"
+                    type="email"
+                    className="gt-search-box-input"
+                    placeholder="Guard Email / ID"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="username"
+                    aria-label="Guard Email or ID"
+                  />
                 </div>
 
-                {/* Security Password */}
-                <div className="gt-form-group">
-                  <label htmlFor="gt-password" className="gt-form-label">
-                    Security Password
-                  </label>
-                  <div className="gt-input-wrap">
-                    <LockKeyhole size={16} className="gt-input-icon" />
-                    <input
-                      id="gt-password"
-                      type={showPassword ? "text" : "password"}
-                      className="gt-form-input"
-                      placeholder="Enter access passphrase"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      autoComplete="current-password"
-                    />
-                    <button
-                      type="button"
-                      className="gt-password-toggle"
-                      onClick={() => setShowPassword((p) => !p)}
-                      aria-label={showPassword ? "Hide password" : "Show password"}
-                      tabIndex={-1}
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
+                {/* Search Box 2: Security Password */}
+                <div className="gt-search-box-wrap">
+                  <LockKeyhole size={16} className="gt-search-box-icon" />
+                  <input
+                    id="gt-password"
+                    type={showPassword ? "text" : "password"}
+                    className="gt-search-box-input gt-password-input"
+                    placeholder="Security Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    aria-label="Security Password"
+                  />
+                  <button
+                    type="button"
+                    className="gt-password-toggle"
+                    onClick={() => setShowPassword((p) => !p)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
                 </div>
 
                 {/* Error Banner */}

@@ -390,14 +390,14 @@ html.dark .gt-stage-background {
 
 .gt-login-card {
   width: 100%;
-  max-width: 440px;
+  max-width: 360px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 22px;
-  padding: 30px 32px 24px;
+  border-radius: 18px;
+  padding: 22px 24px 16px;
   box-shadow: 
-    0 25px 60px -15px rgba(15, 23, 42, 0.12),
-    0 0 1px rgba(0, 0, 0, 0.06);
+    0 20px 50px -10px rgba(15, 23, 42, 0.1),
+    0 0 1px rgba(0, 0, 0, 0.05);
   box-sizing: border-box;
   text-align: left;
   position: relative;
@@ -416,21 +416,21 @@ html.dark .gt-login-card {
 /* Card Brand Header */
 .gt-card-brand {
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .gt-card-logo-ring {
-  width: 58px;
-  height: 58px;
-  margin: 0 auto 10px;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
-  box-shadow: 0 4px 14px rgba(228, 59, 36, 0.16);
-  padding: 8px;
+  box-shadow: 0 3px 10px rgba(228, 59, 36, 0.15);
+  padding: 5px;
   box-sizing: border-box;
 }
 
@@ -444,17 +444,17 @@ html.dark .gt-card-logo-ring {
 .gt-card-logo {
   width: 100%;
   height: 100%;
-  max-width: 38px;
-  max-height: 38px;
+  max-width: 30px;
+  max-height: 30px;
   object-fit: contain;
 }
 
 .gt-card-title {
-  font-size: 21px;
+  font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.3px;
   color: #0f172a;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
 }
 
 html[data-theme="dark"] .gt-card-title,
@@ -463,10 +463,10 @@ html.dark .gt-card-title {
 }
 
 .gt-card-subtitle {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: #64748b;
-  margin: 0 0 12px;
+  margin: 0 0 6px;
 }
 
 html[data-theme="dark"] .gt-card-subtitle,
@@ -476,7 +476,7 @@ html.dark .gt-card-subtitle {
 
 .gt-card-red-rule {
   width: 32px;
-  height: 2.5px;
+  height: 2px;
   background: #e43b24;
   border-radius: 2px;
   margin: 0 auto;
@@ -484,14 +484,14 @@ html.dark .gt-card-subtitle {
 
 /* Intro Section */
 .gt-card-intro {
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .gt-intro-heading {
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 700;
   color: #0f172a;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
 }
 
 html[data-theme="dark"] .gt-intro-heading,
@@ -500,9 +500,9 @@ html.dark .gt-intro-heading {
 }
 
 .gt-intro-desc {
-  font-size: 12.5px;
+  font-size: 11px;
   color: #64748b;
-  line-height: 1.45;
+  line-height: 1.35;
   margin: 0;
 }
 
@@ -511,80 +511,82 @@ html.dark .gt-intro-desc {
   color: #94a3b8;
 }
 
-/* Form Groups & Inputs */
+/* Search Box Form Inputs (Clean Search-Box Style) */
 .gt-login-form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
 }
 
-.gt-form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.gt-form-label {
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #334155;
-}
-
-html[data-theme="dark"] .gt-form-label,
-html.dark .gt-form-label {
-  color: #cbd5e1;
-}
-
-.gt-input-wrap {
+.gt-search-box-wrap {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
-.gt-input-icon {
+.gt-search-box-icon {
   position: absolute;
-  left: 14px;
-  color: #94a3b8;
+  left: 12px;
+  color: #64748b;
   pointer-events: none;
   flex-shrink: 0;
+  z-index: 2;
 }
 
-.gt-form-input {
+html[data-theme="dark"] .gt-search-box-icon,
+html.dark .gt-search-box-icon {
+  color: #94a3b8;
+}
+
+.gt-search-box-input {
   width: 100%;
-  height: 44px;
-  padding: 0 40px 0 40px;
+  height: 38px;
+  padding: 0 34px 0 36px;
   background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  font-size: 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
   color: #0f172a;
   box-sizing: border-box;
   transition: all 0.15s ease;
   outline: none;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.gt-form-input::placeholder {
-  color: #94a3b8;
-  font-weight: 400;
+.gt-search-box-input::placeholder {
+  color: #64748b;
+  font-weight: 500;
+  opacity: 1;
 }
 
-.gt-form-input:focus {
+.gt-search-box-input:focus {
   border-color: #e43b24;
   box-shadow: 0 0 0 3px rgba(228, 59, 36, 0.15);
 }
 
-html[data-theme="dark"] .gt-form-input,
-html.dark .gt-form-input {
+html[data-theme="dark"] .gt-search-box-input,
+html.dark .gt-search-box-input {
   background: #0b1120;
-  border-color: #1e293b;
+  border-color: #334155;
   color: #f1f5f9;
+  box-shadow: none;
 }
 
-html[data-theme="dark"] .gt-form-input:focus,
-html.dark .gt-form-input:focus {
-  border-color: #e43b24;
-  box-shadow: 0 0 0 3px rgba(228, 59, 36, 0.25);
+html[data-theme="dark"] .gt-search-box-input::placeholder,
+html.dark .gt-search-box-input::placeholder {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .gt-search-box-input:focus,
+html.dark .gt-search-box-input:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25);
+}
+
+.gt-password-input {
+  padding-right: 36px;
 }
 
 /* Password Toggle Button */
@@ -593,7 +595,7 @@ html.dark .gt-form-input:focus {
   right: 12px;
   background: transparent;
   border: none;
-  color: #94a3b8;
+  color: #64748b;
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -601,10 +603,16 @@ html.dark .gt-form-input:focus {
   justify-content: center;
   border-radius: 6px;
   transition: color 0.15s ease;
+  z-index: 2;
 }
 
 .gt-password-toggle:hover {
   color: #0f172a;
+}
+
+html[data-theme="dark"] .gt-password-toggle,
+html.dark .gt-password-toggle {
+  color: #94a3b8;
 }
 
 html[data-theme="dark"] .gt-password-toggle:hover,
@@ -641,20 +649,20 @@ html.dark .gt-form-error {
 /* Primary Action Button */
 .gt-submit-btn {
   width: 100%;
-  height: 46px;
-  margin-top: 4px;
+  height: 40px;
+  margin-top: 2px;
   background: #e43b24;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   color: #ffffff;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(228, 59, 36, 0.35);
+  box-shadow: 0 4px 12px rgba(228, 59, 36, 0.3);
   transition: all 0.15s ease;
 }
 
@@ -697,14 +705,14 @@ html.dark .gt-form-error {
 
 /* Card Security Note */
 .gt-card-security-note {
-  margin-top: 18px;
-  padding-top: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  font-size: 11.5px;
+  gap: 5px;
+  font-size: 10.5px;
   color: #64748b;
   text-align: center;
 }
@@ -940,8 +948,8 @@ html.dark .gt-footer-title {
     max-height: 440px;
   }
   .gt-login-card {
-    max-width: 410px;
-    padding: 26px 26px 20px;
+    max-width: 360px;
+    padding: 22px 24px 16px;
   }
 }
 
@@ -1167,13 +1175,13 @@ html.dark .gt-footer-title {
     font-size: 12px;
   }
 
-  .gt-form-input {
-    height: 44px;
+  .gt-search-box-input {
+    height: 42px;
     font-size: 16px; /* Prevents auto-zoom in iOS safari */
   }
 
   .gt-submit-btn {
-    height: 46px;
+    height: 44px;
     font-size: 14px;
   }
 
