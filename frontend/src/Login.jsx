@@ -7,18 +7,20 @@ import {
   ArrowRight,
   RefreshCw,
   ShieldCheck,
-  Landmark,
-  Users,
+  DoorOpen,
   Headphones,
   Menu,
   X,
   ChevronRight,
   UserPlus,
   Laptop,
+  Users,
+  CalendarCheck,
+  Package,
+  BarChart3,
   ExternalLink,
+  LogIn,
 } from "lucide-react";
-import doctorImg from "./assets/coveryou/doctor_isolated.png";
-import coverYouLogo from "./assets/coveryou/logo.svg";
 import "./Login.css";
 
 const API_BASE_URL = "";
@@ -40,7 +42,7 @@ export default function Login({ onLogin }) {
     }
   };
 
-  // Set theme to light mode to match the executive CoverYou design
+  // Ensure default clean light theme matching the executive enterprise design reference
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", "light");
     document.documentElement.classList.remove("dark");
@@ -48,7 +50,7 @@ export default function Login({ onLogin }) {
     localStorage.setItem("vms-theme", "light");
   }, []);
 
-  // Close mobile navigation drawer with Escape key and lock body scroll
+  // Close mobile navigation drawer with Escape key and manage body overflow
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === "Escape" && mobileMenuOpen) {
@@ -131,30 +133,66 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div className="vms-premium-login-container">
-      {/* Mobile Top Header (Visible on Mobile only <= 900px) */}
-      <header className="vms-login-mob-header">
-        <div className="vms-login-mob-header-brand">
-          <img src="/vms-logo.png" alt="VMS Logo" className="vms-login-mob-logo" />
-          <span className="vms-login-mob-title">VMS</span>
-          <span className="vms-login-mob-divider">|</span>
-          <span className="vms-login-mob-sub">Visitor Management</span>
+    <div className="vms-premium-login-page">
+      {/* =========================================================================
+          TOP NAVIGATION HEADER (Desktop & Mobile)
+          ========================================================================= */}
+      <header className="vms-login-header">
+        <div className="vms-login-header-inner">
+          {/* Left Brand Identity */}
+          <div className="vms-header-brand-wrap">
+            <img src="/vms-logo.png" alt="VMS Logo" className="vms-header-brand-logo" />
+            <span className="vms-header-brand-title">VMS</span>
+            <span className="vms-header-brand-divider">|</span>
+            <span className="vms-header-brand-sub">Visitor Management System</span>
+          </div>
+
+          {/* Right Header Navigation & Actions (Desktop) */}
+          <div className="vms-header-actions-desktop">
+            <div className="vms-header-status-item">
+              <ShieldCheck size={15} className="vms-header-icon" />
+              <span>Secure Access</span>
+            </div>
+
+            <span className="vms-header-action-divider">|</span>
+
+            <a href="/guard" className="vms-header-link-item" title="Open Guard Gate Terminal">
+              <DoorOpen size={15} className="vms-header-icon" />
+              <span>Gate Terminal</span>
+            </a>
+
+            <span className="vms-header-action-divider">|</span>
+
+            <a href="mailto:admin@vms.com" className="vms-header-link-item" title="Contact System Administrator">
+              <Headphones size={15} className="vms-header-icon" />
+              <span>Help</span>
+            </a>
+          </div>
+
+          {/* Mobile Hamburger Menu Button */}
+          <button
+            type="button"
+            className="vms-mobile-menu-trigger"
+            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
-        <button
-          type="button"
-          className="vms-login-mob-menu-btn"
-          aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-          aria-expanded={mobileMenuOpen}
-          onClick={() => setMobileMenuOpen((prev) => !prev)}
-        >
-          {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-        </button>
+
+        {/* Clean Red Accent Underline */}
+        <div className="vms-header-accent-line">
+          <div className="vms-header-accent-fill" />
+        </div>
       </header>
 
-      {/* Mobile Navigation Drawer / Sheet */}
+      {/* =========================================================================
+          MOBILE NAVIGATION DRAWER
+          ========================================================================= */}
       {mobileMenuOpen && (
         <div
-          className="vms-login-mob-modal-overlay"
+          className="vms-mobile-drawer-overlay"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setMobileMenuOpen(false);
@@ -164,18 +202,17 @@ export default function Login({ onLogin }) {
           aria-modal="true"
           aria-label="Navigation Menu"
         >
-          <nav className="vms-login-mob-drawer" aria-label="Mobile Navigation">
-            {/* Top Header inside sheet flush with top edge */}
-            <div className="vms-login-mob-modal-topbar">
-              <div className="vms-login-mob-header-brand">
-                <img src="/vms-logo.png" alt="VMS Logo" className="vms-login-mob-logo" />
-                <span className="vms-login-mob-title">VMS</span>
-                <span className="vms-login-mob-divider">|</span>
-                <span className="vms-login-mob-sub">Visitor Management</span>
+          <nav className="vms-mobile-drawer-panel" aria-label="Mobile Navigation">
+            <div className="vms-mobile-drawer-topbar">
+              <div className="vms-header-brand-wrap">
+                <img src="/vms-logo.png" alt="VMS Logo" className="vms-header-brand-logo" />
+                <span className="vms-header-brand-title">VMS</span>
+                <span className="vms-header-brand-divider">|</span>
+                <span className="vms-header-brand-sub">Visitor Management</span>
               </div>
               <button
                 type="button"
-                className="vms-login-mob-close-btn"
+                className="vms-mobile-drawer-close"
                 aria-label="Close navigation menu"
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -183,95 +220,90 @@ export default function Login({ onLogin }) {
               </button>
             </div>
 
-            <div className="vms-login-mob-drawer-content">
-              <div className="vms-mob-drawer-header">
-                <span className="vms-mob-drawer-title">Quick Portals &amp; Access</span>
-                <span className="vms-mob-drawer-badge">VMS System</span>
-              </div>
+            <div className="vms-mobile-drawer-body">
+              <div className="vms-drawer-section-label">Quick Portals &amp; Access</div>
 
-              <div className="vms-mob-drawer-links">
+              <div className="vms-drawer-nav-list">
                 <a
                   href="/register-visitor"
-                  className="vms-mob-nav-item"
+                  className="vms-drawer-item"
                   onClick={(e) => {
                     e.preventDefault();
                     handleNav("/register-visitor");
                   }}
                 >
-                  <div className="vms-mob-nav-icon-badge badge-guest">
+                  <div className="vms-drawer-item-icon badge-guest">
                     <UserPlus size={18} />
                   </div>
-                  <div className="vms-mob-nav-info">
-                    <strong className="vms-mob-nav-title">Visitor Self-Registration</strong>
-                    <span className="vms-mob-nav-sub">Walk-in guest entry &amp; QR pass kiosk</span>
+                  <div className="vms-drawer-item-info">
+                    <strong className="vms-drawer-item-title">Visitor Self-Registration</strong>
+                    <span className="vms-drawer-item-sub">Walk-in guest entry &amp; QR pass kiosk</span>
                   </div>
-                  <ChevronRight size={16} className="vms-mob-nav-chevron" />
+                  <ChevronRight size={16} className="vms-drawer-chevron" />
                 </a>
 
                 <a
                   href="/it-visit"
-                  className="vms-mob-nav-item"
+                  className="vms-drawer-item"
                   onClick={(e) => {
                     e.preventDefault();
                     handleNav("/it-visit");
                   }}
                 >
-                  <div className="vms-mob-nav-icon-badge badge-it">
+                  <div className="vms-drawer-item-icon badge-it">
                     <Laptop size={18} />
                   </div>
-                  <div className="vms-mob-nav-info">
-                    <strong className="vms-mob-nav-title">IT Contractor Clearance</strong>
-                    <span className="vms-mob-nav-sub">Hardware &amp; equipment pass declaration</span>
+                  <div className="vms-drawer-item-info">
+                    <strong className="vms-drawer-item-title">IT Contractor Clearance</strong>
+                    <span className="vms-drawer-item-sub">Hardware &amp; equipment pass declaration</span>
                   </div>
-                  <ChevronRight size={16} className="vms-mob-nav-chevron" />
+                  <ChevronRight size={16} className="vms-drawer-chevron" />
                 </a>
 
                 <a
                   href="/guard"
-                  className="vms-mob-nav-item"
+                  className="vms-drawer-item"
                   onClick={(e) => {
                     e.preventDefault();
                     handleNav("/guard");
                   }}
                 >
-                  <div className="vms-mob-nav-icon-badge badge-guard">
+                  <div className="vms-drawer-item-icon badge-guard">
                     <ShieldCheck size={18} />
                   </div>
-                  <div className="vms-mob-nav-info">
-                    <strong className="vms-mob-nav-title">Security Gate Terminal</strong>
-                    <span className="vms-mob-nav-sub">Check-in scanner &amp; perimeter gate desk</span>
+                  <div className="vms-drawer-item-info">
+                    <strong className="vms-drawer-item-title">Security Gate Terminal</strong>
+                    <span className="vms-drawer-item-sub">Check-in scanner &amp; optical clearance</span>
                   </div>
-                  <ChevronRight size={16} className="vms-mob-nav-chevron" />
+                  <ChevronRight size={16} className="vms-drawer-chevron" />
                 </a>
 
                 <a
-                  href="https://coveryou.in"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="vms-mob-nav-item"
+                  href="mailto:admin@vms.com"
+                  className="vms-drawer-item"
                   onClick={(e) => {
                     e.preventDefault();
-                    handleNav("https://coveryou.in", true);
+                    handleNav("mailto:admin@vms.com", true);
                   }}
                 >
-                  <div className="vms-mob-nav-icon-badge badge-coveryou">
-                    <ExternalLink size={18} />
+                  <div className="vms-drawer-item-icon badge-help">
+                    <Headphones size={18} />
                   </div>
-                  <div className="vms-mob-nav-info">
-                    <strong className="vms-mob-nav-title">CoverYou Protection</strong>
-                    <span className="vms-mob-nav-sub">Doctor &amp; healthcare indemnity cover</span>
+                  <div className="vms-drawer-item-info">
+                    <strong className="vms-drawer-item-title">System Support</strong>
+                    <span className="vms-drawer-item-sub">Contact system administrator</span>
                   </div>
-                  <ChevronRight size={16} className="vms-mob-nav-chevron" />
+                  <ChevronRight size={16} className="vms-drawer-chevron" />
                 </a>
               </div>
 
-              <div className="vms-mob-drawer-footer">
-                <div className="vms-mob-drawer-status">
-                  <span className="vms-mob-status-dot" />
+              <div className="vms-drawer-footer">
+                <div className="vms-drawer-status-line">
+                  <span className="vms-status-dot" />
                   <span>Gate 01 Access Desk · RBAC Protected</span>
                 </div>
-                <p className="vms-mob-drawer-help">
-                  Need administrative account recovery? Contact <a href="mailto:admin@vms.com">admin@vms.com</a>
+                <p className="vms-drawer-contact">
+                  Need account assistance? Contact <a href="mailto:admin@vms.com">admin@vms.com</a>
                 </p>
               </div>
             </div>
@@ -279,189 +311,271 @@ export default function Login({ onLogin }) {
         </div>
       )}
 
-      <div className="vms-login-split-layout">
-        {/* Left Column: CoverYou Visual Hero Section */}
-        <section className="vms-login-hero-section">
-          {/* CoverYou Brand Logo */}
-          <div className="vms-login-coveryou-brand">
-            <img
-              src={coverYouLogo}
-              alt="CoverYou - Click Karo. Cover Karo."
-              className="vms-coveryou-logo"
-            />
-          </div>
+      {/* =========================================================================
+          MAIN STAGE: Split Layout with Corporate Entrance & Login Card
+          ========================================================================= */}
+      <main className="vms-login-main-stage">
+        {/* Clean Corporate Entrance Background Overlay */}
+        <div className="vms-stage-backdrop-wrap">
+          <div className="vms-stage-backdrop-img" />
+          <div className="vms-stage-backdrop-gradient" />
+        </div>
 
-          {/* Hero Typography & Value Props */}
-          <div className="vms-login-hero-content">
-            <div className="vms-login-hero-copy">
-              <h1 className="vms-login-hero-headline">
-                Let's Find the Right{" "}
-                <span className="vms-hero-highlight">Protection</span> for You
+        {/* Mobile Entrance Hero Banner */}
+        <div className="vms-mobile-hero-banner">
+          <img
+            src="/vms_corporate_entrance_mob.png"
+            alt="Corporate Entrance"
+            className="vms-mobile-hero-img"
+          />
+          <div className="vms-mobile-hero-overlay" />
+          <div className="vms-mobile-hero-caption">
+            <h2 className="vms-mobile-caption-heading">
+              <span className="vms-mob-head-white">Enterprise-Grade</span>
+              <span className="vms-mob-head-red">Visitor Management</span>
+            </h2>
+            <div className="vms-mobile-hero-red-line" />
+            <p className="vms-mobile-caption-sub">
+              Secure entry, approvals, asset tracking, and gate operations — all in one place.
+            </p>
+          </div>
+        </div>
+
+        <div className="vms-login-content-grid">
+          {/* =====================================================================
+              LEFT COLUMN: Hero Typography & 4 Capability Cards
+              ===================================================================== */}
+          <section className="vms-login-hero-col">
+            <div className="vms-hero-text-wrap">
+              <h1 className="vms-hero-headline">
+                <span className="vms-hero-headline-white">Smart, Secure &amp; Contactless</span>
+                <span className="vms-hero-headline-red">Visitor Management</span>
               </h1>
-              <p className="vms-login-hero-description">
-                Get expert guidance and personalized insurance solutions that safeguard
-                your practice, people, and future.
+
+              <div className="vms-hero-red-line" />
+
+              <p className="vms-hero-description">
+                Digitize visitor entry, approvals, asset tracking and gate operations for a safer workplace.
               </p>
             </div>
 
-            {/* Doctor Image & 3 Benefits Container */}
-            <div className="vms-login-visual-showcase">
-              <div className="vms-login-doctor-wrap">
-                <img
-                  src={doctorImg}
-                  alt="Professional Healthcare Advisor"
-                  className="vms-login-doctor-img"
-                />
+            {/* 4 Capability Cards (Horizontal row on desktop, 2x2 grid on mobile) */}
+            <div className="vms-capability-cards-grid">
+              {/* Card 1 */}
+              <div className="vms-capability-card">
+                <div className="vms-cap-icon-box">
+                  <Users size={22} className="vms-cap-icon" />
+                </div>
+                <div className="vms-cap-text-wrap">
+                  <strong className="vms-cap-title">Visitor Registration</strong>
+                  <span className="vms-cap-sub">Quick &amp; contactless check-in</span>
+                </div>
               </div>
 
-              {/* Three Feature Cards */}
-              <div className="vms-login-benefits-list">
-                <div className="vms-benefit-card">
-                  <div className="vms-benefit-icon-badge">
-                    <Landmark size={18} className="vms-benefit-icon" />
-                  </div>
-                  <div className="vms-benefit-text">
-                    <strong className="vms-benefit-title">IRDAI Assistance</strong>
-                    <span className="vms-benefit-sub">100% Compliant</span>
-                  </div>
+              {/* Card 2 */}
+              <div className="vms-capability-card">
+                <div className="vms-cap-icon-box">
+                  <CalendarCheck size={22} className="vms-cap-icon" />
                 </div>
-
-                <div className="vms-benefit-card">
-                  <div className="vms-benefit-icon-badge">
-                    <Users size={18} className="vms-benefit-icon" />
-                  </div>
-                  <div className="vms-benefit-text">
-                    <strong className="vms-benefit-title">25+ Insurers</strong>
-                    <span className="vms-benefit-sub">Top Partners</span>
-                  </div>
+                <div className="vms-cap-text-wrap">
+                  <strong className="vms-cap-title">Pre-Approvals &amp; Scheduling</strong>
+                  <span className="vms-cap-sub">Plan visits &amp; approve access</span>
                 </div>
+              </div>
 
-                <div className="vms-benefit-card">
-                  <div className="vms-benefit-icon-badge">
-                    <Headphones size={18} className="vms-benefit-icon" />
-                  </div>
-                  <div className="vms-benefit-text">
-                    <strong className="vms-benefit-title">Claims Support</strong>
-                    <span className="vms-benefit-sub">End-to-End Help</span>
-                  </div>
+              {/* Card 3 */}
+              <div className="vms-capability-card">
+                <div className="vms-cap-icon-box">
+                  <Package size={22} className="vms-cap-icon" />
+                </div>
+                <div className="vms-cap-text-wrap">
+                  <strong className="vms-cap-title">Asset Management</strong>
+                  <span className="vms-cap-sub">Track items in &amp; out</span>
+                </div>
+              </div>
+
+              {/* Card 4 */}
+              <div className="vms-capability-card">
+                <div className="vms-cap-icon-box">
+                  <BarChart3 size={22} className="vms-cap-icon" />
+                </div>
+                <div className="vms-cap-text-wrap">
+                  <strong className="vms-cap-title">Reports &amp; Audit Logs</strong>
+                  <span className="vms-cap-sub">Review activity &amp; history</span>
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        {/* Right Column: VMS Login Card */}
-        <section className="vms-login-card-section">
-          <div className="vms-login-card">
-            {/* Card Brand Header */}
-            <div className="vms-card-brand">
-              <div className="vms-card-logo-row">
-                <img src="/vms-logo.png" alt="VMS Logo" className="vms-card-logo-img" />
-                <span className="vms-card-logo-divider">|</span>
-                <span className="vms-card-logo-text">VMS</span>
-              </div>
-              <h2 className="vms-card-app-title">Visitor Management System</h2>
-              <p className="vms-card-app-subtitle">Enterprise Physical &amp; Digital Access Control</p>
-            </div>
-
-            {/* Welcome Back & Subtext */}
-            <div className="vms-card-welcome">
-              <h3 className="vms-card-welcome-title">Welcome back</h3>
-              <p className="vms-card-welcome-desc">
-                Sign in to access your security dashboard and gate operations.
-              </p>
-            </div>
-
-            {/* Login Form */}
-            <form onSubmit={handleSubmit} className="vms-login-form" noValidate={false}>
-              {/* Email Field */}
-              <div className="vms-form-group">
-                <label htmlFor="login-email" className="vms-form-label">
-                  Email address
-                </label>
-                <div className="vms-input-container">
-                  <Mail size={16} className="vms-input-icon" />
-                  <input
-                    id="login-email"
-                    type="email"
-                    name="email"
-                    placeholder="name@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    autoComplete="username"
-                    required
-                    className="vms-login-input"
-                  />
+          {/* =====================================================================
+              RIGHT COLUMN: Floating White Login Card
+              ===================================================================== */}
+          <section className="vms-login-card-col">
+            <div className="vms-login-card">
+              {/* Card Brand Header */}
+              <div className="vms-card-brand-header">
+                <div className="vms-card-brand-row">
+                  <img src="/vms-logo.png" alt="VMS Logo" className="vms-card-brand-logo" />
+                  <span className="vms-card-brand-text">VMS</span>
                 </div>
+                <h2 className="vms-card-system-title">Visitor Management System</h2>
+                <p className="vms-card-system-subtitle">Enterprise Physical &amp; Digital Access Control</p>
+                <div className="vms-card-red-rule" />
               </div>
 
-              {/* Password Field */}
-              <div className="vms-form-group">
-                <div className="vms-label-row">
-                  <label htmlFor="login-password" className="vms-form-label">
-                    Password
+              {/* Welcome Back & Subtitle */}
+              <div className="vms-card-welcome-header">
+                <h3 className="vms-card-welcome-title">Welcome Back</h3>
+                <p className="vms-card-welcome-sub">
+                  Sign in to access your security dashboard and gate operations.
+                </p>
+              </div>
+
+              {/* Login Form */}
+              <form onSubmit={handleSubmit} className="vms-login-form" noValidate={false}>
+                {/* Field 1: Email address / User ID */}
+                <div className="vms-form-group">
+                  <label htmlFor="vms-login-email" className="vms-form-label">
+                    <Mail size={14} className="vms-label-icon" />
+                    <span>Email address / User ID</span>
                   </label>
+                  <div className="vms-search-input-wrap">
+                    <input
+                      id="vms-login-email"
+                      type="email"
+                      name="email"
+                      placeholder="enter@company.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      autoComplete="username"
+                      className="vms-search-box-input"
+                      aria-label="Email address or User ID"
+                    />
+                  </div>
                 </div>
-                <div className="vms-input-container">
-                  <Lock size={16} className="vms-input-icon" />
-                  <input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    name="password"
-                    placeholder="Enter your security password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                    required
-                    className="vms-login-input"
-                  />
-                  <button
-                    type="button"
-                    className="vms-password-toggle-btn"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+
+                {/* Field 2: Password */}
+                <div className="vms-form-group">
+                  <label htmlFor="vms-login-password" className="vms-form-label">
+                    <Lock size={14} className="vms-label-icon" />
+                    <span>Password</span>
+                  </label>
+                  <div className="vms-search-input-wrap vms-password-input-wrap">
+                    <input
+                      id="vms-login-password"
+                      type={showPassword ? "text" : "password"}
+                      name="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                      className="vms-search-box-input vms-password-input"
+                      aria-label="Security Password"
+                    />
+                    <button
+                      type="button"
+                      className="vms-password-toggle-btn"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error Alert */}
+                {error && (
+                  <div className="vms-login-error-alert" role="alert">
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                {/* Primary Red Button: Sign In to VMS → */}
+                <button
+                  type="submit"
+                  className="vms-sign-in-btn"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <RefreshCw size={16} className="vms-spin" />
+                      <span>Signing In...</span>
+                    </>
+                  ) : (
+                    <>
+                      <LogIn size={17} className="vms-btn-prefix-icon" />
+                      <span>Sign In to VMS</span>
+                      <ArrowRight size={17} className="vms-btn-arrow" />
+                    </>
+                  )}
+                </button>
+              </form>
+
+              {/* Mobile-Only Key Capabilities Section */}
+              <div className="vms-mobile-capabilities-wrap">
+                <div className="vms-capabilities-divider">
+                  <span className="vms-divider-line" />
+                  <span className="vms-divider-text">Key Capabilities</span>
+                  <span className="vms-divider-line" />
+                </div>
+
+                <div className="vms-mobile-cap-cards-row">
+                  <div className="vms-mob-cap-card">
+                    <div className="vms-mob-cap-icon-box">
+                      <Users size={18} className="vms-mob-cap-icon" />
+                    </div>
+                    <span className="vms-mob-cap-label">Visitor<br />Registration</span>
+                  </div>
+
+                  <div className="vms-mob-cap-card">
+                    <div className="vms-mob-cap-icon-box">
+                      <CalendarCheck size={18} className="vms-mob-cap-icon" />
+                    </div>
+                    <span className="vms-mob-cap-label">Pre-Approvals<br />&amp; Scheduling</span>
+                  </div>
+
+                  <div className="vms-mob-cap-card">
+                    <div className="vms-mob-cap-icon-box">
+                      <Package size={18} className="vms-mob-cap-icon" />
+                    </div>
+                    <span className="vms-mob-cap-label">Asset<br />Management</span>
+                  </div>
+
+                  <div className="vms-mob-cap-card">
+                    <div className="vms-mob-cap-icon-box">
+                      <BarChart3 size={18} className="vms-mob-cap-icon" />
+                    </div>
+                    <span className="vms-mob-cap-label">Reports<br />&amp; Audit Logs</span>
+                  </div>
                 </div>
               </div>
 
-              {/* Error Alert */}
-              {error && (
-                <div className="vms-login-error-alert" role="alert">
-                  <span>{error}</span>
-                </div>
-              )}
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="vms-login-submit-btn"
-                disabled={loading}
-              >
-                {loading ? (
-                  <>
-                    <RefreshCw size={16} className="vms-spin" />
-                    <span>Signing In...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Sign In to Dashboard</span>
-                    <ArrowRight size={16} className="vms-btn-arrow" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* Security Note Footer */}
-            <div className="vms-card-security-footer">
-              <ShieldCheck size={14} className="vms-security-icon" />
-              <span>Protected by Enterprise RBAC · Audit Logging Active</span>
+              {/* RBAC Security Footer Note */}
+              <div className="vms-card-rbac-footer">
+                <ShieldCheck size={15} className="vms-rbac-icon" />
+                <span>Protected by Role-Based Access Control (RBAC)</span>
+              </div>
             </div>
-          </div>
-        </section>
-      </div>
+          </section>
+        </div>
+
+        {/* Bottom Right Curved Red Accent Wave */}
+        <div className="vms-stage-bottom-swoosh">
+          <svg viewBox="0 0 500 120" preserveAspectRatio="none" className="vms-swoosh-svg">
+            <path
+              d="M0,120 C140,115 280,75 500,20 L500,120 Z"
+              fill="#0b1329"
+            />
+            <path
+              d="M0,120 C180,105 320,60 500,0 L500,120 Z"
+              fill="#e43b24"
+            />
+          </svg>
+        </div>
+      </main>
     </div>
   );
 }
