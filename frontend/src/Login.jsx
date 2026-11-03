@@ -90,8 +90,8 @@ export default function Login({ onLogin }) {
           typeof data.detail === "string"
             ? data.detail
             : response.status === 500
-            ? "Database or server connection error. Please try again."
-            : "Login failed. Check your credentials."
+              ? "Database or server connection error. Please try again."
+              : "Login failed. Check your credentials."
         );
       }
 

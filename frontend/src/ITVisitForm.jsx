@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import {
   UserRound,
+  User,
+  Phone,
+  Mail,
   Building2,
+  MapPin,
+  Globe,
+  Calendar,
   Camera,
   RefreshCw,
   ShieldCheck,
@@ -9,6 +15,18 @@ import {
   CheckCircle2,
   X,
   Upload,
+  Send,
+  RotateCcw,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+  Hash,
+  Laptop,
+  Tag,
+  FileText,
+  Code2,
+  IdCard,
+  Cpu,
 } from "lucide-react";
 import "./PublicRegistration.css";
 
@@ -32,7 +50,7 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
   async function startCamera() {
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError("Camera access requires a supported browser and HTTPS.");
+      setCameraError("Camera access requires HTTPS or localhost.");
       return;
     }
 
@@ -69,14 +87,14 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
       }, 50);
     } catch (err) {
       console.error("Camera access error:", err);
-      setCameraError("Camera access was denied or the camera is unavailable.");
+      setCameraError("Camera access denied or device unavailable.");
     }
   }
 
   function capturePhoto() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) {
-      setCameraError("Please wait until the camera preview is ready.");
+      setCameraError("Please wait until camera preview is ready.");
       return;
     }
 
@@ -141,9 +159,7 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
   }
 
   return (
-    <div className="public-asset-photo-box">
-      <span className="public-asset-photo-label">Asset Photograph (Optional)</span>
-
+    <div className="public-asset-photo-section">
       <input
         type="file"
         ref={fileInputRef}
@@ -154,27 +170,27 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
       />
 
       {cameraActive && (
-        <div className="public-asset-camera-view">
+        <div className="public-live-camera-view" style={{ marginBottom: "12px" }}>
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className="public-asset-video"
+            className="public-live-video"
           />
-          <div className="public-asset-cam-controls">
+          <div className="public-live-controls">
             <button
               type="button"
-              className="public-submit"
-              style={{ width: "auto", padding: "10px 18px", fontSize: "13px" }}
+              className="public-submit-btn"
+              style={{ width: "auto", padding: "8px 16px", fontSize: "13px" }}
               onClick={capturePhoto}
             >
-              <Camera size={16} /> Snap Photo
+              <Camera size={15} /> Snap Photo
             </button>
             <button
               type="button"
-              className="public-secondary-button"
-              style={{ padding: "10px 16px", fontSize: "13px" }}
+              className="public-clear-btn"
+              style={{ width: "auto", padding: "8px 14px", fontSize: "13px", margin: 0 }}
               onClick={stopCamera}
             >
               Cancel
@@ -184,38 +200,57 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
       )}
 
       {!cameraActive && photo && (
-        <div className="public-asset-captured-row">
-          <div className="public-asset-thumb-container">
+        <div className="public-asset-photo-box">
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <img
               src={photo}
               alt={`Asset ${index + 1}`}
-              className="public-asset-thumbnail"
+              style={{
+                width: "60px",
+                height: "60px",
+                objectFit: "cover",
+                borderRadius: "8px",
+                border: "1px solid #e2e8f0",
+              }}
             />
-            <span className="public-asset-photo-badge">
-              <CheckCircle2 size={13} /> Photo captured
-            </span>
+            <div>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "4px",
+                  fontSize: "12px",
+                  color: "#059669",
+                  fontWeight: 650,
+                }}
+              >
+                <CheckCircle2 size={14} /> Photo captured
+              </span>
+              <p style={{ margin: "2px 0 0 0", fontSize: "11px", color: "#64748b" }}>
+                Ready for gate clearance
+              </p>
+            </div>
           </div>
           <div className="public-asset-btn-group">
             <button
               type="button"
-              className="public-secondary-button"
-              style={{ padding: "8px 12px", fontSize: "12px" }}
+              className="public-btn-secondary"
+              style={{ padding: "7px 12px", fontSize: "12px" }}
               onClick={startCamera}
             >
               <RefreshCw size={13} /> Retake
             </button>
             <button
               type="button"
-              className="public-secondary-button"
-              style={{ padding: "8px 12px", fontSize: "12px" }}
+              className="public-btn-secondary"
+              style={{ padding: "7px 12px", fontSize: "12px" }}
               onClick={() => fileInputRef.current?.click()}
             >
-              <Upload size={13} /> Upload Image
+              <Upload size={13} /> Upload
             </button>
             <button
               type="button"
-              className="public-remove-button"
-              style={{ margin: 0, padding: "8px 12px", fontSize: "12px" }}
+              className="public-btn-danger-outline"
               onClick={() => onPhotoChange("")}
             >
               <X size={13} /> Remove
@@ -225,27 +260,29 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
       )}
 
       {!cameraActive && !photo && (
-        <div className="public-asset-empty-state">
-          <div className="public-asset-empty-text">
-            <Camera size={20} className="public-asset-empty-icon" />
-            <div>
-              <p className="public-asset-empty-heading">No photograph attached</p>
-              <p className="public-asset-empty-sub">Snap or upload a photo of the item for gate clearance</p>
+        <div className="public-asset-photo-box">
+          <div className="public-asset-empty-info">
+            <div className="public-asset-empty-icon">
+              <Camera size={18} />
+            </div>
+            <div className="public-asset-empty-text">
+              <h4>Asset photograph (Optional)</h4>
+              <p>Snap or upload a photo of the item for gate clearance</p>
             </div>
           </div>
           <div className="public-asset-btn-group">
             <button
               type="button"
-              className="public-secondary-button"
-              style={{ padding: "8px 14px", fontSize: "13px", fontWeight: "600" }}
+              className="public-btn-secondary"
+              style={{ padding: "8px 14px", fontSize: "12.5px" }}
               onClick={startCamera}
             >
               <Camera size={14} /> Camera
             </button>
             <button
               type="button"
-              className="public-secondary-button"
-              style={{ padding: "8px 14px", fontSize: "13px", fontWeight: "600" }}
+              className="public-btn-secondary"
+              style={{ padding: "8px 14px", fontSize: "12.5px" }}
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload size={14} /> Upload
@@ -255,33 +292,13 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
       )}
 
       {cameraError && (
-        <p className="public-inline-error" style={{ marginTop: "8px" }}>
+        <p style={{ color: "#ef4444", fontSize: "12px", margin: "8px 0 0 0" }}>
           {cameraError}
         </p>
       )}
     </div>
   );
 }
-
-const IT_SERVICE_CATEGORIES = [
-  "Server Room & Data Center Maintenance",
-  "Network Infrastructure & Cabling Work",
-  "Hardware Diagnostics, Replacement & Repair",
-  "IT Asset Delivery / Handover / Offboarding",
-  "Software, Cloud & ERP Onsite Implementation",
-  "Telecom, Leased Line & Fiber Cable Work",
-  "Cybersecurity Audit & Compliance Inspection",
-  "General IT Technical Support / Maintenance",
-];
-
-const IT_FACILITY_AREAS = [
-  "Server Room / Primary Data Center",
-  "Network Rack / MDF / IDF Closets",
-  "IT Staging Lab & Workshop",
-  "Floor Workstations / User Desks",
-  "Telecom & UPS Infrastructure Room",
-  "Entire Facility / Multi-Zone Access",
-];
 
 export default function ITVisitForm({ hosts = [] }) {
   const [loading, setLoading] = useState(false);
@@ -290,12 +307,14 @@ export default function ITVisitForm({ hosts = [] }) {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState("");
   const [hasEquipment, setHasEquipment] = useState(true);
+  const [confirmed, setConfirmed] = useState(false);
+  const [activeStep, setActiveStep] = useState(1);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const photoInputRef = useRef(null);
 
-  const [form, setForm] = useState({
+  const initialFormState = {
     first_name: "",
     last_name: "",
     phone_number: "",
@@ -309,9 +328,6 @@ export default function ITVisitForm({ hosts = [] }) {
     postal_code: "",
     country: "India",
     host_employee_id: "",
-    service_category: IT_SERVICE_CATEGORIES[0],
-    ticket_number: "",
-    facility_area: IT_FACILITY_AREAS[0],
     scope_of_work: "",
     expected_out_time: "",
     assets: [
@@ -323,9 +339,11 @@ export default function ITVisitForm({ hosts = [] }) {
         photo: "",
       },
     ],
-  });
+  };
 
-  // Highlight IT Department hosts
+  const [form, setForm] = useState(initialFormState);
+
+  // Group hosts: IT first
   const itHosts = hosts.filter((h) =>
     (h.department || "").toLowerCase().includes("it") ||
     (h.department || "").toLowerCase().includes("tech") ||
@@ -351,7 +369,7 @@ export default function ITVisitForm({ hosts = [] }) {
   async function startSelfCamera() {
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError("Camera access requires a supported browser and a secure connection.");
+      setCameraError("Camera access requires HTTPS or localhost.");
       return;
     }
 
@@ -446,7 +464,7 @@ export default function ITVisitForm({ hosts = [] }) {
       assets: [
         ...prev.assets,
         {
-          asset_type: "",
+          asset_type: "Diagnostic Laptop",
           brand_model: "",
           serial_number: "",
           custody_action: "Will take back upon departure (Returnable)",
@@ -472,6 +490,22 @@ export default function ITVisitForm({ hosts = [] }) {
     }));
   }
 
+  function handleClearForm() {
+    if (window.confirm("Are you sure you want to clear this IT registration form?")) {
+      setForm(initialFormState);
+      setPhoto("");
+      setConfirmed(false);
+      setError("");
+      setCameraError("");
+      setHasEquipment(true);
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      setCameraActive(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -479,6 +513,11 @@ export default function ITVisitForm({ hosts = [] }) {
     if (!form.host_employee_id) {
       setError("Please select the IT Host employee.");
       window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    if (!confirmed) {
+      setError("Please confirm the information provided is correct before submitting.");
       return;
     }
 
@@ -529,7 +568,7 @@ export default function ITVisitForm({ hosts = [] }) {
         city: form.city.trim(),
         state: form.state.trim(),
         postal_code: form.postal_code.trim(),
-        country: form.country.trim(),
+        country: form.country.trim() || "India",
         host_employee_id: Number(form.host_employee_id),
         purpose: sanitizedPurpose,
         expected_out_time: form.expected_out_time || null,
@@ -563,7 +602,9 @@ export default function ITVisitForm({ hosts = [] }) {
       }
 
       sessionStorage.setItem("vms_auto_download_pass", "true");
-      window.location.assign(`/visitor-pass/${encodeURIComponent(result.qr_token)}?autodownload=1`);
+      window.location.assign(
+        `/visitor-pass/${encodeURIComponent(result.qr_token)}?autodownload=1`
+      );
     } catch (err) {
       console.error("IT Registration error:", err);
       setError(err.message || "Unable to submit your registration. Please try again.");
@@ -575,455 +616,752 @@ export default function ITVisitForm({ hosts = [] }) {
 
   return (
     <main className="public-registration">
+      {/* Top Header */}
       <header className="public-header">
-        <div className="public-brand">
-          <span className="public-brand-icon">
-            <img src="/vms-logo.png" alt="VMS Logo" />
-          </span>
-
-          <div>
-            <h1>Visitor Management</h1>
-            <p>IT Visitor Registration Portal</p>
+        <div className="public-header-inner">
+          <div className="public-brand">
+            <div className="public-brand-icon">
+              <img src="/vms-logo.png" alt="VMS Logo" />
+            </div>
+            <div className="public-brand-text">
+              <h1>Visitor Management</h1>
+              <p>IT Visitor Registration Portal</p>
+            </div>
           </div>
-        </div>
 
-        <span className="public-secure-label">
-          <ShieldCheck size={16} /> IT Visitor Portal
-        </span>
+          <span className="public-secure-label">
+            <ShieldCheck size={15} /> IT Visitor Portal
+          </span>
+        </div>
       </header>
 
-      <section className="public-intro">
-        <p className="public-eyebrow">IT DEPARTMENT</p>
-        <h2>Register your IT visit</h2>
-        <p>
-          Please enter your details, select your IT host, and register any
-          hardware or diagnostic tools you are bringing onto the premises.
-        </p>
-      </section>
+      <div className="public-container">
+        {/* Intro Banner */}
+        <section className="public-intro-banner">
+          <div className="public-intro-content">
+            <h2>Register your IT visit</h2>
+            <p>
+              Please enter your details, select your IT host, and register any hardware
+              or diagnostic tools you are bringing onto the premises.
+            </p>
+          </div>
 
-      {error && (
-        <div className="public-message" role="alert">
-          <AlertCircle size={18} />
-          <span>{error}</span>
+          {/* Decorative graphic card with code laptop & purple badge */}
+          <div className="public-hero-graphic-card it-theme">
+            <div className="public-hero-graphic-icon">
+              <Code2 size={44} strokeWidth={1.6} />
+            </div>
+            <div className="public-hero-badge-pill">
+              <Cpu size={13} strokeWidth={2.5} />
+            </div>
+          </div>
+        </section>
+
+        {/* Stepper Progress Bar */}
+        <div className="public-stepper">
+          <div
+            className={`public-step-item ${activeStep >= 1 ? "active" : ""}`}
+            onClick={() => setActiveStep(1)}
+          >
+            <div className="public-step-circle">1</div>
+            <span className="public-step-label">Personal details</span>
+          </div>
+
+          <div
+            className={`public-step-item ${activeStep >= 2 ? "active" : ""}`}
+            onClick={() => setActiveStep(2)}
+          >
+            <div className="public-step-circle">2</div>
+            <span className="public-step-label">Visit information</span>
+          </div>
+
+          <div
+            className={`public-step-item ${activeStep >= 3 ? "active" : ""}`}
+            onClick={() => setActiveStep(3)}
+          >
+            <div className="public-step-circle">3</div>
+            <span className="public-step-label">Assets & submit</span>
+          </div>
         </div>
-      )}
 
-      <form className="public-form" onSubmit={handleSubmit}>
-        {/* CARD 1: Personal Information */}
-        <section className="public-card">
-          <div className="public-section-heading">
-            <UserRound size={21} />
-            <div>
-              <h3>Personal information</h3>
-              <p>Enter your identification, company, and contact details.</p>
-            </div>
+        {error && (
+          <div className="public-alert-box" role="alert">
+            <AlertCircle size={18} />
+            <span>{error}</span>
           </div>
+        )}
 
-          <div className="public-grid">
-            <label>
-              First name *
-              <input
-                name="first_name"
-                value={form.first_name}
-                onChange={updateField}
-                required
-                placeholder="First name"
-              />
-            </label>
-
-            <label>
-              Last name *
-              <input
-                name="last_name"
-                value={form.last_name}
-                onChange={updateField}
-                required
-                placeholder="Last name"
-              />
-            </label>
-
-            <label>
-              Phone number *
-              <input
-                name="phone_number"
-                type="tel"
-                value={form.phone_number}
-                onChange={updateField}
-                required
-                placeholder="+91 98765 43210"
-              />
-            </label>
-
-            <label>
-              Corporate email address *
-              <input
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={updateField}
-                required
-                placeholder="technician@company.com"
-              />
-            </label>
-
-            <label className="public-full-width">
-              Company or organisation *
-              <input
-                name="company_name"
-                value={form.company_name}
-                onChange={updateField}
-                required
-                placeholder="e.g. Dell Technologies, Cisco, HP Enterprise, Airtel"
-              />
-            </label>
-
-            <label className="public-full-width">
-              Contractor badge or technician ID
-              <input
-                name="technician_id"
-                value={form.technician_id}
-                onChange={updateField}
-                placeholder="e.g. TECH-9021 or CISCO-04"
-              />
-            </label>
-
-            <label className="public-full-width">
-              Address line 1 *
-              <input
-                name="address_line1"
-                value={form.address_line1}
-                onChange={updateField}
-                required
-                placeholder="House number, street, or building"
-              />
-            </label>
-
-            <label className="public-full-width">
-              Address line 2
-              <input
-                name="address_line2"
-                value={form.address_line2}
-                onChange={updateField}
-                placeholder="Apartment, area, or locality"
-              />
-            </label>
-
-            <label>
-              City *
-              <input
-                name="city"
-                value={form.city}
-                onChange={updateField}
-                required
-                placeholder="City"
-              />
-            </label>
-
-            <label>
-              State *
-              <input
-                name="state"
-                value={form.state}
-                onChange={updateField}
-                required
-                placeholder="State"
-              />
-            </label>
-
-            <label>
-              Postal code *
-              <input
-                name="postal_code"
-                value={form.postal_code}
-                onChange={updateField}
-                required
-                placeholder="Postal code"
-              />
-            </label>
-
-            <label>
-              Country *
-              <input
-                name="country"
-                value={form.country}
-                onChange={updateField}
-                required
-                placeholder="Country"
-              />
-            </label>
-          </div>
-        </section>
-
-        {/* CARD 2: Photograph */}
-        <section className="public-card">
-          <div className="public-section-heading">
-            <Camera size={21} />
-            <div>
-              <h3>Technician photograph</h3>
-              <p>Capture a frontal photo for identification and access pass.</p>
-            </div>
-          </div>
-
-          <div className="public-camera">
-            {photo ? (
-              <img
-                className="public-photo-preview"
-                src={photo}
-                alt="Captured technician"
-              />
-            ) : (
-              <div className="public-camera-placeholder">
-                <Camera size={34} />
-                <span>Your photo preview will appear here</span>
-              </div>
-            )}
-
-            <video
-              ref={videoRef}
-              className="public-video"
-              hidden={!cameraActive}
-              playsInline
-              muted
-            />
-          </div>
-
-          <div className="public-actions">
-            <button type="button" onClick={startSelfCamera}>
-              <Camera size={17} /> {photo ? "Retake photo" : "Open camera"}
-            </button>
-
-            {cameraActive && (
-              <button type="button" onClick={captureSelfPhoto}>
-                Capture photo
-              </button>
-            )}
-
-            <button type="button" onClick={() => photoInputRef.current?.click()}>
-              <Upload size={17} /> Upload image
-            </button>
-          </div>
-
-          <input
-            type="file"
-            ref={photoInputRef}
-            accept="image/*"
-            capture="user"
-            style={{ display: "none" }}
-            onChange={handlePhotoUpload}
-          />
-
-          {cameraError && <p className="public-inline-error">{cameraError}</p>}
-        </section>
-
-        {/* CARD 3: Visit Information */}
-        <section className="public-card">
-          <div className="public-section-heading">
-            <Building2 size={21} />
-            <div>
-              <h3>Visit information</h3>
-              <p>Tell us who you are visiting and your technical scope.</p>
-            </div>
-          </div>
-
-          <div className="public-grid">
-            <label className="public-full-width">
-              IT Host employee *
-              <select
-                name="host_employee_id"
-                value={form.host_employee_id}
-                onChange={updateField}
-                required
-              >
-                <option value="">Select your IT host</option>
-                {itHosts.length > 0 && (
-                  <optgroup label="IT Department Personnel (Recommended)">
-                    {itHosts.map((h) => (
-                      <option key={h.employee_id} value={h.employee_id}>
-                        ★ {h.name} — {h.department || "IT Department"}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {otherHosts.length > 0 && (
-                  <optgroup label="Other Hosts">
-                    {otherHosts.map((h) => (
-                      <option key={h.employee_id} value={h.employee_id}>
-                        {h.name} {h.department ? `(${h.department})` : ""}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </label>
-
-
-
-            <label className="public-full-width">
-              Detailed purpose of visit *
-              <textarea
-                name="scope_of_work"
-                value={form.scope_of_work}
-                onChange={updateField}
-                rows={3}
-                required
-                placeholder="e.g. Switch firmware update, cable diagnostics, server replacement..."
-              />
-            </label>
-
-            <label className="public-full-width">
-              Expected departure *
-              <input
-                type="datetime-local"
-                name="expected_out_time"
-                value={form.expected_out_time}
-                onChange={updateField}
-                required
-              />
-            </label>
-          </div>
-        </section>
-
-        {/* CARD 4: Assets you are carrying */}
-        <section className="public-card">
-          <div className="public-section-heading">
-            <ShieldCheck size={21} />
-            <div>
-              <h3>Assets you are carrying</h3>
-              <p>Register laptops, diagnostic equipment, or other items.</p>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: "16px", display: "flex", gap: "20px", flexWrap: "wrap" }}>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: "600", color: "#1d2b43" }}>
-              <input
-                type="radio"
-                name="eq_toggle"
-                checked={hasEquipment}
-                onChange={() => setHasEquipment(true)}
-              />
-              Carrying hardware or tools onto premises
-            </label>
-            <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: "600", color: "#1d2b43" }}>
-              <input
-                type="radio"
-                name="eq_toggle"
-                checked={!hasEquipment}
-                onChange={() => setHasEquipment(false)}
-              />
-              No hardware carried (Service / Inspection only)
-            </label>
-          </div>
-
-          {hasEquipment &&
-            form.assets.map((asset, index) => (
-              <div className="public-asset" key={index}>
-                <div className="public-grid">
-                  <label>
-                    Asset type *
-                    <input
-                      value={asset.asset_type}
-                      onChange={(e) =>
-                        updateEquipmentItem(index, "asset_type", e.target.value)
-                      }
-                      placeholder="Laptop, Network Switch, Toolkit..."
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    Brand / model
-                    <input
-                      value={asset.brand_model}
-                      onChange={(e) =>
-                        updateEquipmentItem(index, "brand_model", e.target.value)
-                      }
-                      placeholder="Brand and model"
-                    />
-                  </label>
-
-                  <label>
-                    Serial number *
-                    <input
-                      value={asset.serial_number}
-                      onChange={(e) =>
-                        updateEquipmentItem(index, "serial_number", e.target.value)
-                      }
-                      placeholder="Device serial number"
-                      required
-                    />
-                  </label>
-
-                  <label>
-                    Custody intent
-                    <select
-                      value={asset.custody_action}
-                      onChange={(e) =>
-                        updateEquipmentItem(index, "custody_action", e.target.value)
-                      }
-                    >
-                      <option value="Will take back upon departure (Returnable)">
-                        Will take back upon departure
-                      </option>
-                      <option value="Permanent delivery / Handing over to IT">
-                        Handing over to IT Department
-                      </option>
-                      <option value="Temporary staging / Remaining on premises">
-                        Temporary staging on premises
-                      </option>
-                    </select>
-                  </label>
+        <form onSubmit={handleSubmit}>
+          {/* CARD 1: Personal Information */}
+          <section className="public-card" id="step-personal">
+            <div className="public-card-header">
+              <div className="public-card-header-left">
+                <div className="public-card-badge it-badge">
+                  <UserRound size={20} />
                 </div>
+                <div className="public-card-title">
+                  <h3>Personal information</h3>
+                  <p>Enter your identification, company, and contact details.</p>
+                </div>
+              </div>
+              <ChevronUp size={18} className="public-card-toggle-icon" />
+            </div>
 
-                <ITAssetPhotoCapture
-                  index={index}
-                  photo={asset.photo}
-                  onPhotoChange={(newPhoto) =>
-                    updateEquipmentItem(index, "photo", newPhoto)
-                  }
-                />
+            <div className="public-grid">
+              <div className="public-field">
+                <label className="public-label">
+                  First name <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <User size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="first_name"
+                    value={form.first_name}
+                    onChange={updateField}
+                    placeholder="First name"
+                    autoComplete="given-name"
+                    required
+                  />
+                </div>
+              </div>
 
-                {form.assets.length > 1 && (
+              <div className="public-field">
+                <label className="public-label">
+                  Last name <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <User size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="last_name"
+                    value={form.last_name}
+                    onChange={updateField}
+                    placeholder="Last name"
+                    autoComplete="family-name"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="public-field">
+                <label className="public-label">
+                  Phone number <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <Phone size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="phone_number"
+                    type="tel"
+                    value={form.phone_number}
+                    onChange={updateField}
+                    placeholder="+91 98765 43210"
+                    autoComplete="tel"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="public-field">
+                <label className="public-label">
+                  Corporate email address <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <Mail size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={updateField}
+                    placeholder="technician@company.com"
+                    autoComplete="email"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="public-field public-grid-full">
+                <label className="public-label">
+                  Company or organisation <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <Building2 size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="company_name"
+                    value={form.company_name}
+                    onChange={updateField}
+                    placeholder="e.g. Dell Technologies, Cisco, HP Enterprise"
+                    autoComplete="organization"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="public-field public-grid-full">
+                <label className="public-label">
+                  Contractor badge or technician ID
+                </label>
+                <div className="public-input-wrap">
+                  <IdCard size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="technician_id"
+                    value={form.technician_id}
+                    onChange={updateField}
+                    placeholder="e.g. TECH-9021 or CISCO-04"
+                  />
+                </div>
+              </div>
+
+              <div className="public-field public-grid-full">
+                <label className="public-label">
+                  Address line 1 <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <MapPin size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="address_line1"
+                    value={form.address_line1}
+                    onChange={updateField}
+                    placeholder="House number, street, or building"
+                    autoComplete="address-line1"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="public-field public-grid-full">
+                <label className="public-label">Address line 2</label>
+                <div className="public-input-wrap">
+                  <MapPin size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="address_line2"
+                    value={form.address_line2}
+                    onChange={updateField}
+                    placeholder="Apartment, area, or locality"
+                    autoComplete="address-line2"
+                  />
+                </div>
+              </div>
+
+              <div className="public-field">
+                <label className="public-label">
+                  City <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <Building2 size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="city"
+                    value={form.city}
+                    onChange={updateField}
+                    placeholder="City"
+                    autoComplete="address-level2"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="public-field">
+                <label className="public-label">
+                  State <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <MapPin size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="state"
+                    value={form.state}
+                    onChange={updateField}
+                    placeholder="State"
+                    autoComplete="address-level1"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="public-field">
+                <label className="public-label">
+                  Postal code <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <Hash size={16} className="public-input-icon" />
+                  <input
+                    className="public-input"
+                    name="postal_code"
+                    value={form.postal_code}
+                    onChange={updateField}
+                    placeholder="Postal code"
+                    autoComplete="postal-code"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="public-field">
+                <label className="public-label">
+                  Country <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <Globe size={16} className="public-input-icon" />
+                  <select
+                    className="public-select"
+                    name="country"
+                    value={form.country}
+                    onChange={updateField}
+                    required
+                  >
+                    <option value="India">India</option>
+                    <option value="United States">United States</option>
+                    <option value="United Kingdom">United Kingdom</option>
+                    <option value="United Arab Emirates">United Arab Emirates</option>
+                    <option value="Singapore">Singapore</option>
+                    <option value="Germany">Germany</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* CARD 2: Technician Photograph */}
+          <section className="public-card">
+            <div className="public-card-header">
+              <div className="public-card-header-left">
+                <div className="public-card-badge it-badge">
+                  <Camera size={20} />
+                </div>
+                <div className="public-card-title">
+                  <h3>Technician photograph</h3>
+                  <p>Capture a frontal photo for identification and access pass.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="public-photo-row">
+              <div className="public-photo-preview-box">
+                {photo ? (
+                  <img src={photo} alt="Technician portrait" />
+                ) : (
+                  <>
+                    <svg
+                      width="48"
+                      height="48"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#94a3b8"
+                      strokeWidth="1.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <span className="public-photo-placeholder-text">
+                      Your photo preview will appear here
+                    </span>
+                  </>
+                )}
+              </div>
+
+              <div className="public-photo-controls">
+                <button
+                  type="button"
+                  className="public-btn-secondary"
+                  onClick={startSelfCamera}
+                >
+                  <Camera size={16} />
+                  {photo ? "Retake photo" : "Open camera"}
+                </button>
+
+                <button
+                  type="button"
+                  className="public-btn-secondary"
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  <Upload size={16} /> Upload image
+                </button>
+
+                {photo && (
                   <button
                     type="button"
-                    className="public-remove-button"
-                    onClick={() => removeEquipmentItem(index)}
+                    className="public-btn-danger-outline"
+                    onClick={() => setPhoto("")}
                   >
-                    Remove asset
+                    <X size={14} /> Remove photo
                   </button>
                 )}
               </div>
-            ))}
+            </div>
 
-          {hasEquipment && (
-            <button
-              type="button"
-              className="public-secondary-button"
-              onClick={addEquipmentItem}
-            >
-              + Add an asset
-            </button>
-          )}
+            <input
+              type="file"
+              ref={photoInputRef}
+              accept="image/*"
+              capture="user"
+              style={{ display: "none" }}
+              onChange={handlePhotoUpload}
+            />
 
-          {!hasEquipment && (
-            <p className="public-hint" style={{ margin: 0 }}>
-              No external hardware declared. A digital IT Service Authorization pass will be issued.
-            </p>
-          )}
-        </section>
+            {cameraActive && (
+              <div className="public-live-camera-view">
+                <video
+                  ref={videoRef}
+                  className="public-live-video"
+                  autoPlay
+                  playsInline
+                  muted
+                />
+                <div className="public-live-controls">
+                  <button
+                    type="button"
+                    className="public-submit-btn"
+                    style={{ width: "auto", padding: "10px 20px" }}
+                    onClick={captureSelfPhoto}
+                  >
+                    <Camera size={16} /> Snap Photo
+                  </button>
+                  <button
+                    type="button"
+                    className="public-clear-btn"
+                    style={{ width: "auto", padding: "10px 16px", margin: 0 }}
+                    onClick={stopSelfCamera}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
 
-        <p className="public-privacy-note">
-          Your information, photograph, and registered equipment are intended for IT security verification and gate exit clearance.
-        </p>
+            {cameraError && (
+              <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "10px" }}>
+                {cameraError}
+              </p>
+            )}
+          </section>
 
-        <button className="public-submit" type="submit" disabled={loading}>
-          {loading ? "Submitting registration..." : "Review and submit registration"}
-        </button>
-      </form>
+          {/* CARD 3: Visit Information */}
+          <section className="public-card" id="step-visit">
+            <div className="public-card-header">
+              <div className="public-card-header-left">
+                <div className="public-card-badge green-badge">
+                  <Building2 size={20} />
+                </div>
+                <div className="public-card-title">
+                  <h3>Visit information</h3>
+                  <p>Tell us who you are visiting and your technical scope.</p>
+                </div>
+              </div>
+              <ChevronUp size={18} className="public-card-toggle-icon" />
+            </div>
 
-      <footer className="public-footer">
-        <ShieldCheck size={16} />
-        IT Department visitor registration · Internal security verification
-      </footer>
+            <div className="public-grid">
+              <div className="public-field public-grid-full">
+                <label className="public-label">
+                  IT Host employee <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <User size={16} className="public-input-icon" />
+                  <select
+                    className="public-select"
+                    name="host_employee_id"
+                    value={form.host_employee_id}
+                    onChange={updateField}
+                    required
+                  >
+                    <option value="">Select your IT host</option>
+                    {itHosts.length > 0 && (
+                      <optgroup label="IT Department Personnel (Recommended)">
+                        {itHosts.map((h) => (
+                          <option key={h.employee_id} value={h.employee_id}>
+                            ★ {h.name} — {h.department || "IT Department"}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                    {otherHosts.length > 0 && (
+                      <optgroup label="Other Hosts">
+                        {otherHosts.map((h) => (
+                          <option key={h.employee_id} value={h.employee_id}>
+                            {h.name} {h.department ? `(${h.department})` : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="public-field public-grid-full">
+                <label className="public-label">
+                  Detailed purpose of visit <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <FileText
+                    size={16}
+                    className="public-input-icon textarea-icon"
+                  />
+                  <textarea
+                    className="public-textarea"
+                    name="scope_of_work"
+                    value={form.scope_of_work}
+                    onChange={updateField}
+                    rows={3}
+                    required
+                    placeholder="Switch firmware update, cable diagnostics, server replacement..."
+                  />
+                </div>
+              </div>
+
+              <div className="public-field public-grid-full">
+                <label className="public-label">
+                  Expected departure <span className="public-required">*</span>
+                </label>
+                <div className="public-input-wrap">
+                  <Calendar size={16} className="public-input-icon" />
+                  <input
+                    type="datetime-local"
+                    className="public-input"
+                    name="expected_out_time"
+                    value={form.expected_out_time}
+                    onChange={updateField}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* CARD 4: Assets you are carrying */}
+          <section className="public-card" id="step-assets">
+            <div className="public-card-header">
+              <div className="public-card-header-left">
+                <div className="public-card-badge it-badge">
+                  <Cpu size={20} />
+                </div>
+                <div className="public-card-title">
+                  <h3>Assets you are carrying</h3>
+                  <p>Register laptops, diagnostic equipment, or other items.</p>
+                </div>
+              </div>
+              <ChevronUp size={18} className="public-card-toggle-icon" />
+            </div>
+
+            {/* Radio Selection Toggle */}
+            <div className="public-segmented-toggle">
+              <label className="public-radio-label">
+                <input
+                  type="radio"
+                  name="hardware_mode"
+                  checked={hasEquipment}
+                  onChange={() => setHasEquipment(true)}
+                />
+                <span>Carrying hardware or tools onto premises</span>
+              </label>
+              <label className="public-radio-label">
+                <input
+                  type="radio"
+                  name="hardware_mode"
+                  checked={!hasEquipment}
+                  onChange={() => setHasEquipment(false)}
+                />
+                <span>No hardware carried (Service / Inspection only)</span>
+              </label>
+            </div>
+
+            {hasEquipment && (
+              <>
+                {form.assets.map((asset, index) => (
+                  <div className="public-asset-card" key={index}>
+                    <div className="public-asset-header">
+                      <span className="public-asset-header-title">
+                        <Tag size={15} color="#7c3aed" /> Asset {index + 1}
+                      </span>
+                      {form.assets.length > 1 && (
+                        <button
+                          type="button"
+                          className="public-btn-danger-outline"
+                          onClick={() => removeEquipmentItem(index)}
+                        >
+                          <X size={13} /> Remove asset
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="public-grid">
+                      <div className="public-field">
+                        <label className="public-label">
+                          Asset type <span className="public-required">*</span>
+                        </label>
+                        <div className="public-input-wrap">
+                          <Laptop size={16} className="public-input-icon" />
+                          <select
+                            className="public-select"
+                            value={asset.asset_type}
+                            onChange={(e) =>
+                              updateEquipmentItem(index, "asset_type", e.target.value)
+                            }
+                            required
+                          >
+                            <option value="Diagnostic Laptop">Diagnostic Laptop</option>
+                            <option value="Network Switch / Router">Network Switch / Router</option>
+                            <option value="Toolkit / Hand Tools">Toolkit / Hand Tools</option>
+                            <option value="Cable Tester / Fluke">Cable Tester / Fluke</option>
+                            <option value="Server / Storage Unit">Server / Storage Unit</option>
+                            <option value="Fiber Splicing Machine">Fiber Splicing Machine</option>
+                            <option value="Other IT Equipment">Other IT Equipment</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="public-field">
+                        <label className="public-label">Brand / model</label>
+                        <div className="public-input-wrap">
+                          <Tag size={16} className="public-input-icon" />
+                          <input
+                            className="public-input"
+                            value={asset.brand_model}
+                            onChange={(e) =>
+                              updateEquipmentItem(index, "brand_model", e.target.value)
+                            }
+                            placeholder="Brand and model"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="public-field">
+                        <label className="public-label">
+                          Serial number <span className="public-required">*</span>
+                        </label>
+                        <div className="public-input-wrap">
+                          <Hash size={16} className="public-input-icon" />
+                          <input
+                            className="public-input"
+                            value={asset.serial_number}
+                            onChange={(e) =>
+                              updateEquipmentItem(index, "serial_number", e.target.value)
+                            }
+                            placeholder="Device serial number"
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      <div className="public-field">
+                        <label className="public-label">Custody intent</label>
+                        <div className="public-input-wrap">
+                          <select
+                            className="public-select no-icon"
+                            value={asset.custody_action}
+                            onChange={(e) =>
+                              updateEquipmentItem(index, "custody_action", e.target.value)
+                            }
+                          >
+                            <option value="Will take back upon departure (Returnable)">
+                              Will take back upon departure
+                            </option>
+                            <option value="Permanent delivery / Handing over to IT">
+                              Handing over to IT Department
+                            </option>
+                            <option value="Temporary staging / Remaining on premises">
+                              Temporary staging on premises
+                            </option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <ITAssetPhotoCapture
+                      index={index}
+                      photo={asset.photo}
+                      onPhotoChange={(newPhoto) =>
+                        updateEquipmentItem(index, "photo", newPhoto)
+                      }
+                    />
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  className="public-btn-add-asset"
+                  onClick={addEquipmentItem}
+                >
+                  <Plus size={16} /> + Add an asset
+                </button>
+              </>
+            )}
+
+            {!hasEquipment && (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: "12.5px",
+                  color: "#64748b",
+                  background: "#f1f5f9",
+                  padding: "12px 14px",
+                  borderRadius: "10px",
+                }}
+              >
+                No external hardware declared. Pass serves as contractor personnel
+                clearance.
+              </p>
+            )}
+          </section>
+
+          {/* Confirmation Checkbox */}
+          <label className="public-confirm-row">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              onChange={(e) => setConfirmed(e.target.checked)}
+              required
+            />
+            <span className="public-confirm-text">
+              I confirm the information provided is correct.
+            </span>
+          </label>
+
+          {/* Submit and Clear Buttons */}
+          <button
+            type="submit"
+            className="public-submit-btn"
+            disabled={loading}
+          >
+            <Send size={16} />
+            {loading ? "Submitting registration..." : "Review and submit registration"}
+          </button>
+
+          <button
+            type="button"
+            className="public-clear-btn"
+            onClick={handleClearForm}
+          >
+            <RotateCcw size={15} /> Clear form
+          </button>
+
+          {/* Privacy Note */}
+          <div className="public-security-notice">
+            <ShieldCheck size={18} />
+            <span>
+              Your information, photograph, and registered equipment are intended for IT
+              security verification and gate exit clearance.
+            </span>
+          </div>
+        </form>
+
+        {/* Footer */}
+        <footer className="public-portal-footer">
+          <ShieldCheck size={14} />
+          <span>
+            IT Department visitor registration · Internal security verification
+          </span>
+        </footer>
+      </div>
     </main>
   );
 }

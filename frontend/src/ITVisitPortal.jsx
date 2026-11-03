@@ -6,6 +6,17 @@ import "./PublicRegistration.css";
 const API_BASE_URL = "";
 
 export default function ITVisitPortal() {
+  useEffect(() => {
+    const prevTheme = document.documentElement.getAttribute("data-theme");
+    const hadDarkClass = document.documentElement.classList.contains("dark");
+    document.documentElement.setAttribute("data-theme", "light");
+    document.documentElement.classList.remove("dark");
+    return () => {
+      if (prevTheme) document.documentElement.setAttribute("data-theme", prevTheme);
+      if (hadDarkClass) document.documentElement.classList.add("dark");
+    };
+  }, []);
+
   const [hosts, setHosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -45,25 +56,39 @@ export default function ITVisitPortal() {
     return (
       <main className="public-registration">
         <header className="public-header">
-          <div className="public-brand">
-            <span className="public-brand-icon">
-              <img src="/vms-logo.png" alt="VMS Logo" />
-            </span>
-            <div>
-              <h1>Visitor Management</h1>
-              <p>IT Visitor Registration Portal</p>
+          <div className="public-header-inner">
+            <div className="public-brand">
+              <div className="public-brand-icon">
+                <img src="/vms-logo.png" alt="VMS Logo" />
+              </div>
+              <div className="public-brand-text">
+                <h1>Visitor Management</h1>
+                <p>IT Visitor Registration Portal</p>
+              </div>
             </div>
+            <span className="public-secure-label">
+              <ShieldCheck size={15} /> IT Visitor Portal
+            </span>
           </div>
-          <span className="public-secure-label">
-            <ShieldCheck size={16} /> IT Visitor Portal
-          </span>
         </header>
 
-        <section className="public-intro" style={{ textAlign: "center", padding: "60px 0" }}>
-          <RefreshCw size={32} className="spin" style={{ color: "#2458bc", margin: "0 auto 14px", display: "block" }} />
-          <h2>Loading registration portal</h2>
-          <p>Connecting to host registry...</p>
-        </section>
+        <div className="public-container" style={{ textAlign: "center", padding: "80px 20px" }}>
+          <RefreshCw
+            size={36}
+            style={{
+              color: "#2563eb",
+              margin: "0 auto 16px",
+              display: "block",
+              animation: "spin 1s linear infinite",
+            }}
+          />
+          <h2 style={{ fontSize: "20px", fontWeight: 700, color: "#0f172a", margin: "0 0 8px 0" }}>
+            Loading registration portal...
+          </h2>
+          <p style={{ fontSize: "14px", color: "#64748b", margin: 0 }}>
+            Connecting to host registry and secure gate service
+          </p>
+        </div>
       </main>
     );
   }
@@ -72,29 +97,31 @@ export default function ITVisitPortal() {
     return (
       <main className="public-registration">
         <header className="public-header">
-          <div className="public-brand">
-            <span className="public-brand-icon">
-              <img src="/vms-logo.png" alt="VMS Logo" />
-            </span>
-            <div>
-              <h1>Visitor Management</h1>
-              <p>IT Visitor Registration Portal</p>
+          <div className="public-header-inner">
+            <div className="public-brand">
+              <div className="public-brand-icon">
+                <img src="/vms-logo.png" alt="VMS Logo" />
+              </div>
+              <div className="public-brand-text">
+                <h1>Visitor Management</h1>
+                <p>IT Visitor Registration Portal</p>
+              </div>
             </div>
           </div>
         </header>
 
-        <div className="public-intro">
-          <div className="public-message" role="alert">
+        <div className="public-container" style={{ padding: "40px 20px" }}>
+          <div className="public-alert-box" role="alert">
             <AlertCircle size={20} />
             <span>{error}</span>
           </div>
           <button
             type="button"
-            className="public-submit"
+            className="public-submit-btn"
             style={{ width: "auto", margin: "16px 0" }}
             onClick={() => window.location.reload()}
           >
-            Retry
+            Retry Connection
           </button>
         </div>
       </main>
