@@ -4150,10 +4150,6 @@ const renderNotifications = () => {
           </div>
 
           <div className="it-header-controls">
-            <button className="it-log-recovery-primary-btn" onClick={openCreateVisit}>
-              <UserPlus size={15} />
-              <span>Create Visit</span>
-            </button>
             <button className="it-qr-portal-btn" onClick={openScanner}>
               <QrCode size={15} />
               <span>Scan Visitor QR</span>
@@ -4547,15 +4543,6 @@ const renderNotifications = () => {
             </div>
 
             <div className="mobile-dashboard-hero-controls">
-              <button
-                type="button"
-                className="mobile-dashboard-btn-create"
-                onClick={openCreateVisit}
-              >
-                <UserPlus size={15} />
-                <span>Create Visit</span>
-              </button>
-
               <button
                 type="button"
                 className="mobile-dashboard-btn-scan"

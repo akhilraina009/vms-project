@@ -183,6 +183,11 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
   // Detailed Modal State
   const [selectedApproval, setSelectedApproval] = useState(null);
   const [lightboxImage, setLightboxImage] = useState(null);
+  const [modalPhotoFailed, setModalPhotoFailed] = useState(false);
+
+  useEffect(() => {
+    setModalPhotoFailed(false);
+  }, [selectedApproval?.pre_approval_id]);
 
   // Host Absent / Reschedule Modal State
   const [rescheduleTarget, setRescheduleTarget] = useState(null);
@@ -491,9 +496,9 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
             WebkitBackdropFilter: "blur(6px)",
             zIndex: 9999,
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             justifyContent: "center",
-            padding: "16px",
+            padding: "16px 12px",
             overflowY: "auto",
           }}
           onClick={() => setSelectedApproval(null)}
@@ -504,7 +509,8 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
               borderRadius: "16px",
               maxWidth: "760px",
               width: "100%",
-              maxHeight: "min(92vh, 880px)",
+              maxHeight: "min(94vh, 880px)",
+              margin: "auto 0",
               display: "flex",
               flexDirection: "column",
               boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.35)",
@@ -595,31 +601,38 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
                     overflow: "hidden",
                     background: "#e2e8f0",
                     flexShrink: 0,
-                    cursor: selectedApproval.visitor?.photo_url ? "pointer" : "default",
+                    cursor: selectedApproval.visitor?.photo_url && !modalPhotoFailed ? "pointer" : "default",
                   }}
                   onClick={() => {
-                    if (selectedApproval.visitor?.photo_url) {
-                      setLightboxImage(
-                        selectedApproval.visitor.photo_url.startsWith("http")
-                          ? selectedApproval.visitor.photo_url
-                          : `${PHOTO_BASE_URL}${selectedApproval.visitor.photo_url}`
-                      );
+                    const resolved = resolvePhotoUrl(selectedApproval.visitor?.photo_url);
+                    if (resolved && !modalPhotoFailed) {
+                      setLightboxImage(resolved);
                     }
                   }}
                 >
-                  {selectedApproval.visitor?.photo_url ? (
+                  {resolvePhotoUrl(selectedApproval.visitor?.photo_url) && !modalPhotoFailed ? (
                     <img
-                      src={
-                        selectedApproval.visitor.photo_url.startsWith("http")
-                          ? selectedApproval.visitor.photo_url
-                          : `${PHOTO_BASE_URL}${selectedApproval.visitor.photo_url}`
-                      }
+                      src={resolvePhotoUrl(selectedApproval.visitor.photo_url)}
                       alt="IT Technician"
                       style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      onError={() => setModalPhotoFailed(true)}
                     />
                   ) : (
-                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8" }}>
-                      <Laptop size={32} />
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        background: "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+                        color: "#ffffff",
+                        fontWeight: 700,
+                        fontSize: "20px",
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      {getInitials(getTechnicianName(selectedApproval))}
                     </div>
                   )}
                 </div>
@@ -756,20 +769,15 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
                       >
                         {asset.photo_url && (
                           <img
-                            src={
-                              asset.photo_url.startsWith("http")
-                                ? asset.photo_url
-                                : `${PHOTO_BASE_URL}${asset.photo_url}`
-                            }
+                            src={resolvePhotoUrl(asset.photo_url)}
                             alt="Hardware"
                             style={{ width: "48px", height: "48px", borderRadius: "6px", objectFit: "cover", cursor: "pointer" }}
                             onClick={() =>
-                              setLightboxImage(
-                                asset.photo_url.startsWith("http")
-                                  ? asset.photo_url
-                                  : `${PHOTO_BASE_URL}${asset.photo_url}`
-                              )
+                              setLightboxImage(resolvePhotoUrl(asset.photo_url))
                             }
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none";
+                            }}
                           />
                         )}
                         <div>
@@ -835,6 +843,8 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
             <div
               className="preapproval-modal-footer it-preapproval-modal-footer"
               style={{
+                background: "#f8fafc",
+                borderTop: "1px solid #e2e8f0",
                 padding: "14px 18px",
                 flexShrink: 0,
                 display: "flex",
