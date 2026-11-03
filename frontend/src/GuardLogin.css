@@ -3,7 +3,7 @@
    Executive Obsidian & Crimson Theme with full Dark & Light support
    ========================================================================== */
 
-.login-page {
+.guard-login-page {
   min-height: 100vh;
   width: 100%;
   display: flex;
@@ -24,8 +24,8 @@
 }
 
 /* Light Theme Canvas for Guard Login */
-html:not([data-theme="dark"]):not(.dark) .login-page,
-html[data-theme="light"] .login-page {
+html:not([data-theme="dark"]):not(.dark) .guard-login-page,
+html[data-theme="light"] .guard-login-page {
   background-color: #f8fafc;
   background-image: 
     radial-gradient(#cbd5e1 1.2px, transparent 1.2px),

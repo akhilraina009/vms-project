@@ -97,7 +97,7 @@ export default function GuardLogin({ onLogin }) {
   }
 
   return (
-    <div className="login-page">
+    <div className="guard-login-page">
       {/* Top Theme Toggle */}
       <div className="login-top-bar">
         <button

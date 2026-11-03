@@ -321,11 +321,16 @@ function VMSApp() {
   });
 
   useEffect(() => {
+    if (!authToken || !currentUser) {
+      document.documentElement.setAttribute("data-theme", "light");
+      document.documentElement.classList.remove("dark");
+      return;
+    }
     document.documentElement.setAttribute("data-theme", theme);
     document.documentElement.classList.toggle("dark", theme === "dark");
     localStorage.setItem("vms_theme", theme);
     localStorage.setItem("vms-theme", theme);
-  }, [theme]);
+  }, [theme, authToken, currentUser]);
 
   /* Synchronous Print Mode Handlers to Guarantee Clean White Executive PDF/Print Output */
   useEffect(() => {

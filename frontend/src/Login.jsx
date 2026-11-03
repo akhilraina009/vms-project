@@ -48,15 +48,23 @@ export default function Login({ onLogin }) {
     localStorage.setItem("vms-theme", "light");
   }, []);
 
-  // Close mobile navigation drawer with Escape key
+  // Close mobile navigation drawer with Escape key and lock body scroll
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === "Escape" && mobileMenuOpen) {
         setMobileMenuOpen(false);
       }
     }
+    if (mobileMenuOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [mobileMenuOpen]);
 
   async function handleSubmit(event) {
@@ -123,7 +131,7 @@ export default function Login({ onLogin }) {
   }
 
   return (
-    <div className="vms-premium-login-container login-page">
+    <div className="vms-premium-login-container">
       {/* Mobile Top Header (Visible on Mobile only <= 900px) */}
       <header className="vms-login-mob-header">
         <div className="vms-login-mob-header-brand">
@@ -143,107 +151,132 @@ export default function Login({ onLogin }) {
         </button>
       </header>
 
-      {/* Mobile Navigation Drawer / Dropdown */}
+      {/* Mobile Navigation Drawer / Sheet */}
       {mobileMenuOpen && (
-        <>
-          <div
-            className="vms-login-mob-backdrop"
-            onClick={() => setMobileMenuOpen(false)}
-            aria-hidden="true"
-          />
+        <div
+          className="vms-login-mob-modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setMobileMenuOpen(false);
+            }
+          }}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation Menu"
+        >
           <nav className="vms-login-mob-drawer" aria-label="Mobile Navigation">
-            <div className="vms-mob-drawer-header">
-              <span className="vms-mob-drawer-title">Quick Portals &amp; Access</span>
-              <span className="vms-mob-drawer-badge">VMS System</span>
-            </div>
-
-            <div className="vms-mob-drawer-links">
-              <a
-                href="/register-visitor"
-                className="vms-mob-nav-item"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNav("/register-visitor");
-                }}
-              >
-                <div className="vms-mob-nav-icon-badge badge-guest">
-                  <UserPlus size={18} />
-                </div>
-                <div className="vms-mob-nav-info">
-                  <strong className="vms-mob-nav-title">Visitor Self-Registration</strong>
-                  <span className="vms-mob-nav-sub">Walk-in guest entry &amp; QR pass kiosk</span>
-                </div>
-                <ChevronRight size={16} className="vms-mob-nav-chevron" />
-              </a>
-
-              <a
-                href="/it-visit"
-                className="vms-mob-nav-item"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNav("/it-visit");
-                }}
-              >
-                <div className="vms-mob-nav-icon-badge badge-it">
-                  <Laptop size={18} />
-                </div>
-                <div className="vms-mob-nav-info">
-                  <strong className="vms-mob-nav-title">IT Contractor Clearance</strong>
-                  <span className="vms-mob-nav-sub">Hardware &amp; equipment pass declaration</span>
-                </div>
-                <ChevronRight size={16} className="vms-mob-nav-chevron" />
-              </a>
-
-              <a
-                href="/guard"
-                className="vms-mob-nav-item"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNav("/guard");
-                }}
-              >
-                <div className="vms-mob-nav-icon-badge badge-guard">
-                  <ShieldCheck size={18} />
-                </div>
-                <div className="vms-mob-nav-info">
-                  <strong className="vms-mob-nav-title">Security Gate Terminal</strong>
-                  <span className="vms-mob-nav-sub">Check-in scanner &amp; perimeter gate desk</span>
-                </div>
-                <ChevronRight size={16} className="vms-mob-nav-chevron" />
-              </a>
-
-              <a
-                href="https://coveryou.in"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="vms-mob-nav-item"
-                onClick={(e) => {
-                  e.preventDefault();
-                  handleNav("https://coveryou.in", true);
-                }}
-              >
-                <div className="vms-mob-nav-icon-badge badge-coveryou">
-                  <ExternalLink size={18} />
-                </div>
-                <div className="vms-mob-nav-info">
-                  <strong className="vms-mob-nav-title">CoverYou Protection</strong>
-                  <span className="vms-mob-nav-sub">Doctor &amp; healthcare indemnity cover</span>
-                </div>
-                <ChevronRight size={16} className="vms-mob-nav-chevron" />
-              </a>
-            </div>
-
-            <div className="vms-mob-drawer-footer">
-              <div className="vms-mob-drawer-status">
-                <span className="vms-mob-status-dot" />
-                <span>Gate 01 Access Desk · RBAC Protected</span>
+            {/* Top Header inside sheet flush with top edge */}
+            <div className="vms-login-mob-modal-topbar">
+              <div className="vms-login-mob-header-brand">
+                <img src="/vms-logo.png" alt="VMS Logo" className="vms-login-mob-logo" />
+                <span className="vms-login-mob-title">VMS</span>
+                <span className="vms-login-mob-divider">|</span>
+                <span className="vms-login-mob-sub">Visitor Management</span>
               </div>
-              <p className="vms-mob-drawer-help">
-                Need administrative account recovery? Contact <a href="mailto:admin@vms.com">admin@vms.com</a>
-              </p>
+              <button
+                type="button"
+                className="vms-login-mob-close-btn"
+                aria-label="Close navigation menu"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="vms-login-mob-drawer-content">
+              <div className="vms-mob-drawer-header">
+                <span className="vms-mob-drawer-title">Quick Portals &amp; Access</span>
+                <span className="vms-mob-drawer-badge">VMS System</span>
+              </div>
+
+              <div className="vms-mob-drawer-links">
+                <a
+                  href="/register-visitor"
+                  className="vms-mob-nav-item"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNav("/register-visitor");
+                  }}
+                >
+                  <div className="vms-mob-nav-icon-badge badge-guest">
+                    <UserPlus size={18} />
+                  </div>
+                  <div className="vms-mob-nav-info">
+                    <strong className="vms-mob-nav-title">Visitor Self-Registration</strong>
+                    <span className="vms-mob-nav-sub">Walk-in guest entry &amp; QR pass kiosk</span>
+                  </div>
+                  <ChevronRight size={16} className="vms-mob-nav-chevron" />
+                </a>
+
+                <a
+                  href="/it-visit"
+                  className="vms-mob-nav-item"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNav("/it-visit");
+                  }}
+                >
+                  <div className="vms-mob-nav-icon-badge badge-it">
+                    <Laptop size={18} />
+                  </div>
+                  <div className="vms-mob-nav-info">
+                    <strong className="vms-mob-nav-title">IT Contractor Clearance</strong>
+                    <span className="vms-mob-nav-sub">Hardware &amp; equipment pass declaration</span>
+                  </div>
+                  <ChevronRight size={16} className="vms-mob-nav-chevron" />
+                </a>
+
+                <a
+                  href="/guard"
+                  className="vms-mob-nav-item"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNav("/guard");
+                  }}
+                >
+                  <div className="vms-mob-nav-icon-badge badge-guard">
+                    <ShieldCheck size={18} />
+                  </div>
+                  <div className="vms-mob-nav-info">
+                    <strong className="vms-mob-nav-title">Security Gate Terminal</strong>
+                    <span className="vms-mob-nav-sub">Check-in scanner &amp; perimeter gate desk</span>
+                  </div>
+                  <ChevronRight size={16} className="vms-mob-nav-chevron" />
+                </a>
+
+                <a
+                  href="https://coveryou.in"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="vms-mob-nav-item"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleNav("https://coveryou.in", true);
+                  }}
+                >
+                  <div className="vms-mob-nav-icon-badge badge-coveryou">
+                    <ExternalLink size={18} />
+                  </div>
+                  <div className="vms-mob-nav-info">
+                    <strong className="vms-mob-nav-title">CoverYou Protection</strong>
+                    <span className="vms-mob-nav-sub">Doctor &amp; healthcare indemnity cover</span>
+                  </div>
+                  <ChevronRight size={16} className="vms-mob-nav-chevron" />
+                </a>
+              </div>
+
+              <div className="vms-mob-drawer-footer">
+                <div className="vms-mob-drawer-status">
+                  <span className="vms-mob-status-dot" />
+                  <span>Gate 01 Access Desk · RBAC Protected</span>
+                </div>
+                <p className="vms-mob-drawer-help">
+                  Need administrative account recovery? Contact <a href="mailto:admin@vms.com">admin@vms.com</a>
+                </p>
+              </div>
             </div>
           </nav>
-        </>
+        </div>
       )}
 
       <div className="vms-login-split-layout">

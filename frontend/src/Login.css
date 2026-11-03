@@ -4,24 +4,25 @@
    ========================================================================== */
 
 /* Page Outer Container */
+html body .vms-premium-login-container,
 .vms-premium-login-container {
-  min-height: 100vh;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  background-color: #fff6f4;
+  min-height: 100vh !important;
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  background-color: #fff6f4 !important;
   background-image: 
     url("./assets/coveryou/hero_bg_curves.svg"),
     radial-gradient(circle at 10% 20%, rgba(254, 205, 211, 0.35) 0%, transparent 40%),
-    radial-gradient(circle at 90% 80%, rgba(226, 232, 240, 0.4) 0%, transparent 50%);
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: cover;
-  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #0f172a;
-  position: relative;
-  overflow-x: hidden;
-  box-sizing: border-box;
+    radial-gradient(circle at 90% 80%, rgba(226, 232, 240, 0.4) 0%, transparent 50%) !important;
+  background-repeat: no-repeat !important;
+  background-position: center center !important;
+  background-size: cover !important;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+  color: #0f172a !important;
+  position: relative !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
 }
 
 /* Ensure light theme enforcement on the login page */
@@ -101,32 +102,76 @@ html[data-theme="light"] body .vms-premium-login-container {
   outline: none;
 }
 
-/* Mobile Drawer Backdrop */
-.vms-login-mob-backdrop {
+/* Mobile Drawer Modal Overlay */
+.vms-login-mob-modal-overlay {
   position: fixed;
   inset: 0;
-  top: 53px;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  z-index: 55;
-  animation: vmsFadeIn 0.2s ease-out;
+  z-index: 999;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  animation: vmsFadeIn 0.18s ease-out;
+  padding: 0;
+  margin: 0;
 }
 
-/* Mobile Navigation Drawer */
+/* Mobile Navigation Sheet - Flush with screen top (NO GAPS) */
 .vms-login-mob-drawer {
-  position: fixed;
-  top: 53px;
-  left: 0;
-  right: 0;
-  background: #ffffff;
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff !important;
   border-bottom: 1px solid #e2e8f0;
-  box-shadow: 0 16px 36px -4px rgba(15, 23, 42, 0.16);
-  z-index: 58;
-  padding: 16px 18px 20px;
-  max-height: calc(100vh - 65px);
-  overflow-y: auto;
+  box-shadow: 0 20px 48px -4px rgba(15, 23, 42, 0.22);
+  border-radius: 0 0 22px 22px;
+  overflow: hidden;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
   animation: vmsSlideDown 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  margin: 0;
+}
+
+/* Modal Top Bar inside sheet (replaces sticky header seamlessly) */
+.vms-login-mob-modal-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9;
+  min-height: 54px;
+  box-sizing: border-box;
+}
+
+/* Close Button */
+.vms-login-mob-close-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  transition: all 0.15s ease;
+}
+
+.vms-login-mob-close-btn:hover {
+  background: #fee2e2;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+.vms-login-mob-drawer-content {
+  padding: 16px 20px 22px;
+  overflow-y: auto;
   box-sizing: border-box;
 }
 

@@ -47,6 +47,13 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [cameraActive]);
+
   async function startCamera() {
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -75,16 +82,14 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
       streamRef.current = stream;
       setCameraActive(true);
 
-      setTimeout(async () => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          try {
-            await videoRef.current.play();
-          } catch (e) {
-            console.error("Video play error:", e);
-          }
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        try {
+          await videoRef.current.play();
+        } catch (e) {
+          console.error("Video play error:", e);
         }
-      }, 50);
+      }
     } catch (err) {
       console.error("Camera access error:", err);
       setCameraError("Camera access denied or device unavailable.");
@@ -172,7 +177,13 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
       {cameraActive && (
         <div className="public-live-camera-view" style={{ marginBottom: "12px" }}>
           <video
-            ref={videoRef}
+            ref={(el) => {
+              videoRef.current = el;
+              if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                el.srcObject = streamRef.current;
+                el.play().catch(() => {});
+              }
+            }}
             autoPlay
             playsInline
             muted
@@ -306,6 +317,7 @@ export default function ITVisitForm({ hosts = [] }) {
   const [photo, setPhoto] = useState("");
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState("");
+  const [facingMode, setFacingMode] = useState("user");
   const [hasEquipment, setHasEquipment] = useState(true);
   const [confirmed, setConfirmed] = useState(false);
   const [activeStep, setActiveStep] = useState(1);
@@ -313,6 +325,13 @@ export default function ITVisitForm({ hosts = [] }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const photoInputRef = useRef(null);
+
+  useEffect(() => {
+    if (cameraActive && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [cameraActive]);
 
   const initialFormState = {
     first_name: "",
@@ -366,7 +385,8 @@ export default function ITVisitForm({ hosts = [] }) {
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function startSelfCamera() {
+  async function startSelfCamera(requestedMode) {
+    const mode = requestedMode || facingMode;
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraError("Camera access requires HTTPS or localhost.");
@@ -376,22 +396,47 @@ export default function ITVisitForm({ hosts = [] }) {
     try {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "user" },
-        audio: false,
-      });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: mode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+          audio: false,
+        });
+      } catch {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: mode },
+          audio: false,
+        });
+      }
 
       streamRef.current = stream;
+      setCameraActive(true);
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+        try {
+          await videoRef.current.play();
+        } catch (err) {
+          console.warn("Video play warning:", err);
+        }
       }
-      setCameraActive(true);
     } catch {
       setCameraError("Camera access was denied or the camera is unavailable.");
+      setCameraActive(false);
     }
+  }
+
+  async function toggleCameraFacing() {
+    const nextMode = facingMode === "user" ? "environment" : "user";
+    setFacingMode(nextMode);
+    await startSelfCamera(nextMode);
   }
 
   function captureSelfPhoto() {
@@ -405,9 +450,15 @@ export default function ITVisitForm({ hosts = [] }) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
+
+    if (facingMode === "user") {
+      context.translate(canvas.width, 0);
+      context.scale(-1, 1);
+    }
+
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    setPhoto(canvas.toDataURL("image/jpeg", 0.85));
+    setPhoto(canvas.toDataURL("image/jpeg", 0.88));
     stopSelfCamera();
   }
 
@@ -943,61 +994,133 @@ export default function ITVisitForm({ hosts = [] }) {
               </div>
             </div>
 
-            <div className="public-photo-row">
-              <div className="public-photo-preview-box">
-                {photo ? (
-                  <img src={photo} alt="Technician portrait" />
-                ) : (
-                  <>
-                    <svg
-                      width="48"
-                      height="48"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#94a3b8"
-                      strokeWidth="1.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
-                    </svg>
-                    <span className="public-photo-placeholder-text">
-                      Your photo preview will appear here
-                    </span>
-                  </>
-                )}
-              </div>
-
-              <div className="public-photo-controls">
-                <button
-                  type="button"
-                  className="public-btn-secondary"
-                  onClick={startSelfCamera}
-                >
-                  <Camera size={16} />
-                  {photo ? "Retake photo" : "Open camera"}
-                </button>
-
-                <button
-                  type="button"
-                  className="public-btn-secondary"
-                  onClick={() => photoInputRef.current?.click()}
-                >
-                  <Upload size={16} /> Upload image
-                </button>
-
-                {photo && (
+            {cameraActive ? (
+              <div className="public-live-camera-viewfinder-card">
+                <div className="public-camera-topbar">
+                  <div className="public-camera-status-pill">
+                    <span className="public-camera-pulse-dot" />
+                    <span>Live Camera Active</span>
+                  </div>
                   <button
                     type="button"
-                    className="public-btn-danger-outline"
-                    onClick={() => setPhoto("")}
+                    className="public-camera-flip-btn"
+                    onClick={toggleCameraFacing}
+                    title="Switch camera"
                   >
-                    <X size={14} /> Remove photo
+                    <RefreshCw size={13} /> Switch Camera
                   </button>
-                )}
+                </div>
+
+                <div className="public-camera-screen-wrap">
+                  <video
+                    ref={(el) => {
+                      videoRef.current = el;
+                      if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                        el.srcObject = streamRef.current;
+                        el.play().catch(() => {});
+                      }
+                    }}
+                    className={`public-live-video ${facingMode === "user" ? "mirrored" : ""}`}
+                    autoPlay
+                    playsInline
+                    muted
+                  />
+                  <div className="public-camera-reticle">
+                    <div className="public-camera-corner top-left" />
+                    <div className="public-camera-corner top-right" />
+                    <div className="public-camera-corner bottom-left" />
+                    <div className="public-camera-corner bottom-right" />
+                    <div className="public-camera-face-guide">
+                      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.2">
+                        <circle cx="12" cy="10" r="5" />
+                        <path d="M6 21v-2a6 6 0 0 1 12 0v2" />
+                      </svg>
+                      <span className="public-camera-hint">Align face inside frame</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="public-camera-action-bar">
+                  <button
+                    type="button"
+                    className="public-camera-snap-btn"
+                    onClick={captureSelfPhoto}
+                  >
+                    <Camera size={18} /> Snap Photo
+                  </button>
+                  <button
+                    type="button"
+                    className="public-camera-cancel-btn"
+                    onClick={stopSelfCamera}
+                  >
+                    <X size={16} /> Cancel
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="public-photo-row">
+                <div className={`public-photo-preview-box ${photo ? "has-photo" : ""}`}>
+                  {photo ? (
+                    <div className="public-photo-thumbnail-container">
+                      <img src={photo} alt="Technician portrait" />
+                      <span className="public-photo-badge-attached">
+                        <CheckCircle2 size={12} /> Photo Attached
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="public-photo-avatar-placeholder">
+                        <svg
+                          width="48"
+                          height="48"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#94a3b8"
+                          strokeWidth="1.6"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                          <circle cx="12" cy="7" r="4" />
+                        </svg>
+                      </div>
+                      <span className="public-photo-placeholder-text">
+                        Your photo preview will appear here
+                      </span>
+                    </>
+                  )}
+                </div>
+
+                <div className="public-photo-controls">
+                  <button
+                    type="button"
+                    className="public-btn-primary-camera"
+                    onClick={() => startSelfCamera("user")}
+                  >
+                    <Camera size={16} />
+                    {photo ? "Retake Photo" : "Open Camera"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="public-btn-secondary"
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    <Upload size={16} /> Upload Image
+                  </button>
+
+                  {photo && (
+                    <button
+                      type="button"
+                      className="public-btn-danger-outline"
+                      onClick={() => setPhoto("")}
+                    >
+                      <X size={14} /> Remove Photo
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             <input
               type="file"
@@ -1007,36 +1130,6 @@ export default function ITVisitForm({ hosts = [] }) {
               style={{ display: "none" }}
               onChange={handlePhotoUpload}
             />
-
-            {cameraActive && (
-              <div className="public-live-camera-view">
-                <video
-                  ref={videoRef}
-                  className="public-live-video"
-                  autoPlay
-                  playsInline
-                  muted
-                />
-                <div className="public-live-controls">
-                  <button
-                    type="button"
-                    className="public-submit-btn"
-                    style={{ width: "auto", padding: "10px 20px" }}
-                    onClick={captureSelfPhoto}
-                  >
-                    <Camera size={16} /> Snap Photo
-                  </button>
-                  <button
-                    type="button"
-                    className="public-clear-btn"
-                    style={{ width: "auto", padding: "10px 16px", margin: 0 }}
-                    onClick={stopSelfCamera}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
 
             {cameraError && (
               <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "10px" }}>
