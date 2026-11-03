@@ -201,12 +201,6 @@ export default function GuardLogin({ onLogin }) {
 
           {/* 1.5 MOBILE HERO: Guard & Gate Banner (Mobile Only) */}
           <div className="gt-mobile-hero-banner">
-            <div className="gt-mobile-hero-badge">
-              <div className="gt-terminal-pill">
-                <ShieldCheck size={13} className="gt-pill-icon" />
-                <span>Gate Terminal</span>
-              </div>
-            </div>
             <img
               src="/guard_hero_mobile_clean.png"
               alt="Gate Terminal Guard"
