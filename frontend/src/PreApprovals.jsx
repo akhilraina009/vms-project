@@ -436,8 +436,8 @@ export default function PreApprovals({
         action === "approve"
           ? "Approving request"
           : action === "wait"
-          ? "Putting request on hold"
-          : "Rejecting request";
+            ? "Putting request on hold"
+            : "Rejecting request";
 
       const result = await readResponse(response, actionLabel);
 
@@ -957,705 +957,705 @@ export default function PreApprovals({
       )}
 
       <div className="vms-desktop-only">
-{/* Main Page Header */}
-      <div className="it-management-header">
-        <div className="it-header-title-box">
-          <div className="it-header-badge-row">
-            <span className="it-division-pill">Corporate &amp; General Visitors</span>
-            <span className="it-telemetry-pill">
-              <span className="status-dot"></span>
-              Admin Approval Desk Active
-            </span>
+        {/* Main Page Header */}
+        <div className="it-management-header">
+          <div className="it-header-title-box">
+            <div className="it-header-badge-row">
+              <span className="it-division-pill">Corporate &amp; General Visitors</span>
+              <span className="it-telemetry-pill">
+                <span className="status-dot"></span>
+                Admin Approval Desk Active
+              </span>
+            </div>
+            <h2 className="it-page-title">General Visitor Pre-Approvals</h2>
+            <p className="it-page-desc">
+              Review incoming registration requests, cross-check identity and address records, and grant entry clearance for Gate Security.
+            </p>
           </div>
-          <h2 className="it-page-title">General Visitor Pre-Approvals</h2>
-          <p className="it-page-desc">
-            Review incoming registration requests, cross-check identity and address records, and grant entry clearance for Gate Security.
-          </p>
-        </div>
 
-        <div className="it-header-controls">
-          <button
-            type="button"
-            className="it-qr-portal-btn"
-            onClick={() => window.open("/register-visitor", "_blank")}
-            title="Open Visitor Registration Form in a separate window"
-          >
-            <ExternalLink size={14} />
-            <span>Visitor Form</span>
-          </button>
-
-          <button
-            type="button"
-            className="it-qr-portal-btn"
-            onClick={() => window.open("/guard", "_blank")}
-            title="Open Gate Security Desk in a separate window"
-          >
-            <ExternalLink size={14} />
-            <span>Gate Terminal</span>
-          </button>
-
-          {filterToday && (
+          <div className="it-header-controls">
             <button
               type="button"
               className="it-qr-portal-btn"
-              onClick={onShowAll}
+              onClick={() => window.open("/register-visitor", "_blank")}
+              title="Open Visitor Registration Form in a separate window"
             >
-              <span>Show All Requests</span>
+              <ExternalLink size={14} />
+              <span>Visitor Form</span>
             </button>
-          )}
 
-          <button
-            type="button"
-            className="it-refresh-btn"
-            onClick={fetchData}
-            disabled={loading}
-            title="Refresh pre-approvals"
-          >
-            <RefreshCw size={15} className={loading ? "spin" : ""} />
-          </button>
-
-          {onBack && (
-            <button type="button" className="it-qr-portal-btn" onClick={onBack}>
-              <ArrowLeft size={14} />
-              <span>Back to Dashboard</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Stats Counter Bar */}
-      <section className="stats-grid stats-grid-5">
-        <div
-          className={`stat-card clickable ${statusFilter === "all" ? "active-filter filter-blue" : ""}`}
-          onClick={() => setStatusFilter("all")}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="stat-icon blue">
-            <ClipboardList size={18} />
-          </div>
-          <div className="stat-content">
-            <span>{filterToday ? "Today's Requests" : "Total Requests"}</span>
-            <strong>{totalCount}</strong>
-            <span className="stat-interactive-hint">
-              {statusFilter === "all" ? "● Active View" : "View all"}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`stat-card clickable ${statusFilter === "PENDING" ? "active-filter filter-amber" : ""}`}
-          onClick={() => setStatusFilter(statusFilter === "PENDING" ? "all" : "PENDING")}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="stat-icon amber">
-            <Hourglass size={18} />
-          </div>
-          <div className="stat-content">
-            <span>Pending Review</span>
-            <strong style={{ color: "#d97706" }}>{pendingCount}</strong>
-            <span className="stat-interactive-hint">
-              {statusFilter === "PENDING" ? "● Active View" : "Awaiting approval"}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`stat-card clickable ${statusFilter === "WAITING" ? "active-filter filter-orange" : ""}`}
-          onClick={() => setStatusFilter(statusFilter === "WAITING" ? "all" : "WAITING")}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="stat-icon orange" style={{ background: "#fff7ed", color: "#ea580c" }}>
-            <Clock size={18} />
-          </div>
-          <div className="stat-content">
-            <span>Host Busy (Waiting)</span>
-            <strong style={{ color: "#ea580c" }}>{waitingCount}</strong>
-            <span className="stat-interactive-hint">
-              {statusFilter === "WAITING" ? "● Active View" : "Waiting in lobby"}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`stat-card clickable ${statusFilter === "APPROVED" ? "active-filter filter-green" : ""}`}
-          onClick={() => setStatusFilter(statusFilter === "APPROVED" ? "all" : "APPROVED")}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="stat-icon green">
-            <CheckCircle2 size={18} />
-          </div>
-          <div className="stat-content">
-            <span>Approved</span>
-            <strong style={{ color: "#059669" }}>{approvedCount}</strong>
-            <span className="stat-interactive-hint">
-              {statusFilter === "APPROVED" ? "● Active View" : "Ready for gate"}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className={`stat-card clickable ${statusFilter === "REJECTED" ? "active-filter filter-purple" : ""}`}
-          onClick={() => setStatusFilter(statusFilter === "REJECTED" ? "all" : "REJECTED")}
-          role="button"
-          tabIndex={0}
-        >
-          <div className="stat-icon purple">
-            <XCircle size={18} />
-          </div>
-          <div className="stat-content">
-            <span>Rejected</span>
-            <strong style={{ color: "#dc2626" }}>{rejectedCount}</strong>
-            <span className="stat-interactive-hint">
-              {statusFilter === "REJECTED" ? "● Active View" : "Entry denied"}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {error && (
-        <div className="error-banner" role="alert">
-          <XCircle size={17} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {success && (
-        <div
-          role="status"
-          style={{
-            padding: "12px 15px",
-            marginBottom: "14px",
-            borderRadius: "8px",
-            background: "rgba(16, 185, 129, 0.15)",
-            color: "#047857",
-            border: "1px solid rgba(16, 185, 129, 0.35)",
-            fontSize: "13px",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-          }}
-        >
-          <CheckCircle2 size={16} />
-          <span>{success}</span>
-        </div>
-      )}
-
-      {/* Manual Pre-Approval Creation Form */}
-      <section className="page-card">
-        <div className="section-header">
-          <div>
-            <h2>Schedule New Expected Visitor</h2>
-            <p>Add an advance appointment or expected visitor to the pre-clearance register.</p>
-          </div>
-          <CalendarClock size={22} color="#4f46e5" />
-        </div>
-
-        <form
-          onSubmit={handleCreate}
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "16px",
-            marginTop: "20px",
-          }}
-        >
-          <div className="form-field" style={{ gridColumn: "1 / -1" }}>
-            <label>
-              Visitor <span>*</span>
-            </label>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <select
-                name="visitor_id"
-                value={form.visitor_id}
-                onChange={handleInput}
-                required
-                disabled={loading}
-                style={{ flex: "1 1 260px", minWidth: 0 }}
-              >
-                <option value="">Select visitor</option>
-                {visitors.map((visitor) => (
-                  <option key={visitor.visitor_id} value={visitor.visitor_id}>
-                    {`${visitor.first_name || ""} ${visitor.last_name || ""}`.trim()}
-                    {visitor.company_name ? ` — ${visitor.company_name}` : ""}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="back-button"
-                onClick={() => {
-                  setShowNewVisitor((previous) => !previous);
-                  setError("");
-                  setSuccess("");
-                }}
-                disabled={registeringVisitor}
-              >
-                {showNewVisitor ? "Close Form" : "+ Register New Visitor"}
-              </button>
-            </div>
-          </div>
-
-          {showNewVisitor && (
-            <div
-              style={{
-                gridColumn: "1 / -1",
-                padding: "20px",
-                border: "1px solid #e2e8f0",
-                borderRadius: "12px",
-                background: "#f8fafc",
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-                gap: "14px",
-              }}
-            >
-              <div style={{ gridColumn: "1 / -1" }}>
-                <h3 style={{ margin: "0 0 5px", fontSize: "16px", color: "#0f172a" }}>
-                  Register New Visitor Identity
-                </h3>
-                <p style={{ margin: 0, color: "#64748b", fontSize: "12px" }}>
-                  Enter contact and complete address details.
-                </p>
-              </div>
-              {[
-                ["first_name", "First Name *", "First name", true],
-                ["last_name", "Last Name *", "Last name", true],
-                ["phone_number", "Phone Number *", "Phone number", true],
-                ["email", "Email Address", "Email address", false],
-                ["company_name", "Company Name", "Company name", false],
-              ].map(([name, label, placeholder, required]) => (
-                <div className="form-field" key={name}>
-                  <label>{label}</label>
-                  <input
-                    name={name}
-                    value={newVisitor[name]}
-                    onChange={handleNewVisitorInput}
-                    placeholder={placeholder}
-                    required={required}
-                    type={name === "email" ? "email" : "text"}
-                  />
-                </div>
-              ))}
-              <div style={{ gridColumn: "1 / -1", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
-                <h4 style={{ margin: "0 0 12px", fontSize: "14px", color: "#ffffff", fontWeight: 700 }}>Address Details</h4>
-              </div>
-              {[
-                ["address_line1", "Address Line 1", "Building / Street"],
-                ["address_line2", "Address Line 2 (Optional)", "Area / Locality"],
-                ["city", "City", "City"],
-                ["state", "State", "State"],
-                ["postal_code", "PIN Code", "Postal Code"],
-                ["country", "Country", "Country"],
-              ].map(([name, label, placeholder]) => (
-                <div className="form-field" key={name}>
-                  <label>{label}</label>
-                  <input
-                    name={name}
-                    value={newVisitor[name]}
-                    onChange={handleNewVisitorInput}
-                    placeholder={placeholder}
-                  />
-                </div>
-              ))}
-              <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-                <button
-                  type="button"
-                  className="back-button"
-                  onClick={() => setShowNewVisitor(false)}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={registeringVisitor}
-                  onClick={(event) => {
-                    const formElement = event.currentTarget.closest("form");
-                    if (!newVisitor.first_name.trim() || !newVisitor.last_name.trim() || !newVisitor.phone_number.trim()) {
-                      setError("First name, last name, and phone number are required.");
-                      return;
-                    }
-                    void handleRegisterVisitor({ preventDefault: () => {}, currentTarget: formElement });
-                  }}
-                >
-                  {registeringVisitor ? "Saving..." : "Save & Select"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="form-field">
-            <label>
-              Host / Employee <span>*</span>
-            </label>
-            <select
-              name="host_employee_id"
-              value={form.host_employee_id}
-              onChange={handleInput}
-              required
-              disabled={loading || hosts.length === 0}
-            >
-              <option value="">Select host</option>
-              {hosts.map((host) => (
-                <option key={host.employee_id} value={host.employee_id}>
-                  {`${host.first_name || ""} ${host.last_name || ""}`.trim()}
-                  {host.department ? ` — ${host.department}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-field">
-            <label>
-              Expected Arrival <span>*</span>
-            </label>
-            <input
-              type="datetime-local"
-              name="expected_in_time"
-              value={form.expected_in_time}
-              onChange={handleInput}
-              required
-            />
-          </div>
-
-          <div className="form-field">
-            <label>Expected Departure</label>
-            <input
-              type="datetime-local"
-              name="expected_out_time"
-              value={form.expected_out_time}
-              onChange={handleInput}
-              min={form.expected_in_time || undefined}
-            />
-          </div>
-
-          <div className="form-field" style={{ gridColumn: "1 / -1" }}>
-            <label>
-              Purpose of Visit <span>*</span>
-            </label>
-            <textarea
-              name="purpose"
-              value={form.purpose}
-              onChange={handleInput}
-              placeholder="Enter official reason for this visit"
-              maxLength={500}
-              rows={2}
-              required
-            />
-          </div>
-
-          <div
-            style={{
-              gridColumn: "1 / -1",
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "10px",
-            }}
-          >
             <button
               type="button"
-              className="back-button"
-              onClick={() => {
-                setForm(emptyForm);
-                setError("");
-                setSuccess("");
-              }}
-              disabled={submitting}
+              className="it-qr-portal-btn"
+              onClick={() => window.open("/guard", "_blank")}
+              title="Open Gate Security Desk in a separate window"
             >
-              Reset
+              <ExternalLink size={14} />
+              <span>Gate Terminal</span>
             </button>
 
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={submitting || loading || visitors.length === 0 || hosts.length === 0}
-            >
-              {submitting ? (
-                <>
-                  <RefreshCw size={14} className="spin" />
-                  Scheduling...
-                </>
-              ) : (
-                <>
-                  <CalendarClock size={14} />
-                  Schedule Pre-Approval
-                </>
-              )}
-            </button>
-          </div>
-        </form>
-      </section>
-
-      {/* Pre-Approval Table */}
-      <section className="table-card">
-        <div className="table-toolbar">
-          <div>
-            <h2>{filterToday ? "Today's General Visitors" : "General Visitor Pre-Approval Queue"}</h2>
-            <p>
-              {visibleApprovals.length} request{visibleApprovals.length === 1 ? "" : "s"} found · Cross-check visitor details before granting gate clearance.
-            </p>
-          </div>
-          <div className="visitor-toolbar-actions">
-            <div className="search-field">
-              <Search size={14} />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search visitor, host, company..."
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  style={{ background: "transparent", border: 0, cursor: "pointer", color: "#94a3b8" }}
-                  onClick={() => setSearchQuery("")}
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </div>
-            {statusFilter !== "all" && (
+            {filterToday && (
               <button
                 type="button"
-                className="clear-filter-btn"
-                onClick={() => setStatusFilter("all")}
+                className="it-qr-portal-btn"
+                onClick={onShowAll}
               >
-                <X size={12} />
-                Reset Filter
+                <span>Show All Requests</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              className="it-refresh-btn"
+              onClick={fetchData}
+              disabled={loading}
+              title="Refresh pre-approvals"
+            >
+              <RefreshCw size={15} className={loading ? "spin" : ""} />
+            </button>
+
+            {onBack && (
+              <button type="button" className="it-qr-portal-btn" onClick={onBack}>
+                <ArrowLeft size={14} />
+                <span>Back to Dashboard</span>
               </button>
             )}
           </div>
         </div>
 
-        {loading ? (
-          <div className="empty-state">
-            <RefreshCw size={20} className="spin" />
-            Loading pre-approvals...
+        {/* Stats Counter Bar */}
+        <section className="stats-grid stats-grid-5">
+          <div
+            className={`stat-card clickable ${statusFilter === "all" ? "active-filter filter-blue" : ""}`}
+            onClick={() => setStatusFilter("all")}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="stat-icon blue">
+              <ClipboardList size={18} />
+            </div>
+            <div className="stat-content">
+              <span>{filterToday ? "Today's Requests" : "Total Requests"}</span>
+              <strong>{totalCount}</strong>
+              <span className="stat-interactive-hint">
+                {statusFilter === "all" ? "● Active View" : "View all"}
+              </span>
+            </div>
           </div>
-        ) : visibleApprovals.length === 0 ? (
-          <div className="empty-state">
-            <CalendarClock size={24} />
-            <span>
-              {filterToday
-                ? "No general pre-approval requests scheduled for today."
-                : "No requests found for the selected filter."}
-            </span>
+
+          <div
+            className={`stat-card clickable ${statusFilter === "PENDING" ? "active-filter filter-amber" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "PENDING" ? "all" : "PENDING")}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="stat-icon amber">
+              <Hourglass size={18} />
+            </div>
+            <div className="stat-content">
+              <span>Pending Review</span>
+              <strong style={{ color: "#d97706" }}>{pendingCount}</strong>
+              <span className="stat-interactive-hint">
+                {statusFilter === "PENDING" ? "● Active View" : "Awaiting approval"}
+              </span>
+            </div>
           </div>
-        ) : (
-          <div className="table-wrap" style={{ overflowX: "auto" }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Visitor Profile</th>
-                  <th>Host / Department</th>
-                  <th>Purpose &amp; Assets</th>
-                  <th>Expected Arrival</th>
-                  <th>Status</th>
-                  <th>Inspection &amp; Admin Decision</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleApprovals.map((approval) => {
-                  const currentStatus = String(approval.status || "").trim().toUpperCase();
-                  const isActionLoading = actionLoading === approval.pre_approval_id;
-                  const v = getVisitor(approval);
-                  const h = getHost(approval);
 
-                  return (
-                    <tr key={approval.pre_approval_id}>
-                      {/* Visitor Profile */}
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div
-                            style={{
-                              width: "36px",
-                              height: "36px",
-                              borderRadius: "8px",
-                              background: "#e2e8f0",
-                              overflow: "hidden",
-                              flexShrink: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            {v?.photo_url ? (
-                              <img
-                                src={
-                                  v.photo_url.startsWith("http")
-                                    ? v.photo_url
-                                    : `${PHOTO_BASE_URL}${v.photo_url}`
-                                }
-                                alt="Visitor"
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                              />
-                            ) : (
-                              <Users size={16} color="#64748b" />
-                            )}
-                          </div>
-                          <div>
-                            <strong>{getVisitorName(approval)}</strong>
-                            {v?.company_name && (
-                              <div style={{ fontSize: "11px", color: "#64748b" }}>{v.company_name}</div>
-                            )}
-                            <div style={{ fontSize: "11px", color: "#94a3b8" }}>{v?.phone_number || ""}</div>
-                          </div>
-                        </div>
-                      </td>
+          <div
+            className={`stat-card clickable ${statusFilter === "WAITING" ? "active-filter filter-orange" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "WAITING" ? "all" : "WAITING")}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="stat-icon orange" style={{ background: "#fff7ed", color: "#ea580c" }}>
+              <Clock size={18} />
+            </div>
+            <div className="stat-content">
+              <span>Host Busy (Waiting)</span>
+              <strong style={{ color: "#ea580c" }}>{waitingCount}</strong>
+              <span className="stat-interactive-hint">
+                {statusFilter === "WAITING" ? "● Active View" : "Waiting in lobby"}
+              </span>
+            </div>
+          </div>
 
-                      {/* Host Info */}
-                      <td>
-                        <strong>{getHostName(approval)}</strong>
-                        {h?.department && (
-                          <div style={{ fontSize: "11px", color: "#64748b" }}>{h.department}</div>
-                        )}
-                      </td>
+          <div
+            className={`stat-card clickable ${statusFilter === "APPROVED" ? "active-filter filter-green" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "APPROVED" ? "all" : "APPROVED")}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="stat-icon green">
+              <CheckCircle2 size={18} />
+            </div>
+            <div className="stat-content">
+              <span>Approved</span>
+              <strong style={{ color: "#059669" }}>{approvedCount}</strong>
+              <span className="stat-interactive-hint">
+                {statusFilter === "APPROVED" ? "● Active View" : "Ready for gate"}
+              </span>
+            </div>
+          </div>
 
-                      {/* Purpose & Assets */}
-                      <td>
-                        <div style={{ maxWidth: "220px", fontSize: "12.5px" }}>
-                          {approval.purpose}
-                        </div>
-                        {approval.assets && approval.assets.length > 0 && (
-                          <span
-                            style={{
-                              display: "inline-block",
-                              marginTop: "4px",
-                              fontSize: "10.5px",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              background: "#eff6ff",
-                              color: "#2563eb",
-                              border: "1px solid #bfdbfe",
-                            }}
-                          >
-                            📦 {approval.assets.length} Asset{approval.assets.length === 1 ? "" : "s"}
-                          </span>
-                        )}
-                      </td>
+          <div
+            className={`stat-card clickable ${statusFilter === "REJECTED" ? "active-filter filter-purple" : ""}`}
+            onClick={() => setStatusFilter(statusFilter === "REJECTED" ? "all" : "REJECTED")}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="stat-icon purple">
+              <XCircle size={18} />
+            </div>
+            <div className="stat-content">
+              <span>Rejected</span>
+              <strong style={{ color: "#dc2626" }}>{rejectedCount}</strong>
+              <span className="stat-interactive-hint">
+                {statusFilter === "REJECTED" ? "● Active View" : "Entry denied"}
+              </span>
+            </div>
+          </div>
+        </section>
 
-                      {/* Expected Time */}
-                      <td>
-                        <div style={{ fontSize: "12.5px" }}>{formatDateTime(approval.expected_in_time)}</div>
-                      </td>
-
-                      {/* Status */}
-                      <td>
-                        <span
-                          style={{
-                            ...getStatusStyle(currentStatus),
-                            display: "inline-block",
-                            padding: "4px 9px",
-                            borderRadius: "20px",
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {getStatusStyle(currentStatus).label}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td>
-                        <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
-                          {/* Cross-Check Button */}
-                          <button
-                            type="button"
-                            className="back-button"
-                            style={{ padding: "6px 10px", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}
-                            onClick={() => setSelectedApproval(approval)}
-                            title="Cross-check all visitor details and pass"
-                          >
-                            <Eye size={13} />
-                            <span>Verify Details</span>
-                          </button>
-
-                          {currentStatus === "PENDING" && (
-                            <>
-                              <button
-                                type="button"
-                                className="primary-button"
-                                style={{ background: "#059669", padding: "6px 11px", fontSize: "12px" }}
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "approve")}
-                              >
-                                Approve
-                              </button>
-                              <button
-                                type="button"
-                                className="back-button"
-                                style={{ color: "#d97706", borderColor: "#fde68a", padding: "6px 9px", fontSize: "12px" }}
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "wait")}
-                                title="Host is busy. Ask visitor to wait in lobby."
-                              >
-                                Host Busy
-                              </button>
-                              <button
-                                type="button"
-                                className="back-button"
-                                style={{ color: "#dc2626", borderColor: "#fecaca", padding: "6px 9px", fontSize: "12px" }}
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "reject")}
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-
-                          {currentStatus === "WAITING" && (
-                            <>
-                              <button
-                                type="button"
-                                className="primary-button"
-                                style={{ background: "#059669", padding: "6px 11px", fontSize: "12px" }}
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "approve")}
-                              >
-                                Approve Now
-                              </button>
-                              <button
-                                type="button"
-                                className="back-button"
-                                style={{ color: "#dc2626", borderColor: "#fecaca", padding: "6px 9px", fontSize: "12px" }}
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "reject")}
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-
-                          {currentStatus === "APPROVED" && (
-                            <span style={{ color: "#059669", fontSize: "12px", fontWeight: 600 }}>
-                              ✓ Cleared for Gate
-                            </span>
-                          )}
-
-                          {currentStatus === "CHECKED_IN" && (
-                            <span style={{ color: "#4338ca", fontSize: "12px", fontWeight: 600 }}>
-                              ● On Premises
-                            </span>
-                          )}
-
-                          {currentStatus === "REJECTED" && (
-                            <span style={{ color: "#dc2626", fontSize: "12px" }}>
-                              ✕ Entry Denied
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {error && (
+          <div className="error-banner" role="alert">
+            <XCircle size={17} />
+            <span>{error}</span>
           </div>
         )}
-      </section>
+
+        {success && (
+          <div
+            role="status"
+            style={{
+              padding: "12px 15px",
+              marginBottom: "14px",
+              borderRadius: "8px",
+              background: "rgba(16, 185, 129, 0.15)",
+              color: "#047857",
+              border: "1px solid rgba(16, 185, 129, 0.35)",
+              fontSize: "13px",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <CheckCircle2 size={16} />
+            <span>{success}</span>
+          </div>
+        )}
+
+        {/* Manual Pre-Approval Creation Form */}
+        <section className="page-card">
+          <div className="section-header">
+            <div>
+              <h2>Schedule New Expected Visitor</h2>
+              <p>Add an advance appointment or expected visitor to the pre-clearance register.</p>
+            </div>
+            <CalendarClock size={22} color="#4f46e5" />
+          </div>
+
+          <form
+            onSubmit={handleCreate}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "16px",
+              marginTop: "20px",
+            }}
+          >
+            <div className="form-field" style={{ gridColumn: "1 / -1" }}>
+              <label>
+                Visitor <span>*</span>
+              </label>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <select
+                  name="visitor_id"
+                  value={form.visitor_id}
+                  onChange={handleInput}
+                  required
+                  disabled={loading}
+                  style={{ flex: "1 1 260px", minWidth: 0 }}
+                >
+                  <option value="">Select visitor</option>
+                  {visitors.map((visitor) => (
+                    <option key={visitor.visitor_id} value={visitor.visitor_id}>
+                      {`${visitor.first_name || ""} ${visitor.last_name || ""}`.trim()}
+                      {visitor.company_name ? ` — ${visitor.company_name}` : ""}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="back-button"
+                  onClick={() => {
+                    setShowNewVisitor((previous) => !previous);
+                    setError("");
+                    setSuccess("");
+                  }}
+                  disabled={registeringVisitor}
+                >
+                  {showNewVisitor ? "Close Form" : "+ Register New Visitor"}
+                </button>
+              </div>
+            </div>
+
+            {showNewVisitor && (
+              <div
+                style={{
+                  gridColumn: "1 / -1",
+                  padding: "20px",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "12px",
+                  background: "#f8fafc",
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+                  gap: "14px",
+                }}
+              >
+                <div style={{ gridColumn: "1 / -1" }}>
+                  <h3 style={{ margin: "0 0 5px", fontSize: "16px", color: "#0f172a" }}>
+                    Register New Visitor Identity
+                  </h3>
+                  <p style={{ margin: 0, color: "#64748b", fontSize: "12px" }}>
+                    Enter contact and complete address details.
+                  </p>
+                </div>
+                {[
+                  ["first_name", "First Name *", "First name", true],
+                  ["last_name", "Last Name *", "Last name", true],
+                  ["phone_number", "Phone Number *", "Phone number", true],
+                  ["email", "Email Address", "Email address", false],
+                  ["company_name", "Company Name", "Company name", false],
+                ].map(([name, label, placeholder, required]) => (
+                  <div className="form-field" key={name}>
+                    <label>{label}</label>
+                    <input
+                      name={name}
+                      value={newVisitor[name]}
+                      onChange={handleNewVisitorInput}
+                      placeholder={placeholder}
+                      required={required}
+                      type={name === "email" ? "email" : "text"}
+                    />
+                  </div>
+                ))}
+                <div style={{ gridColumn: "1 / -1", borderTop: "1px solid #e2e8f0", paddingTop: "12px" }}>
+                  <h4 style={{ margin: "0 0 12px", fontSize: "14px", color: "#ffffff", fontWeight: 700 }}>Address Details</h4>
+                </div>
+                {[
+                  ["address_line1", "Address Line 1", "Building / Street"],
+                  ["address_line2", "Address Line 2 (Optional)", "Area / Locality"],
+                  ["city", "City", "City"],
+                  ["state", "State", "State"],
+                  ["postal_code", "PIN Code", "Postal Code"],
+                  ["country", "Country", "Country"],
+                ].map(([name, label, placeholder]) => (
+                  <div className="form-field" key={name}>
+                    <label>{label}</label>
+                    <input
+                      name={name}
+                      value={newVisitor[name]}
+                      onChange={handleNewVisitorInput}
+                      placeholder={placeholder}
+                    />
+                  </div>
+                ))}
+                <div style={{ gridColumn: "1 / -1", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                  <button
+                    type="button"
+                    className="back-button"
+                    onClick={() => setShowNewVisitor(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="primary-button"
+                    disabled={registeringVisitor}
+                    onClick={(event) => {
+                      const formElement = event.currentTarget.closest("form");
+                      if (!newVisitor.first_name.trim() || !newVisitor.last_name.trim() || !newVisitor.phone_number.trim()) {
+                        setError("First name, last name, and phone number are required.");
+                        return;
+                      }
+                      void handleRegisterVisitor({ preventDefault: () => { }, currentTarget: formElement });
+                    }}
+                  >
+                    {registeringVisitor ? "Saving..." : "Save & Select"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="form-field">
+              <label>
+                Host / Employee <span>*</span>
+              </label>
+              <select
+                name="host_employee_id"
+                value={form.host_employee_id}
+                onChange={handleInput}
+                required
+                disabled={loading || hosts.length === 0}
+              >
+                <option value="">Select host</option>
+                {hosts.map((host) => (
+                  <option key={host.employee_id} value={host.employee_id}>
+                    {`${host.first_name || ""} ${host.last_name || ""}`.trim()}
+                    {host.department ? ` — ${host.department}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-field">
+              <label>
+                Expected Arrival <span>*</span>
+              </label>
+              <input
+                type="datetime-local"
+                name="expected_in_time"
+                value={form.expected_in_time}
+                onChange={handleInput}
+                required
+              />
+            </div>
+
+            <div className="form-field">
+              <label>Expected Departure</label>
+              <input
+                type="datetime-local"
+                name="expected_out_time"
+                value={form.expected_out_time}
+                onChange={handleInput}
+                min={form.expected_in_time || undefined}
+              />
+            </div>
+
+            <div className="form-field" style={{ gridColumn: "1 / -1" }}>
+              <label>
+                Purpose of Visit <span>*</span>
+              </label>
+              <textarea
+                name="purpose"
+                value={form.purpose}
+                onChange={handleInput}
+                placeholder="Enter official reason for this visit"
+                maxLength={500}
+                rows={2}
+                required
+              />
+            </div>
+
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+              }}
+            >
+              <button
+                type="button"
+                className="back-button"
+                onClick={() => {
+                  setForm(emptyForm);
+                  setError("");
+                  setSuccess("");
+                }}
+                disabled={submitting}
+              >
+                Reset
+              </button>
+
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={submitting || loading || visitors.length === 0 || hosts.length === 0}
+              >
+                {submitting ? (
+                  <>
+                    <RefreshCw size={14} className="spin" />
+                    Scheduling...
+                  </>
+                ) : (
+                  <>
+                    <CalendarClock size={14} />
+                    Schedule Pre-Approval
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        {/* Pre-Approval Table */}
+        <section className="table-card">
+          <div className="table-toolbar">
+            <div>
+              <h2>{filterToday ? "Today's General Visitors" : "General Visitor Pre-Approval Queue"}</h2>
+              <p>
+                {visibleApprovals.length} request{visibleApprovals.length === 1 ? "" : "s"} found · Cross-check visitor details before granting gate clearance.
+              </p>
+            </div>
+            <div className="visitor-toolbar-actions">
+              <div className="search-field">
+                <Search size={14} />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search visitor, host, company..."
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    style={{ background: "transparent", border: 0, cursor: "pointer", color: "#94a3b8" }}
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+              {statusFilter !== "all" && (
+                <button
+                  type="button"
+                  className="clear-filter-btn"
+                  onClick={() => setStatusFilter("all")}
+                >
+                  <X size={12} />
+                  Reset Filter
+                </button>
+              )}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="empty-state">
+              <RefreshCw size={20} className="spin" />
+              Loading pre-approvals...
+            </div>
+          ) : visibleApprovals.length === 0 ? (
+            <div className="empty-state">
+              <CalendarClock size={24} />
+              <span>
+                {filterToday
+                  ? "No general pre-approval requests scheduled for today."
+                  : "No requests found for the selected filter."}
+              </span>
+            </div>
+          ) : (
+            <div className="table-wrap" style={{ overflowX: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Visitor Profile</th>
+                    <th>Host / Department</th>
+                    <th>Purpose &amp; Assets</th>
+                    <th>Expected Arrival</th>
+                    <th>Status</th>
+                    <th>Inspection &amp; Admin Decision</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleApprovals.map((approval) => {
+                    const currentStatus = String(approval.status || "").trim().toUpperCase();
+                    const isActionLoading = actionLoading === approval.pre_approval_id;
+                    const v = getVisitor(approval);
+                    const h = getHost(approval);
+
+                    return (
+                      <tr key={approval.pre_approval_id}>
+                        {/* Visitor Profile */}
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div
+                              style={{
+                                width: "36px",
+                                height: "36px",
+                                borderRadius: "8px",
+                                background: "#e2e8f0",
+                                overflow: "hidden",
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              {v?.photo_url ? (
+                                <img
+                                  src={
+                                    v.photo_url.startsWith("http")
+                                      ? v.photo_url
+                                      : `${PHOTO_BASE_URL}${v.photo_url}`
+                                  }
+                                  alt="Visitor"
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                              ) : (
+                                <Users size={16} color="#64748b" />
+                              )}
+                            </div>
+                            <div>
+                              <strong>{getVisitorName(approval)}</strong>
+                              {v?.company_name && (
+                                <div style={{ fontSize: "11px", color: "#64748b" }}>{v.company_name}</div>
+                              )}
+                              <div style={{ fontSize: "11px", color: "#94a3b8" }}>{v?.phone_number || ""}</div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Host Info */}
+                        <td>
+                          <strong>{getHostName(approval)}</strong>
+                          {h?.department && (
+                            <div style={{ fontSize: "11px", color: "#64748b" }}>{h.department}</div>
+                          )}
+                        </td>
+
+                        {/* Purpose & Assets */}
+                        <td>
+                          <div style={{ maxWidth: "220px", fontSize: "12.5px" }}>
+                            {approval.purpose}
+                          </div>
+                          {approval.assets && approval.assets.length > 0 && (
+                            <span
+                              style={{
+                                display: "inline-block",
+                                marginTop: "4px",
+                                fontSize: "10.5px",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                background: "#eff6ff",
+                                color: "#2563eb",
+                                border: "1px solid #bfdbfe",
+                              }}
+                            >
+                              📦 {approval.assets.length} Asset{approval.assets.length === 1 ? "" : "s"}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Expected Time */}
+                        <td>
+                          <div style={{ fontSize: "12.5px" }}>{formatDateTime(approval.expected_in_time)}</div>
+                        </td>
+
+                        {/* Status */}
+                        <td>
+                          <span
+                            style={{
+                              ...getStatusStyle(currentStatus),
+                              display: "inline-block",
+                              padding: "4px 9px",
+                              borderRadius: "20px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              whiteSpace: "nowrap",
+                            }}
+                          >
+                            {getStatusStyle(currentStatus).label}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                            {/* Cross-Check Button */}
+                            <button
+                              type="button"
+                              className="back-button"
+                              style={{ padding: "6px 10px", fontSize: "12px", display: "flex", alignItems: "center", gap: "4px" }}
+                              onClick={() => setSelectedApproval(approval)}
+                              title="Cross-check all visitor details and pass"
+                            >
+                              <Eye size={13} />
+                              <span>Verify Details</span>
+                            </button>
+
+                            {currentStatus === "PENDING" && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="primary-button"
+                                  style={{ background: "#059669", padding: "6px 11px", fontSize: "12px" }}
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "approve")}
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  className="back-button"
+                                  style={{ color: "#d97706", borderColor: "#fde68a", padding: "6px 9px", fontSize: "12px" }}
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "wait")}
+                                  title="Host is busy. Ask visitor to wait in lobby."
+                                >
+                                  Host Busy
+                                </button>
+                                <button
+                                  type="button"
+                                  className="back-button"
+                                  style={{ color: "#dc2626", borderColor: "#fecaca", padding: "6px 9px", fontSize: "12px" }}
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "reject")}
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+
+                            {currentStatus === "WAITING" && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="primary-button"
+                                  style={{ background: "#059669", padding: "6px 11px", fontSize: "12px" }}
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "approve")}
+                                >
+                                  Approve Now
+                                </button>
+                                <button
+                                  type="button"
+                                  className="back-button"
+                                  style={{ color: "#dc2626", borderColor: "#fecaca", padding: "6px 9px", fontSize: "12px" }}
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "reject")}
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
+
+                            {currentStatus === "APPROVED" && (
+                              <span style={{ color: "#059669", fontSize: "12px", fontWeight: 600 }}>
+                                ✓ Cleared for Gate
+                              </span>
+                            )}
+
+                            {currentStatus === "CHECKED_IN" && (
+                              <span style={{ color: "#4338ca", fontSize: "12px", fontWeight: 600 }}>
+                                ● On Premises
+                              </span>
+                            )}
+
+                            {currentStatus === "REJECTED" && (
+                              <span style={{ color: "#dc2626", fontSize: "12px" }}>
+                                ✕ Entry Denied
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
 
       {/* =========================================================================
@@ -1916,7 +1916,7 @@ export default function PreApprovals({
                         setError("First name, last name, and phone number are required.");
                         return;
                       }
-                      void handleRegisterVisitor({ preventDefault: () => {}, currentTarget: formElement });
+                      void handleRegisterVisitor({ preventDefault: () => { }, currentTarget: formElement });
                     }}
                   >
                     {registeringVisitor ? "Saving..." : "Save & Select"}

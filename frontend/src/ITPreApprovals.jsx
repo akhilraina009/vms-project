@@ -371,8 +371,8 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
         action === "approve"
           ? "Approving IT clearance"
           : action === "wait"
-          ? "Putting IT visitor on hold"
-          : "Rejecting IT clearance";
+            ? "Putting IT visitor on hold"
+            : "Rejecting IT clearance";
 
       const result = await readResponse(response, actionLabel);
 
@@ -1345,330 +1345,330 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
 
       {/* Desktop View: Preserved 100% untouched */}
       <div className="it-preapprovals-desktop-view">
-      {/* Table Card */}
-      <section className="table-card">
-        <div className="table-toolbar">
-          <div>
-            <h2>IT Visitor &amp; Technical Contractor Queue</h2>
-            <p>
-              {visibleApprovals.length} IT request{visibleApprovals.length === 1 ? "" : "s"} found · Dedicated IT Department clearance workflow connected to Gate Security.
-            </p>
-          </div>
-          <div className="visitor-toolbar-actions">
-            <div className="search-field">
-              <Search size={14} />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search technician, IT host, company..."
-              />
-              {searchQuery && (
+        {/* Table Card */}
+        <section className="table-card">
+          <div className="table-toolbar">
+            <div>
+              <h2>IT Visitor &amp; Technical Contractor Queue</h2>
+              <p>
+                {visibleApprovals.length} IT request{visibleApprovals.length === 1 ? "" : "s"} found · Dedicated IT Department clearance workflow connected to Gate Security.
+              </p>
+            </div>
+            <div className="visitor-toolbar-actions">
+              <div className="search-field">
+                <Search size={14} />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search technician, IT host, company..."
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    style={{ background: "transparent", border: 0, cursor: "pointer", color: "#94a3b8" }}
+                    onClick={() => setSearchQuery("")}
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+              {statusFilter !== "all" && (
                 <button
                   type="button"
-                  style={{ background: "transparent", border: 0, cursor: "pointer", color: "#94a3b8" }}
-                  onClick={() => setSearchQuery("")}
+                  className="clear-filter-btn"
+                  onClick={() => setStatusFilter("all")}
                 >
                   <X size={12} />
+                  Reset Filter
                 </button>
               )}
             </div>
-            {statusFilter !== "all" && (
-              <button
-                type="button"
-                className="clear-filter-btn"
-                onClick={() => setStatusFilter("all")}
-              >
-                <X size={12} />
-                Reset Filter
-              </button>
-            )}
           </div>
-        </div>
 
-        {loading ? (
-          <div className="empty-state">
-            <RefreshCw size={20} className="spin" />
-            Loading IT pre-approvals...
-          </div>
-        ) : visibleApprovals.length === 0 ? (
-          <div className="empty-state">
-            <Server size={24} />
-            <span>No IT Department pre-approval requests found for the selected view.</span>
-          </div>
-        ) : (
-          <div className="table-wrap" style={{ overflowX: "auto" }}>
-            <table>
-              <thead>
-                <tr>
-                  <th>Technician / Contractor</th>
-                  <th>IT Host Engineer</th>
-                  <th>Scope &amp; Hardware Assets</th>
-                  <th>Expected Arrival</th>
-                  <th>Clearance Status</th>
-                  <th>Hardware Verification &amp; Decision</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleApprovals.map((approval) => {
-                  const currentStatus = String(approval.status || "").trim().toUpperCase();
-                  const isActionLoading = actionLoading === approval.pre_approval_id;
-                  const v = approval.visitor;
-                  const h = approval.host_employee;
+          {loading ? (
+            <div className="empty-state">
+              <RefreshCw size={20} className="spin" />
+              Loading IT pre-approvals...
+            </div>
+          ) : visibleApprovals.length === 0 ? (
+            <div className="empty-state">
+              <Server size={24} />
+              <span>No IT Department pre-approval requests found for the selected view.</span>
+            </div>
+          ) : (
+            <div className="table-wrap" style={{ overflowX: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Technician / Contractor</th>
+                    <th>IT Host Engineer</th>
+                    <th>Scope &amp; Hardware Assets</th>
+                    <th>Expected Arrival</th>
+                    <th>Clearance Status</th>
+                    <th>Hardware Verification &amp; Decision</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleApprovals.map((approval) => {
+                    const currentStatus = String(approval.status || "").trim().toUpperCase();
+                    const isActionLoading = actionLoading === approval.pre_approval_id;
+                    const v = approval.visitor;
+                    const h = approval.host_employee;
 
-                  return (
-                    <tr key={approval.pre_approval_id}>
-                      {/* Technician */}
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                          <div
-                            style={{
-                              width: "38px",
-                              height: "38px",
-                              borderRadius: "8px",
-                              background: "#e0e7ff",
-                              overflow: "hidden",
-                              flexShrink: 0,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                            }}
-                          >
-                            {v?.photo_url ? (
-                              <img
-                                src={
-                                  v.photo_url.startsWith("http")
-                                    ? v.photo_url
-                                    : `${PHOTO_BASE_URL}${v.photo_url}`
-                                }
-                                alt="Technician"
-                                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                              />
-                            ) : (
-                              <Laptop size={18} color="#4338ca" />
-                            )}
-                          </div>
-                          <div>
-                            <strong>{getTechnicianName(approval)}</strong>
-                            <div style={{ fontSize: "11px", color: "#4f46e5", fontWeight: 600 }}>
-                              {v?.company_name || "IT Contractor"}
+                    return (
+                      <tr key={approval.pre_approval_id}>
+                        {/* Technician */}
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            <div
+                              style={{
+                                width: "38px",
+                                height: "38px",
+                                borderRadius: "8px",
+                                background: "#e0e7ff",
+                                overflow: "hidden",
+                                flexShrink: 0,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              {v?.photo_url ? (
+                                <img
+                                  src={
+                                    v.photo_url.startsWith("http")
+                                      ? v.photo_url
+                                      : `${PHOTO_BASE_URL}${v.photo_url}`
+                                  }
+                                  alt="Technician"
+                                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
+                              ) : (
+                                <Laptop size={18} color="#4338ca" />
+                              )}
                             </div>
-                            <div style={{ fontSize: "11px", color: "#94a3b8" }}>{v?.phone_number || ""}</div>
+                            <div>
+                              <strong>{getTechnicianName(approval)}</strong>
+                              <div style={{ fontSize: "11px", color: "#4f46e5", fontWeight: 600 }}>
+                                {v?.company_name || "IT Contractor"}
+                              </div>
+                              <div style={{ fontSize: "11px", color: "#94a3b8" }}>{v?.phone_number || ""}</div>
+                            </div>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* IT Host */}
-                      <td>
-                        <strong>{getITHostName(approval)}</strong>
-                        <div style={{ fontSize: "11px", color: "#4338ca" }}>
-                          {h?.department || "IT Department"}
-                        </div>
-                      </td>
+                        {/* IT Host */}
+                        <td>
+                          <strong>{getITHostName(approval)}</strong>
+                          <div style={{ fontSize: "11px", color: "#4338ca" }}>
+                            {h?.department || "IT Department"}
+                          </div>
+                        </td>
 
-                      {/* Scope & Hardware */}
-                      <td>
-                        <div style={{ maxWidth: "240px", fontSize: "12.5px" }}>
-                          {getCleanPurpose(approval.purpose)}
-                        </div>
-                        {approval.assets && approval.assets.length > 0 && (
+                        {/* Scope & Hardware */}
+                        <td>
+                          <div style={{ maxWidth: "240px", fontSize: "12.5px" }}>
+                            {getCleanPurpose(approval.purpose)}
+                          </div>
+                          {approval.assets && approval.assets.length > 0 && (
+                            <span
+                              style={{
+                                display: "inline-block",
+                                marginTop: "4px",
+                                fontSize: "10.5px",
+                                padding: "2px 7px",
+                                borderRadius: "4px",
+                                background: "#ede9fe",
+                                color: "#6d28d9",
+                                border: "1px solid #ddd6fe",
+                                fontWeight: 600,
+                              }}
+                            >
+                              💻 {approval.assets.length} Hardware Item{approval.assets.length === 1 ? "" : "s"}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Expected Time */}
+                        <td>
+                          <div style={{ fontSize: "12.5px" }}>{formatDateTime(approval.expected_in_time)}</div>
+                        </td>
+
+                        {/* Status */}
+                        <td>
                           <span
                             style={{
+                              ...getStatusStyle(currentStatus),
                               display: "inline-block",
-                              marginTop: "4px",
-                              fontSize: "10.5px",
-                              padding: "2px 7px",
-                              borderRadius: "4px",
-                              background: "#ede9fe",
-                              color: "#6d28d9",
-                              border: "1px solid #ddd6fe",
-                              fontWeight: 600,
+                              padding: "4px 9px",
+                              borderRadius: "20px",
+                              fontSize: "11px",
+                              fontWeight: 700,
+                              whiteSpace: "nowrap",
                             }}
                           >
-                            💻 {approval.assets.length} Hardware Item{approval.assets.length === 1 ? "" : "s"}
+                            {getStatusStyle(currentStatus).label}
                           </span>
-                        )}
-                      </td>
+                        </td>
 
-                      {/* Expected Time */}
-                      <td>
-                        <div style={{ fontSize: "12.5px" }}>{formatDateTime(approval.expected_in_time)}</div>
-                      </td>
+                        {/* Actions */}
+                        <td>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+                            {/* Cross-Check Button */}
+                            <button
+                              type="button"
+                              className="it-action-btn verify"
+                              onClick={() => setSelectedApproval(approval)}
+                              title="Cross-check IT technician details, ticket, and hardware"
+                            >
+                              <Eye size={13} />
+                              <span>Verify Hardware</span>
+                            </button>
 
-                      {/* Status */}
-                      <td>
-                        <span
-                          style={{
-                            ...getStatusStyle(currentStatus),
-                            display: "inline-block",
-                            padding: "4px 9px",
-                            borderRadius: "20px",
-                            fontSize: "11px",
-                            fontWeight: 700,
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {getStatusStyle(currentStatus).label}
-                        </span>
-                      </td>
+                            {currentStatus === "PENDING" && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="it-action-btn approve"
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "approve")}
+                                  title="Approve IT clearance for gate check-in"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  className="it-action-btn wait"
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "wait")}
+                                  title="Host is occupied. Request technician to wait in reception lobby."
+                                >
+                                  Host Busy
+                                </button>
+                                <button
+                                  type="button"
+                                  className="it-action-btn reschedule"
+                                  disabled={isActionLoading}
+                                  onClick={() => openRescheduleModal(approval)}
+                                  title="IT Host is absent. Reschedule visit to tomorrow or next date/time."
+                                >
+                                  <CalendarClock size={12} />
+                                  Host Absent
+                                </button>
+                                <button
+                                  type="button"
+                                  className="it-action-btn reject"
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "reject")}
+                                  title="Deny IT entrance"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
 
-                      {/* Actions */}
-                      <td>
-                        <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
-                          {/* Cross-Check Button */}
-                          <button
-                            type="button"
-                            className="it-action-btn verify"
-                            onClick={() => setSelectedApproval(approval)}
-                            title="Cross-check IT technician details, ticket, and hardware"
-                          >
-                            <Eye size={13} />
-                            <span>Verify Hardware</span>
-                          </button>
+                            {currentStatus === "WAITING" && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="it-action-btn approve"
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "approve")}
+                                  title="Host is now available. Approve IT clearance."
+                                >
+                                  Approve Now
+                                </button>
+                                <button
+                                  type="button"
+                                  className="it-action-btn reschedule"
+                                  disabled={isActionLoading}
+                                  onClick={() => openRescheduleModal(approval)}
+                                  title="IT Host is absent. Reschedule technical visit to tomorrow or custom date/time."
+                                >
+                                  <CalendarClock size={12} />
+                                  Host Absent
+                                </button>
+                                <button
+                                  type="button"
+                                  className="it-action-btn reject"
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "reject")}
+                                  title="Deny IT entrance"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
 
-                          {currentStatus === "PENDING" && (
-                            <>
-                              <button
-                                type="button"
-                                className="it-action-btn approve"
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "approve")}
-                                title="Approve IT clearance for gate check-in"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                type="button"
-                                className="it-action-btn wait"
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "wait")}
-                                title="Host is occupied. Request technician to wait in reception lobby."
-                              >
-                                Host Busy
-                              </button>
-                              <button
-                                type="button"
-                                className="it-action-btn reschedule"
-                                disabled={isActionLoading}
-                                onClick={() => openRescheduleModal(approval)}
-                                title="IT Host is absent. Reschedule visit to tomorrow or next date/time."
-                              >
-                                <CalendarClock size={12} />
-                                Host Absent
-                              </button>
-                              <button
-                                type="button"
-                                className="it-action-btn reject"
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "reject")}
-                                title="Deny IT entrance"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
+                            {currentStatus === "RESCHEDULED" && (
+                              <>
+                                <button
+                                  type="button"
+                                  className="it-action-btn approve"
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "approve")}
+                                  title="Approve IT clearance"
+                                >
+                                  Approve
+                                </button>
+                                <button
+                                  type="button"
+                                  className="it-action-btn wait"
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "wait")}
+                                  title="Host is busy. Ask to wait."
+                                >
+                                  Host Busy
+                                </button>
+                                <button
+                                  type="button"
+                                  className="it-action-btn reschedule"
+                                  disabled={isActionLoading}
+                                  onClick={() => openRescheduleModal(approval)}
+                                  title="Reschedule visit date/time again"
+                                >
+                                  <CalendarClock size={12} />
+                                  Reschedule
+                                </button>
+                                <button
+                                  type="button"
+                                  className="it-action-btn reject"
+                                  disabled={isActionLoading}
+                                  onClick={() => handleDecision(approval, "reject")}
+                                  title="Deny IT entrance"
+                                >
+                                  Reject
+                                </button>
+                              </>
+                            )}
 
-                          {currentStatus === "WAITING" && (
-                            <>
-                              <button
-                                type="button"
-                                className="it-action-btn approve"
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "approve")}
-                                title="Host is now available. Approve IT clearance."
-                              >
-                                Approve Now
-                              </button>
-                              <button
-                                type="button"
-                                className="it-action-btn reschedule"
-                                disabled={isActionLoading}
-                                onClick={() => openRescheduleModal(approval)}
-                                title="IT Host is absent. Reschedule technical visit to tomorrow or custom date/time."
-                              >
-                                <CalendarClock size={12} />
-                                Host Absent
-                              </button>
-                              <button
-                                type="button"
-                                className="it-action-btn reject"
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "reject")}
-                                title="Deny IT entrance"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
+                            {currentStatus === "APPROVED" && (
+                              <span style={{ color: "#059669", fontSize: "12px", fontWeight: 600 }}>
+                                ✓ Ready for Gate Check-in
+                              </span>
+                            )}
 
-                          {currentStatus === "RESCHEDULED" && (
-                            <>
-                              <button
-                                type="button"
-                                className="it-action-btn approve"
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "approve")}
-                                title="Approve IT clearance"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                type="button"
-                                className="it-action-btn wait"
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "wait")}
-                                title="Host is busy. Ask to wait."
-                              >
-                                Host Busy
-                              </button>
-                              <button
-                                type="button"
-                                className="it-action-btn reschedule"
-                                disabled={isActionLoading}
-                                onClick={() => openRescheduleModal(approval)}
-                                title="Reschedule visit date/time again"
-                              >
-                                <CalendarClock size={12} />
-                                Reschedule
-                              </button>
-                              <button
-                                type="button"
-                                className="it-action-btn reject"
-                                disabled={isActionLoading}
-                                onClick={() => handleDecision(approval, "reject")}
-                                title="Deny IT entrance"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
+                            {currentStatus === "CHECKED_IN" && (
+                              <span style={{ color: "#4338ca", fontSize: "12px", fontWeight: 600 }}>
+                                ● Inside Premises
+                              </span>
+                            )}
 
-                          {currentStatus === "APPROVED" && (
-                            <span style={{ color: "#059669", fontSize: "12px", fontWeight: 600 }}>
-                              ✓ Ready for Gate Check-in
-                            </span>
-                          )}
-
-                          {currentStatus === "CHECKED_IN" && (
-                            <span style={{ color: "#4338ca", fontSize: "12px", fontWeight: 600 }}>
-                              ● Inside Premises
-                            </span>
-                          )}
-
-                          {currentStatus === "REJECTED" && (
-                            <span style={{ color: "#dc2626", fontSize: "12px" }}>
-                              ✕ Access Denied
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+                            {currentStatus === "REJECTED" && (
+                              <span style={{ color: "#dc2626", fontSize: "12px" }}>
+                                ✕ Access Denied
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Host Absent / Reschedule Modal */}
@@ -1688,7 +1688,8 @@ export default function ITPreApprovals({ onBack, onNotification, onPreApprovalCh
           onClick={() => setRescheduleTarget(null)}
         >
           <div
-            className="vms-dialog-card reschedule-modal-card" style={{ width: "100%", maxWidth: "520px", padding: "24px 26px", borderRadius: "16px", boxShadow: "0 20px 40px rgba(0, 0, 0, 0.7)", background: "#0f172a", border: "1px solid #1e293b",
+            className="vms-dialog-card reschedule-modal-card" style={{
+              width: "100%", maxWidth: "520px", padding: "24px 26px", borderRadius: "16px", boxShadow: "0 20px 40px rgba(0, 0, 0, 0.7)", background: "#0f172a", border: "1px solid #1e293b",
             }}
             onClick={(e) => e.stopPropagation()}
           >
