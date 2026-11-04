@@ -1,0 +1,2088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>The Future of Visitor Management Is Coming · VMS Enterprise</title>
+  <meta name="description" content="One intelligent platform for visitor registration, approvals, secure access, hardware tracking, and complete visibility across your premises.">
+  <link rel="icon" href="/favicon.png" type="image/png">
+
+  <!-- Offline & Local Network Optimized Font Stack with Non-Blocking Fallback -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+  </noscript>
+
+  <style>
+    /* ==========================================================================
+       VMS ENTERPRISE DESIGN TOKENS
+       ========================================================================== */
+    :root {
+      --bg-base: #060911;
+      --bg-surface: #0b1120;
+      --bg-card: rgba(15, 23, 42, 0.72);
+      --bg-card-hover: rgba(22, 33, 58, 0.9);
+      --bg-card-glass: rgba(255, 255, 255, 0.03);
+      
+      --vms-red: #e11d48;
+      --vms-red-bright: #ff3b68;
+      --vms-red-glow: rgba(225, 29, 72, 0.45);
+      --vms-red-subtle: rgba(225, 29, 72, 0.12);
+      --vms-red-border: rgba(225, 29, 72, 0.35);
+
+      --text-white: #ffffff;
+      --text-silver: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --accent-cyan: #38bdf8;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(255, 255, 255, 0.18);
+      
+      --font-display: "Inter Tight", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+      color-scheme: dark;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+      background: var(--bg-base);
+      color: var(--text-silver);
+      font-family: var(--font-body);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      width: 100%;
+    }
+
+    body {
+      background: var(--bg-base);
+      color: var(--text-silver);
+      overflow-x: hidden;
+      width: 100%;
+      min-height: 100vh;
+      line-height: 1.6;
+      position: relative;
+    }
+
+    /* Custom Selection */
+    ::selection {
+      background: var(--vms-red);
+      color: #ffffff;
+    }
+
+    /* Interactive Canvas Background */
+    #space-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Ambient Decorative Glows */
+    .ambient-glow-1 {
+      position: absolute;
+      top: -10vw;
+      left: 15vw;
+      width: 45vw;
+      height: 45vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(225, 29, 72, 0.16) 0%, rgba(15, 23, 42, 0) 70%);
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .ambient-glow-2 {
+      position: absolute;
+      top: 30vh;
+      right: -5vw;
+      width: 50vw;
+      height: 50vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56, 189, 248, 0.1) 0%, rgba(15, 23, 42, 0) 70%);
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .ambient-glow-3 {
+      position: absolute;
+      bottom: 10vh;
+      left: 5vw;
+      width: 60vw;
+      height: 40vw;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(225, 29, 72, 0.12) 0%, rgba(15, 23, 42, 0) 70%);
+      filter: blur(100px);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Layout Containers */
+    .page-wrap {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 0 16px;
+      }
+    }
+
+    /* ==========================================================================
+       HEADER & NAVIGATION
+       ========================================================================== */
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      width: 100%;
+      background: rgba(6, 9, 17, 0.78);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.3s ease, border-color 0.3s ease;
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 72px;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-logo-wrap {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.2);
+      flex-shrink: 0;
+    }
+
+    .brand-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .brand-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 17px;
+      color: var(--text-white);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .brand-subtitle {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .brand-descriptor {
+      display: inline-block;
+      font-size: 10.5px;
+      color: var(--text-dim);
+      border-left: 1px solid var(--border-subtle);
+      padding-left: 12px;
+      margin-left: 8px;
+      font-weight: 500;
+    }
+
+    @media (max-width: 900px) {
+      .brand-descriptor {
+        display: none;
+      }
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(225, 29, 72, 0.1);
+      border: 1px solid rgba(225, 29, 72, 0.28);
+      font-size: 11px;
+      font-weight: 700;
+      color: #ff859d;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+    }
+
+    .pulse-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--vms-red);
+      box-shadow: 0 0 10px var(--vms-red);
+      animation: pulseGlow 1.8s infinite;
+    }
+
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .btn-nav-explore {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: var(--text-white);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-nav-explore:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+    }
+
+    @media (max-width: 640px) {
+      .status-badge {
+        display: none;
+      }
+      .btn-nav-explore span {
+        display: none;
+      }
+    }
+
+    /* ==========================================================================
+       HERO SECTION
+       ========================================================================== */
+    .hero-section {
+      position: relative;
+      padding: 60px 0 100px;
+      min-height: calc(100vh - 72px);
+      display: flex;
+      align-items: center;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      align-items: center;
+      gap: 48px;
+      width: 100%;
+    }
+
+    @media (max-width: 980px) {
+      .hero-section {
+        padding: 40px 0 80px;
+      }
+      .hero-grid {
+        grid-template-columns: 1fr;
+        gap: 40px;
+      }
+    }
+
+    /* Hero Text Column */
+    .hero-content {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      max-width: 640px;
+    }
+
+    .hero-pill-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #cbd5e1;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .kicker-tag {
+      color: var(--vms-red-bright);
+      font-family: var(--font-mono);
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(38px, 5.2vw, 64px);
+      font-weight: 900;
+      line-height: 1.1;
+      letter-spacing: -0.035em;
+      color: var(--text-white);
+      margin-bottom: 20px;
+    }
+
+    .gradient-crimson {
+      background: linear-gradient(135deg, #ffffff 0%, #ff4d73 45%, #e11d48 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+      text-shadow: 0 0 40px rgba(225, 29, 72, 0.4);
+    }
+
+    .hero-subtext {
+      font-size: clamp(16px, 1.8vw, 18.5px);
+      line-height: 1.6;
+      color: #94a3b8;
+      margin-bottom: 32px;
+      max-width: 580px;
+    }
+
+    /* Hero Quick Highlights */
+    .hero-pillars {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 36px;
+    }
+
+    @media (max-width: 540px) {
+      .hero-pillars {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .pillar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-subtle);
+      font-size: 13px;
+      font-weight: 600;
+      color: #e2e8f0;
+      backdrop-filter: blur(8px);
+      transition: all 0.2s ease;
+    }
+
+    .pillar-item:hover {
+      border-color: rgba(225, 29, 72, 0.35);
+      background: rgba(22, 33, 58, 0.85);
+      transform: translateY(-2px);
+    }
+
+    .pillar-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      background: rgba(225, 29, 72, 0.15);
+      color: var(--vms-red-bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .pillar-item:nth-child(2) .pillar-icon {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+    }
+    .pillar-item:nth-child(3) .pillar-icon {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+    }
+    .pillar-item:nth-child(4) .pillar-icon {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+
+    /* Hero CTA Row */
+    .hero-cta-group {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .btn-hero-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 28px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f43f5e 0%, #e11d48 50%, #be123c 100%);
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 700;
+      text-decoration: none;
+      box-shadow: 0 10px 25px -5px rgba(225, 29, 72, 0.5), 0 0 15px rgba(225, 29, 72, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .btn-hero-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px -5px rgba(225, 29, 72, 0.65), 0 0 25px rgba(225, 29, 72, 0.4);
+    }
+
+    .btn-hero-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 24px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-white);
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+
+    .btn-hero-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    /* ==========================================================================
+       3D INTERACTIVE SIGNATURE SCENE
+       ========================================================================== */
+    .scene-3d-stage {
+      position: relative;
+      width: 100%;
+      height: 580px;
+      perspective: 1200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    @media (max-width: 980px) {
+      .scene-3d-stage {
+        height: 520px;
+        max-width: 460px;
+        margin: 0 auto;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .scene-3d-stage {
+        height: 460px;
+      }
+    }
+
+    .scene-3d-world {
+      position: relative;
+      width: 340px;
+      height: 480px;
+      transform-style: preserve-3d;
+      transition: transform 0.12s ease-out;
+      will-change: transform;
+    }
+
+    @media (max-width: 480px) {
+      .scene-3d-world {
+        width: 300px;
+        height: 430px;
+      }
+    }
+
+    /* Orbital Gimbal Rings */
+    .gimbal-ring-outer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 480px;
+      height: 480px;
+      margin-top: -240px;
+      margin-left: -240px;
+      border-radius: 50%;
+      border: 1.5px dashed rgba(225, 29, 72, 0.3);
+      transform: rotateX(72deg) rotateY(15deg) translateZ(-60px);
+      pointer-events: none;
+      animation: rotateGimbalOuter 24s linear infinite;
+    }
+
+    .gimbal-ring-outer::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      margin-left: -5px;
+      margin-top: -5px;
+      border-radius: 50%;
+      background: var(--vms-red-bright);
+      box-shadow: 0 0 15px var(--vms-red-bright);
+    }
+
+    .gimbal-ring-inner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 400px;
+      height: 400px;
+      margin-top: -200px;
+      margin-left: -200px;
+      border-radius: 50%;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      transform: rotateX(55deg) rotateY(-25deg) translateZ(-40px);
+      pointer-events: none;
+      animation: rotateGimbalInner 18s linear infinite reverse;
+    }
+
+    @keyframes rotateGimbalOuter {
+      0% { transform: rotateX(72deg) rotateY(15deg) rotateZ(0deg) translateZ(-60px); }
+      100% { transform: rotateX(72deg) rotateY(15deg) rotateZ(360deg) translateZ(-60px); }
+    }
+
+    @keyframes rotateGimbalInner {
+      0% { transform: rotateX(55deg) rotateY(-25deg) rotateZ(0deg) translateZ(-40px); }
+      100% { transform: rotateX(55deg) rotateY(-25deg) rotateZ(360deg) translateZ(-40px); }
+    }
+
+    /* 3D Security Shield Plane (Backdrop) */
+    .shield-mesh-back {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 320px;
+      height: 380px;
+      margin-top: -190px;
+      margin-left: -160px;
+      border-radius: 24px;
+      background: radial-gradient(circle at 50% 30%, rgba(225, 29, 72, 0.2) 0%, rgba(15, 23, 42, 0.6) 70%);
+      border: 1px solid rgba(225, 29, 72, 0.2);
+      transform: translateZ(-30px);
+      box-shadow: 0 0 60px rgba(225, 29, 72, 0.15);
+      pointer-events: none;
+    }
+
+    /* The Central Holographic Pass */
+    .holographic-pass {
+      position: absolute;
+      inset: 0;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(15, 23, 42, 0.88) 100%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1.5px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.75), 0 0 35px rgba(225, 29, 72, 0.25);
+      transform: translateZ(40px);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      cursor: grab;
+      transition: border-color 0.3s ease;
+    }
+
+    .holographic-pass:active {
+      cursor: grabbing;
+    }
+
+    /* Specular dynamic reflection that moves with mouse */
+    .pass-specular {
+      position: absolute;
+      inset: -100%;
+      background: radial-gradient(circle 320px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.2) 0%, transparent 60%);
+      pointer-events: none;
+      mix-blend-mode: overlay;
+    }
+
+    /* Pass Inner Header */
+    .pass-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 14px;
+    }
+
+    .pass-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .pass-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: #ffffff;
+      padding: 3px;
+      object-fit: contain;
+    }
+
+    .pass-type-badge {
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-family: var(--font-display);
+    }
+
+    .pass-chip {
+      width: 32px;
+      height: 24px;
+      border-radius: 4px;
+      background: linear-gradient(135deg, #d97706 0%, #fbbf24 50%, #b45309 100%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      position: relative;
+      box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.4);
+    }
+
+    .pass-chip::after {
+      content: "";
+      position: absolute;
+      inset: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.25);
+      border-radius: 2px;
+    }
+
+    /* Pass Visitor Identity */
+    .pass-visitor-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 0;
+    }
+
+    .pass-avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2563eb, #1e40af);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #ffffff;
+      font-weight: 800;
+      font-size: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      flex-shrink: 0;
+    }
+
+    .pass-name-col {
+      min-width: 0;
+    }
+
+    .pass-name {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.01em;
+      margin-bottom: 2px;
+    }
+
+    .pass-role {
+      font-size: 11px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    /* Central Dynamic QR Matrix */
+    .pass-qr-stage {
+      position: relative;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .pass-qr-img {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3));
+    }
+
+    /* Scan Laser Line Animation */
+    .qr-scan-line {
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #ff3b68, #ffffff, #ff3b68, transparent);
+      box-shadow: 0 0 12px #ff3b68;
+      animation: laserScan 2.5s ease-in-out infinite alternate;
+    }
+
+    @keyframes laserScan {
+      0% { top: 12%; opacity: 0.2; }
+      50% { opacity: 1; }
+      100% { top: 88%; opacity: 0.2; }
+    }
+
+    .pass-qr-label {
+      margin-top: 8px;
+      font-size: 10px;
+      font-weight: 700;
+      color: #cbd5e1;
+      letter-spacing: 0.08em;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+    }
+
+    /* Telemetry Info Pill */
+    .pass-telemetry {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 8px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .telemetry-cell {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .telemetry-lbl {
+      font-size: 9px;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .telemetry-val {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .telemetry-val.active-time {
+      color: #34d399;
+    }
+
+    /* Pass Bottom Barcode */
+    .pass-footer-barcode {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 10px;
+      font-size: 9.5px;
+      font-family: var(--font-mono);
+      color: #94a3b8;
+    }
+
+    /* Floating Connected 3D Orbit Nodes */
+    .orbit-card {
+      position: absolute;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(11, 17, 32, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      transition: all 0.3s ease;
+      pointer-events: auto;
+    }
+
+    .orbit-card:hover {
+      border-color: rgba(225, 29, 72, 0.5);
+      background: rgba(18, 27, 49, 0.95);
+      transform: translateZ(90px) scale(1.05);
+    }
+
+    .orbit-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+
+    .orbit-card.node-1 {
+      top: -15px;
+      left: -50px;
+      transform: translateZ(75px);
+      border-left: 3px solid #34d399;
+    }
+    .orbit-card.node-1 .orbit-icon {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+
+    .orbit-card.node-2 {
+      top: 60px;
+      right: -60px;
+      transform: translateZ(85px);
+      border-left: 3px solid #e11d48;
+    }
+    .orbit-card.node-2 .orbit-icon {
+      background: rgba(225, 29, 72, 0.2);
+      color: #ff4d73;
+    }
+
+    .orbit-card.node-3 {
+      bottom: 80px;
+      left: -65px;
+      transform: translateZ(65px);
+      border-left: 3px solid #38bdf8;
+    }
+    .orbit-card.node-3 .orbit-icon {
+      background: rgba(56, 189, 248, 0.2);
+      color: #38bdf8;
+    }
+
+    .orbit-card.node-4 {
+      bottom: -15px;
+      right: -45px;
+      transform: translateZ(75px);
+      border-left: 3px solid #fbbf24;
+    }
+    .orbit-card.node-4 .orbit-icon {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    @media (max-width: 980px) {
+      .orbit-card.node-1 { left: -10px; top: -10px; }
+      .orbit-card.node-2 { right: -10px; top: 60px; }
+      .orbit-card.node-3 { left: -10px; bottom: 80px; }
+      .orbit-card.node-4 { right: -10px; bottom: -10px; }
+    }
+
+    @media (max-width: 480px) {
+      .orbit-card {
+        font-size: 10.5px;
+        padding: 6px 10px;
+      }
+      .orbit-card.node-1 { left: 0px; top: -18px; }
+      .orbit-card.node-2 { right: 0px; top: 40px; }
+      .orbit-card.node-3 { left: 0px; bottom: 70px; }
+      .orbit-card.node-4 { right: 0px; bottom: -15px; }
+    }
+
+    /* Scene Interactive Tilt Hint */
+    .scene-hint-badge {
+      position: absolute;
+      bottom: -32px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    /* ==========================================================================
+       CAPABILITIES SECTION
+       ========================================================================== */
+    .capabilities-section {
+      padding: 100px 0;
+      position: relative;
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto 60px;
+    }
+
+    .section-kicker {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--vms-red-bright);
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .section-title {
+      font-family: var(--font-display);
+      font-size: clamp(32px, 3.8vw, 48px);
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      color: var(--text-white);
+      line-height: 1.15;
+      margin-bottom: 16px;
+    }
+
+    .section-subtitle {
+      font-size: clamp(15.5px, 1.6vw, 18px);
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* 4 Feature Cards Grid */
+    .capabilities-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 24px;
+      margin-bottom: 60px;
+    }
+
+    @media (max-width: 768px) {
+      .capabilities-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+    }
+
+    .capability-card {
+      position: relative;
+      background: rgba(11, 17, 32, 0.7);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid var(--border-subtle);
+      border-radius: 18px;
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+      overflow: hidden;
+    }
+
+    .capability-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(225, 29, 72, 0.6), transparent);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .capability-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(225, 29, 72, 0.35);
+      background: rgba(18, 27, 49, 0.85);
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), 0 0 25px rgba(225, 29, 72, 0.12);
+    }
+
+    .capability-card:hover::before {
+      opacity: 1;
+    }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .card-icon-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(225, 29, 72, 0.12);
+      border: 1px solid rgba(225, 29, 72, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--vms-red-bright);
+      font-size: 22px;
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.15);
+    }
+
+    .card-badge {
+      font-family: var(--font-mono);
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 4px 10px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--text-white);
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .card-desc {
+      font-size: 15px;
+      color: var(--text-muted);
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+
+    .card-feature-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 16px;
+    }
+
+    .card-feature-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+
+    .card-feature-item svg {
+      color: #34d399;
+      flex-shrink: 0;
+    }
+
+    /* Workflow Pipeline Strip */
+    .workflow-strip {
+      background: rgba(11, 17, 32, 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px 30px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      position: relative;
+    }
+
+    @media (max-width: 900px) {
+      .workflow-strip {
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .workflow-strip {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .step-item {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .step-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--vms-red-bright);
+      margin-bottom: 4px;
+    }
+
+    .step-name {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .step-desc {
+      font-size: 12px;
+      color: #94a3b8;
+      line-height: 1.4;
+    }
+
+    /* ==========================================================================
+       COMING SOON LAUNCH ANNOUNCEMENT SECTION
+       ========================================================================== */
+    .coming-soon-section {
+      padding: 100px 0 120px;
+      position: relative;
+      background: linear-gradient(180deg, transparent 0%, rgba(225, 29, 72, 0.04) 50%, transparent 100%);
+    }
+
+    .launch-monument-card {
+      position: relative;
+      background: radial-gradient(circle at 50% 20%, rgba(225, 29, 72, 0.15) 0%, rgba(11, 17, 32, 0.95) 70%);
+      border: 1.5px solid rgba(225, 29, 72, 0.35);
+      border-radius: 28px;
+      padding: 70px 40px;
+      text-align: center;
+      overflow: hidden;
+      box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 50px rgba(225, 29, 72, 0.15);
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 640px) {
+      .launch-monument-card {
+        padding: 44px 20px;
+        border-radius: 20px;
+      }
+    }
+
+    .launch-monument-card::before {
+      content: "";
+      position: absolute;
+      top: -20%;
+      left: 30%;
+      width: 40%;
+      height: 50%;
+      background: radial-gradient(circle, rgba(225, 29, 72, 0.35) 0%, transparent 70%);
+      filter: blur(60px);
+      pointer-events: none;
+    }
+
+    /* Big 3D Typography */
+    .coming-soon-monument {
+      font-family: var(--font-display);
+      font-size: clamp(48px, 9vw, 98px);
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: #ffffff;
+      text-transform: uppercase;
+      margin: 16px 0 24px;
+      position: relative;
+      display: inline-block;
+      text-shadow: 0 10px 40px rgba(225, 29, 72, 0.5), 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+
+    .monument-gradient {
+      background: linear-gradient(180deg, #ffffff 20%, #ff6b8b 70%, #e11d48 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .launch-headline {
+      font-family: var(--font-display);
+      font-size: clamp(26px, 3.2vw, 36px);
+      font-weight: 800;
+      color: #ffffff;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+
+    .launch-subtext {
+      font-size: clamp(15.5px, 1.6vw, 18px);
+      color: #cbd5e1;
+      max-width: 620px;
+      margin: 0 auto 40px;
+      line-height: 1.65;
+    }
+
+    /* Dimensional Progress Ring Indicator */
+    .launch-progress-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 18px;
+      border-radius: 30px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      margin-bottom: 40px;
+    }
+
+    .progress-spinner-ring {
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(225, 29, 72, 0.3);
+      border-top-color: var(--vms-red-bright);
+      border-radius: 50%;
+      animation: spin 1.2s linear infinite;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
+
+    .progress-lbl {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: #cbd5e1;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* Interactive "Be the First to Know" Form */
+    .notify-box {
+      max-width: 520px;
+      margin: 0 auto;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .notify-header {
+      margin-bottom: 16px;
+      text-align: left;
+    }
+
+    .notify-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .notify-sub {
+      font-size: 12.5px;
+      color: #94a3b8;
+    }
+
+    .notify-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    @media (max-width: 540px) {
+      .notify-form {
+        flex-direction: column;
+      }
+    }
+
+    .notify-input {
+      flex: 1;
+      height: 46px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+      font-size: 14px;
+      padding: 0 16px;
+      font-family: inherit;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .notify-input:focus {
+      border-color: var(--vms-red);
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.25);
+    }
+
+    .notify-input::placeholder {
+      color: #64748b;
+    }
+
+    .notify-btn {
+      height: 46px;
+      padding: 0 24px;
+      border-radius: 8px;
+      background: var(--vms-red);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .notify-btn:hover {
+      background: #be123c;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 14px rgba(225, 29, 72, 0.4);
+    }
+
+    .notify-feedback {
+      display: none;
+      margin-top: 14px;
+      font-size: 12px;
+      color: #34d399;
+      font-weight: 600;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 6px;
+      padding: 8px 12px;
+    }
+
+    /* ==========================================================================
+       FOOTER
+       ========================================================================== */
+    .site-footer {
+      border-top: 1px solid var(--border-subtle);
+      background: #04060c;
+      padding: 50px 0 40px;
+      width: 100%;
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .footer-link {
+      color: #94a3b8;
+      font-size: 13px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: var(--vms-red-bright);
+    }
+
+    /* ==========================================================================
+       ACCESSIBILITY & REDUCED MOTION
+       ========================================================================== */
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+      .gimbal-ring-outer,
+      .gimbal-ring-inner,
+      .qr-scan-line,
+      .progress-spinner-ring {
+        animation: none !important;
+      }
+      .scene-3d-world {
+        transform: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background Space Canvas -->
+  <canvas id="space-canvas"></canvas>
+
+  <!-- Ambient Light Orbs -->
+  <div class="ambient-glow-1"></div>
+  <div class="ambient-glow-2"></div>
+  <div class="ambient-glow-3"></div>
+
+  <div class="page-wrap">
+
+    <!-- Header Navigation -->
+    <header class="site-header">
+      <div class="container">
+        <div class="header-inner">
+          <a href="#hero" class="brand-group" aria-label="VMS Home">
+            <div class="brand-logo-wrap">
+              <img src="/vms-logo.png" alt="VMS Logo" class="brand-logo-img">
+            </div>
+            <div class="brand-text">
+              <div class="brand-title">VMS</div>
+              <div class="brand-subtitle">Visitor Management System</div>
+            </div>
+            <span class="brand-descriptor">Enterprise Physical &amp; Digital Access Control</span>
+          </a>
+
+          <div class="header-actions">
+            <div class="status-badge">
+              <span class="pulse-dot"></span>
+              A NEW EXPERIENCE IS COMING
+            </div>
+            <a href="#capabilities" class="btn-nav-explore">
+              <span>Explore VMS</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section" id="hero">
+      <div class="container">
+        <div class="hero-grid">
+
+          <!-- Left: Hero Story & Messaging -->
+          <div class="hero-content">
+            <div class="hero-pill-kicker">
+              <span class="pulse-dot"></span>
+              <span class="kicker-tag">VMS NEXT-GEN</span>
+              <span>Enterprise Physical &amp; Digital Access</span>
+            </div>
+
+            <h1 class="hero-title">
+              The Future of <span class="gradient-crimson">Visitor Management</span> Is Coming.
+            </h1>
+
+            <p class="hero-subtext">
+              One intelligent platform for visitor registration, approvals, secure access, hardware tracking, and complete visibility across your premises.
+            </p>
+
+            <!-- 4 Value Pillars -->
+            <div class="hero-pillars">
+              <div class="pillar-item">
+                <div class="pillar-icon">⚡</div>
+                <span>3-Sec Gate Clearance</span>
+              </div>
+              <div class="pillar-item">
+                <div class="pillar-icon">🛡</div>
+                <span>Zero-Leakage Custody</span>
+              </div>
+              <div class="pillar-item">
+                <div class="pillar-icon">📱</div>
+                <span>Dynamic QR Badges</span>
+              </div>
+              <div class="pillar-item">
+                <div class="pillar-icon">🔒</div>
+                <span>End-to-End Audit Trail</span>
+              </div>
+            </div>
+
+            <!-- CTA Group -->
+            <div class="hero-cta-group">
+              <a href="#coming-soon" class="btn-hero-primary">
+                <span>Be First to Know</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </a>
+              <a href="#capabilities" class="btn-hero-secondary">
+                <span>Explore Capabilities</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </a>
+            </div>
+          </div>
+
+          <!-- Right: Interactive 3D VMS Ecosystem Experience -->
+          <div class="scene-3d-stage" id="scene-stage">
+            
+            <!-- Gimbal Orbital Rings -->
+            <div class="gimbal-ring-outer"></div>
+            <div class="gimbal-ring-inner"></div>
+
+            <!-- 3D World (Rotates with Cursor / Touch) -->
+            <div class="scene-3d-world" id="scene-world">
+              
+              <!-- Layer 1: Shield Mesh Backdrop -->
+              <div class="shield-mesh-back"></div>
+
+              <!-- Layer 2: Floating Holographic Digital Pass -->
+              <div class="holographic-pass" id="pass-card">
+                <div class="pass-specular" id="pass-specular"></div>
+
+                <!-- Pass Header -->
+                <div class="pass-header">
+                  <div class="pass-brand">
+                    <img src="/vms-logo.png" alt="VMS" class="pass-logo">
+                    <span class="pass-type-badge">VMS Enterprise Access</span>
+                  </div>
+                  <div class="pass-chip"></div>
+                </div>
+
+                <!-- Pass Identity -->
+                <div class="pass-visitor-row">
+                  <div class="pass-avatar">DS</div>
+                  <div class="pass-name-col">
+                    <div class="pass-name">Dan Singh</div>
+                    <div class="pass-role">Network Contractor · IT Division</div>
+                  </div>
+                </div>
+
+                <!-- Pass Central QR with Active Laser Scan -->
+                <div class="pass-qr-stage">
+                  <div class="qr-scan-line"></div>
+                  <img src="/it_visit_qr.png" alt="Visitor Pass QR" class="pass-qr-img" onerror="this.src='/favicon.png'">
+                  <div class="pass-qr-label">OPTICAL SCAN PASS #138</div>
+                </div>
+
+                <!-- Pass Telemetry -->
+                <div class="pass-telemetry">
+                  <div class="telemetry-cell">
+                    <span class="telemetry-lbl">Gate Status</span>
+                    <span class="telemetry-val active-time">● ACTIVE ONSITE</span>
+                  </div>
+                  <div class="telemetry-cell">
+                    <span class="telemetry-lbl">Hardware In</span>
+                    <span class="telemetry-val">1 Laptop Cleared</span>
+                  </div>
+                </div>
+
+                <!-- Pass Footer -->
+                <div class="pass-footer-barcode">
+                  <span>REF: V-20261103-75E</span>
+                  <span>ISO 27001 AUDITED</span>
+                </div>
+              </div>
+
+              <!-- Layer 3: 4 Connected Orbit Telemetry Nodes -->
+              <div class="orbit-card node-1">
+                <div class="orbit-icon">✓</div>
+                <div>
+                  <div style="color:#ffffff;">Gate In: 09:21 AM</div>
+                  <div style="font-size:10px; color:#94a3b8;">Host notified on Slack</div>
+                </div>
+              </div>
+
+              <div class="orbit-card node-2">
+                <div class="orbit-icon">🛡</div>
+                <div>
+                  <div style="color:#ffffff;">Custody Verified</div>
+                  <div style="font-size:10px; color:#94a3b8;">Zero exit leakage</div>
+                </div>
+              </div>
+
+              <div class="orbit-card node-3">
+                <div class="orbit-icon">💻</div>
+                <div>
+                  <div style="color:#ffffff;">IT Asset Cleared</div>
+                  <div style="font-size:10px; color:#94a3b8;">ThinkPad P16 · SN: 34567</div>
+                </div>
+              </div>
+
+              <div class="orbit-card node-4">
+                <div class="orbit-icon">⚡</div>
+                <div>
+                  <div style="color:#ffffff;">Pre-Approval Ready</div>
+                  <div style="font-size:10px; color:#94a3b8;">VIP Fast-Track Clearance</div>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="scene-hint-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m10 15 5-3-5-3v6z"/></svg>
+              <span>Interactive 3D Preview · Tilt &amp; Explore</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- Capabilities Section -->
+    <section class="capabilities-section" id="capabilities">
+      <div class="container">
+        
+        <div class="section-header">
+          <span class="section-kicker">ENTERPRISE VISITOR PLATFORM</span>
+          <h2 class="section-title">One Platform. Complete Visibility.</h2>
+          <p class="section-subtitle">
+            From reception to the security gate, every visit follows a clear, traceable workflow.
+          </p>
+        </div>
+
+        <!-- 4 Capabilities Grid -->
+        <div class="capabilities-grid">
+          
+          <!-- Card 1: Visitor Registration -->
+          <div class="capability-card">
+            <div>
+              <div class="card-top">
+                <div class="card-icon-box">📱</div>
+                <span class="card-badge">Entry Clearance</span>
+              </div>
+              <h3 class="card-title">Visitor Registration</h3>
+              <p class="card-desc">
+                A streamlined registration experience with digital visitor passes and QR-based workflows.
+              </p>
+            </div>
+            <div class="card-feature-list">
+              <div class="card-feature-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Self-service touchless kiosk &amp; mobile passes</span>
+              </div>
+              <div class="card-feature-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Instant encrypted digital credentials with badge photo</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Smart Approvals -->
+          <div class="capability-card">
+            <div>
+              <div class="card-top">
+                <div class="card-icon-box">🛡</div>
+                <span class="card-badge">Host Coordination</span>
+              </div>
+              <h3 class="card-title">Smart Approvals</h3>
+              <p class="card-desc">
+                Organize visit requests, coordinate hosts, and verify authorization before entry.
+              </p>
+            </div>
+            <div class="card-feature-list">
+              <div class="card-feature-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>One-click host authorization &amp; pre-scheduled VIPs</span>
+              </div>
+              <div class="card-feature-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Designated room and building access restrictions</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Secure Gate Operations -->
+          <div class="capability-card">
+            <div>
+              <div class="card-top">
+                <div class="card-icon-box">⚡</div>
+                <span class="card-badge">Security Guard Hub</span>
+              </div>
+              <h3 class="card-title">Secure Gate Operations</h3>
+              <p class="card-desc">
+                Support visitor verification, check-in, checkout, and controlled premises access.
+              </p>
+            </div>
+            <div class="card-feature-list">
+              <div class="card-feature-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Sub-second optical QR gate barcode reader</span>
+              </div>
+              <div class="card-feature-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Real-time occupant roster &amp; evacuation muster telemetry</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Hardware & Asset Tracking -->
+          <div class="capability-card">
+            <div>
+              <div class="card-top">
+                <div class="card-icon-box">💻</div>
+                <span class="card-badge">Zero Leakage</span>
+              </div>
+              <h3 class="card-title">Hardware &amp; Asset Tracking</h3>
+              <p class="card-desc">
+                Track declared equipment, custody status, returns, and exit clearance.
+              </p>
+            </div>
+            <div class="card-feature-list">
+              <div class="card-feature-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Serial number logging &amp; photo hardware inspection</span>
+              </div>
+              <div class="card-feature-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>Strict exit reconciliation: Returned vs. Retained</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Workflow Lifecycle Strip -->
+        <div class="workflow-strip">
+          <div class="step-item">
+            <span class="step-num">STAGE 01</span>
+            <div class="step-name">Pre-Registration</div>
+            <div class="step-desc">Digital invite &amp; encrypted QR pass generated in seconds.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">STAGE 02</span>
+            <div class="step-name">Gate Optical Scan</div>
+            <div class="step-desc">Security terminal confirms identity &amp; declares assets.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">STAGE 03</span>
+            <div class="step-name">Active Mission</div>
+            <div class="step-desc">Real-time dwell tracking and host coordination.</div>
+          </div>
+          <div class="step-item">
+            <span class="step-num">STAGE 04</span>
+            <div class="step-name">Exit Clearance</div>
+            <div class="step-desc">Chain-of-custody verification with 100% audit record.</div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Coming Soon Section -->
+    <section class="coming-soon-section" id="coming-soon">
+      <div class="container">
+        
+        <div class="launch-monument-card">
+          
+          <div class="launch-progress-wrap">
+            <div class="progress-spinner-ring"></div>
+            <span class="progress-lbl">IN FINAL ENGINEERING &amp; POLISH</span>
+          </div>
+
+          <div class="coming-soon-monument">
+            <span class="monument-gradient">COMING SOON</span>
+          </div>
+
+          <h2 class="launch-headline">Something Better Is on the Way.</h2>
+
+          <p class="launch-subtext">
+            We are preparing the next chapter of smarter visitor management. A more intuitive experience, connected workflows, and clearer visibility across every visit.
+          </p>
+
+          <!-- Interactive Subscription -->
+          <div class="notify-box">
+            <div class="notify-header">
+              <div class="notify-title">Be the First to Know</div>
+              <div class="notify-sub">Stay informed about the upcoming VMS experience.</div>
+            </div>
+
+            <form class="notify-form" id="notify-form" onsubmit="handleNotifySubmit(event)">
+              <input 
+                type="email" 
+                class="notify-input" 
+                id="notify-email"
+                placeholder="officer@enterprise.com" 
+                required 
+                autocomplete="email"
+                aria-label="Email address"
+              >
+              <button type="submit" class="notify-btn" id="notify-btn">
+                <span>Notify Me</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+              </button>
+            </form>
+
+            <div class="notify-feedback" id="notify-feedback">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>You're on the priority list. We will notify you when we go live.</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-inner">
+          <div class="footer-brand">
+            <div class="brand-logo-wrap" style="width:32px; height:32px;">
+              <img src="/vms-logo.png" alt="VMS" class="brand-logo-img">
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 14px; color: #ffffff;">VMS Enterprise</div>
+              <div class="footer-copy">Enterprise Physical &amp; Digital Access Control · ISO 27001 &amp; SOC 2 Architecture</div>
+            </div>
+          </div>
+
+          <div class="footer-links">
+            <a href="#hero" class="footer-link">Back to Top</a>
+            <a href="#capabilities" class="footer-link">Platform Capabilities</a>
+            <a href="/guard" class="footer-link">Gate Terminal Portal</a>
+            <a href="/it-visit" class="footer-link">IT Contractor Registration</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Interactive JavaScript Engine -->
+  <script>
+    // 1. Interactive 3D Parallax Tilt for the Hero Scene
+    const stage = document.getElementById('scene-stage');
+    const world = document.getElementById('scene-world');
+    const pass = document.getElementById('pass-card');
+    const specular = document.getElementById('pass-specular');
+
+    let currentX = 0, currentY = 0;
+    let targetX = 0, targetY = 0;
+    let isHovering = false;
+
+    if (stage && world) {
+      function onPointerMove(e) {
+        const rect = stage.getBoundingClientRect();
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX) || rect.left + rect.width / 2;
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY) || rect.top + rect.height / 2;
+
+        const x = (clientX - rect.left) / rect.width;
+        const y = (clientY - rect.top) / rect.height;
+
+        targetX = (y - 0.5) * -28; // RotateX: -14 to +14 deg
+        targetY = (x - 0.5) * 32;  // RotateY: -16 to +16 deg
+        isHovering = true;
+
+        if (pass) {
+          const passRect = pass.getBoundingClientRect();
+          const specX = ((clientX - passRect.left) / passRect.width) * 100;
+          const specY = ((clientY - passRect.top) / passRect.height) * 100;
+          pass.style.setProperty('--mouse-x', specX + '%');
+          pass.style.setProperty('--mouse-y', specY + '%');
+        }
+      }
+
+      function onPointerLeave() {
+        isHovering = false;
+        targetX = 0;
+        targetY = 0;
+      }
+
+      window.addEventListener('mousemove', onPointerMove, { passive: true });
+      stage.addEventListener('mouseleave', onPointerLeave, { passive: true });
+      stage.addEventListener('touchmove', onPointerMove, { passive: true });
+      stage.addEventListener('touchend', onPointerLeave, { passive: true });
+
+      // Smooth Animation Loop for 3D Scene
+      let animFrameId;
+      function animate3DScene(time) {
+        // Natural ambient floating oscillation when not actively dragging
+        const ambientTiltX = Math.sin(time * 0.0012) * 5;
+        const ambientTiltY = Math.cos(time * 0.001) * 6;
+        const ambientFloatZ = Math.sin(time * 0.0015) * 8;
+
+        const finalTargetX = isHovering ? targetX : ambientTiltX;
+        const finalTargetY = isHovering ? targetY : ambientTiltY;
+
+        currentX += (finalTargetX - currentX) * 0.08;
+        currentY += (finalTargetY - currentY) * 0.08;
+
+        world.style.transform = `rotateX(${currentX}deg) rotateY(${currentY}deg) translateZ(${ambientFloatZ}px)`;
+        animFrameId = requestAnimationFrame(animate3DScene);
+      }
+      animFrameId = requestAnimationFrame(animate3DScene);
+    }
+
+    // 2. Hardware-Accelerated Dynamic Starfield & Perspective Grid Canvas
+    const canvas = document.getElementById('space-canvas');
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      let width = (canvas.width = window.innerWidth);
+      let height = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      // Star Particles
+      const STAR_COUNT = Math.min(120, Math.floor(window.innerWidth / 12));
+      const stars = [];
+      for (let i = 0; i < STAR_COUNT; i++) {
+        stars.push({
+          x: Math.random() * width,
+          y: Math.random() * height,
+          size: Math.random() * 1.6 + 0.4,
+          speed: Math.random() * 0.25 + 0.05,
+          alpha: Math.random() * 0.7 + 0.2,
+          pulseSpeed: Math.random() * 0.02 + 0.005,
+          color: Math.random() > 0.85 ? '#e11d48' : '#cbd5e1'
+        });
+      }
+
+      function drawBackground(t) {
+        ctx.clearRect(0, 0, width, height);
+
+        // Perspective Ground Grid (Futuristic Horizon)
+        const horizonY = height * 0.75;
+        ctx.save();
+        ctx.strokeStyle = 'rgba(225, 29, 72, 0.04)';
+        ctx.lineWidth = 1;
+
+        // Radiating grid lines to vanishing point
+        const vpX = width * 0.5;
+        for (let x = -width * 0.5; x <= width * 1.5; x += 90) {
+          ctx.beginPath();
+          ctx.moveTo(vpX, horizonY);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+
+        // Horizontal perspective lines
+        for (let y = horizonY; y <= height; y += (y - horizonY + 12) * 0.35) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // Draw and update stars
+        for (let i = 0; i < stars.length; i++) {
+          const s = stars[i];
+          s.y -= s.speed;
+          if (s.y < 0) {
+            s.y = height;
+            s.x = Math.random() * width;
+          }
+
+          const currentAlpha = s.alpha + Math.sin(t * s.pulseSpeed) * 0.25;
+          ctx.fillStyle = s.color;
+          ctx.globalAlpha = Math.max(0.1, Math.min(1, currentAlpha));
+          ctx.beginPath();
+          ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        requestAnimationFrame(drawBackground);
+      }
+      requestAnimationFrame(drawBackground);
+    }
+
+    // 3. Subscription Form Interaction (Stores in localStorage, zero fake endpoint)
+    function handleNotifySubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('notify-email');
+      const feedback = document.getElementById('notify-feedback');
+      const btn = document.getElementById('notify-btn');
+
+      if (!input || !input.value) return;
+
+      const email = input.value.trim();
+      try {
+        localStorage.setItem('vms_waitlist_email', email);
+        localStorage.setItem('vms_waitlist_timestamp', new Date().toISOString());
+      } catch (err) {
+        console.warn('LocalStorage save error:', err);
+      }
+
+      btn.disabled = true;
+      btn.style.opacity = '0.7';
+      btn.innerHTML = '<span>Saved!</span> ✓';
+
+      feedback.style.display = 'inline-flex';
+      input.value = '';
+    }
+
+    // Check if user previously subscribed
+    try {
+      const prior = localStorage.getItem('vms_waitlist_email');
+      if (prior) {
+        const feedback = document.getElementById('notify-feedback');
+        if (feedback) {
+          feedback.innerHTML = `✓ You're already registered as <strong>${prior}</strong>. Thank you!`;
+          feedback.style.display = 'inline-flex';
+        }
+      }
+    } catch (e) {}
+    // 4. Local Data & Offline Wi-Fi Portability Engine
+    (function initLocalDataPortability() {
+      // Auto-resolve relative paths if accessed directly via file:// or custom local network directories
+      if (window.location.protocol === 'file:') {
+        document.querySelectorAll('img[src^="/"]').forEach(function(img) {
+          var orig = img.getAttribute('src');
+          if (orig && orig.startsWith('/')) {
+            img.src = '.' + orig;
+          }
+        });
+        document.querySelectorAll('link[href^="/"]').forEach(function(lnk) {
+          var orig = lnk.getAttribute('href');
+          if (orig && orig.startsWith('/')) {
+            lnk.href = '.' + orig;
+          }
+        });
+      }
+
+      // Offline network resilience indicator
+      window.addEventListener('online', function() {
+        console.log('[VMS] Network status: ONLINE');
+      });
+      window.addEventListener('offline', function() {
+        console.log('[VMS] Network status: LOCAL / OFFLINE WI-FI (Full functionality maintained)');
+      });
+    })();
+  </script>
+</body>
+</html>

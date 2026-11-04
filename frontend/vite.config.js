@@ -17,7 +17,12 @@ const demoRedirectPlugin = () => ({
         url === "/launch" ||
         url === "/vms-os" ||
         url === "/profile/vms-os" ||
-        url === "/profile/vms-os/"
+        url === "/profile/vms-os/" ||
+        url === "/coming-soon" ||
+        url === "/coming-soon/" ||
+        url === "/soon" ||
+        url === "/soon/" ||
+        url === "/comingsoon"
       ) {
         res.writeHead(302, { Location: "/profile/vms-os/index.html" });
         res.end();

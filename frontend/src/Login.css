@@ -111,6 +111,34 @@
   font-weight: 300;
 }
 
+/* Theme Toggle Button (Light & Dark Mode) */
+.vms-theme-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.vms-theme-toggle-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Mobile Header Actions */
+.vms-mobile-header-actions {
+  display: none;
+  align-items: center;
+  gap: 10px;
+}
+
 /* Mobile Hamburger Menu Button */
 .vms-mobile-menu-trigger {
   display: none;
@@ -849,7 +877,7 @@
   }
 
   .vms-login-hero-col {
-    padding-left: 240px; /* Aligns neatly to the right of the stone pillar branding */
+    padding-left: 280px; /* Aligns neatly to the right of the stone pillar branding */
   }
 
   .vms-capability-cards-grid {
@@ -888,6 +916,12 @@
     display: none;
   }
 
+  .vms-mobile-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
   .vms-mobile-menu-trigger {
     display: inline-flex;
   }
@@ -913,6 +947,12 @@
 
   .vms-header-actions-desktop {
     display: none;
+  }
+
+  .vms-mobile-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .vms-mobile-menu-trigger {
@@ -1212,3 +1252,238 @@
     padding: 18px 12px 14px;
   }
 }
+
+/* ==========================================================================
+   DARK THEME STYLES (html[data-theme="dark"] / html.dark)
+   ========================================================================== */
+html[data-theme="dark"] .vms-premium-login-page,
+html.dark .vms-premium-login-page {
+  background-color: #090d16;
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .vms-login-header,
+html.dark .vms-login-header {
+  background: #0f172a;
+  border-bottom-color: #1e293b;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .vms-header-brand-title,
+html.dark .vms-header-brand-title {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .vms-header-brand-divider,
+html.dark .vms-header-brand-divider {
+  color: #334155;
+}
+
+html[data-theme="dark"] .vms-header-brand-sub,
+html.dark .vms-header-brand-sub {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .vms-header-status-item,
+html[data-theme="dark"] .vms-header-link-item,
+html.dark .vms-header-status-item,
+html.dark .vms-header-link-item {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .vms-header-icon,
+html.dark .vms-header-icon {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .vms-header-action-divider,
+html.dark .vms-header-action-divider {
+  color: #334155;
+}
+
+html[data-theme="dark"] .vms-theme-toggle-btn,
+html.dark .vms-theme-toggle-btn {
+  background: #1e293b;
+  border-color: #334155;
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .vms-theme-toggle-btn:hover,
+html.dark .vms-theme-toggle-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .vms-mobile-menu-trigger,
+html.dark .vms-mobile-menu-trigger {
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .vms-login-card,
+html.dark .vms-login-card {
+  background: #0f172a;
+  border-color: #1e293b;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+html[data-theme="dark"] .vms-card-brand-logo-ring,
+html.dark .vms-card-brand-logo-ring {
+  background: #0b1120;
+  border-color: #1e293b;
+}
+
+html[data-theme="dark"] .vms-card-brand-text,
+html.dark .vms-card-brand-text {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .vms-card-system-title,
+html.dark .vms-card-system-title {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .vms-card-system-subtitle,
+html.dark .vms-card-system-subtitle {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .vms-card-welcome-title,
+html.dark .vms-card-welcome-title {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .vms-card-welcome-sub,
+html.dark .vms-card-welcome-sub {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .vms-form-label,
+html.dark .vms-form-label {
+  color: #cbd5e1;
+}
+
+html[data-theme="dark"] .vms-input-field,
+html.dark .vms-input-field {
+  background: #0b1120 !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+html[data-theme="dark"] .vms-input-field::placeholder,
+html.dark .vms-input-field::placeholder {
+  color: #64748b !important;
+}
+
+html[data-theme="dark"] .vms-input-field:focus,
+html.dark .vms-input-field:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
+}
+
+html[data-theme="dark"] .vms-input-icon,
+html.dark .vms-input-icon {
+  color: #64748b;
+}
+
+html[data-theme="dark"] .vms-password-toggle-btn,
+html.dark .vms-password-toggle-btn {
+  color: #64748b;
+}
+
+html[data-theme="dark"] .vms-password-toggle-btn:hover,
+html.dark .vms-password-toggle-btn:hover {
+  color: #ffffff;
+}
+
+html[data-theme="dark"] .vms-security-badge-card,
+html.dark .vms-security-badge-card {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .vms-capability-card,
+html.dark .vms-capability-card {
+  background: rgba(15, 23, 42, 0.88);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+html[data-theme="dark"] .vms-capability-card:hover,
+html.dark .vms-capability-card:hover {
+  background: #1e293b;
+}
+
+html[data-theme="dark"] .vms-cap-title,
+html.dark .vms-cap-title {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .vms-cap-desc,
+html.dark .vms-cap-desc {
+  color: #94a3b8;
+}
+
+html[data-theme="dark"] .vms-mobile-drawer-panel,
+html.dark .vms-mobile-drawer-panel {
+  background: #0f172a;
+  border-left-color: #1e293b;
+  color: #f1f5f9;
+}
+
+html[data-theme="dark"] .vms-drawer-item,
+html.dark .vms-drawer-item {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html[data-theme="dark"] .vms-drawer-item-title,
+html.dark .vms-drawer-item-title {
+  color: #f8fafc;
+}
+
+html[data-theme="dark"] .vms-drawer-item-sub,
+html.dark .vms-drawer-item-sub {
+  color: #94a3b8;
+}
+
+/* Mobile-specific dark mode elements */
+html[data-theme="dark"] .vms-login-main-stage,
+html.dark .vms-login-main-stage {
+  background: linear-gradient(180deg, #090d16 0%, #0f172a 100%) !important;
+}
+
+html[data-theme="dark"] .vms-mob-cap-card,
+html.dark .vms-mob-cap-card {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+}
+
+html[data-theme="dark"] .vms-mob-cap-title,
+html.dark .vms-mob-cap-title {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .vms-mob-cap-desc,
+html.dark .vms-mob-cap-desc {
+  color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .vms-divider-text,
+html.dark .vms-divider-text {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .vms-divider-line,
+html.dark .vms-divider-line {
+  background: #334155 !important;
+}
+
+html[data-theme="dark"] .vms-card-rbac-footer,
+html.dark .vms-card-rbac-footer {
+  background: #0b1120 !important;
+  border-color: #1e293b !important;
+  color: #94a3b8 !important;
+}
+
+

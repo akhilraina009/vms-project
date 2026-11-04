@@ -14129,6 +14129,9 @@ function AppContent() {
     currentPath === "/demo-video" ||
     currentPath === "/promo" ||
     currentPath === "/showcase" ||
+    currentPath === "/coming-soon" ||
+    currentPath === "/soon" ||
+    currentPath === "/comingsoon" ||
     currentPath === "/profile/vms-os" ||
     currentPath === "/vms-os" ||
     currentPath === "/tour" ||

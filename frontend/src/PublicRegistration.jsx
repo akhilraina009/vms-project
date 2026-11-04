@@ -548,31 +548,40 @@ export default function PublicRegistration() {
   }
 
   function capturePhoto() {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) {
-      setCameraError("Please wait until the camera preview is ready.");
-      return;
+    try {
+      const video = videoRef.current;
+      if (!video) {
+        setCameraError("Please wait until the camera preview is ready.");
+        return;
+      }
+
+      const vw = video.videoWidth || video.clientWidth || 640;
+      const vh = video.videoHeight || video.clientHeight || 480;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = vw;
+      canvas.height = vh;
+      const context = canvas.getContext("2d");
+
+      if (facingMode === "user") {
+        context.translate(canvas.width, 0);
+        context.scale(-1, 1);
+      }
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      setPhoto(canvas.toDataURL("image/jpeg", 0.88));
+
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
+      }
+      setCameraActive(false);
+      setCameraError("");
+    } catch (err) {
+      console.error("Public registration photo capture error:", err);
+      setCameraError("Failed to capture photograph. Please try again.");
     }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const context = canvas.getContext("2d");
-
-    if (facingMode === "user") {
-      context.translate(canvas.width, 0);
-      context.scale(-1, 1);
-    }
-
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    setPhoto(canvas.toDataURL("image/jpeg", 0.88));
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-    setCameraActive(false);
   }
 
   function stopSelfCamera() {

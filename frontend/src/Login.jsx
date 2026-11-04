@@ -7,9 +7,7 @@ import {
   ArrowRight,
   RefreshCw,
   ShieldCheck,
-  DoorOpen,
   Headphones,
-  Menu,
   X,
   ChevronRight,
   UserPlus,
@@ -20,6 +18,8 @@ import {
   BarChart3,
   ExternalLink,
   LogIn,
+  Sun,
+  Moon,
 } from "lucide-react";
 import "./Login.css";
 
@@ -42,13 +42,21 @@ export default function Login({ onLogin }) {
     }
   };
 
-  // Ensure default clean light theme matching the executive enterprise design reference
+  // Theme State & Persistence (defaults to executive light as in reference)
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem("vms-theme") || localStorage.getItem("vms_theme") || "light"
+  );
+
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", "light");
-    document.documentElement.classList.remove("dark");
-    localStorage.setItem("vms_theme", "light");
-    localStorage.setItem("vms-theme", "light");
-  }, []);
+    document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("vms_theme", theme);
+    localStorage.setItem("vms-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  };
 
   // Close mobile navigation drawer with Escape key and manage body overflow
   useEffect(() => {
@@ -154,31 +162,29 @@ export default function Login({ onLogin }) {
               <span>Secure Access</span>
             </div>
 
-            <span className="vms-header-action-divider">|</span>
-
-            <a href="/guard" className="vms-header-link-item" title="Open Guard Gate Terminal">
-              <DoorOpen size={15} className="vms-header-icon" />
-              <span>Gate Terminal</span>
-            </a>
-
-            <span className="vms-header-action-divider">|</span>
-
-            <a href="mailto:admin@vms.com" className="vms-header-link-item" title="Contact System Administrator">
-              <Headphones size={15} className="vms-header-icon" />
-              <span>Help</span>
-            </a>
+            <button
+              type="button"
+              className="vms-theme-toggle-btn"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
           </div>
 
-          {/* Mobile Hamburger Menu Button */}
-          <button
-            type="button"
-            className="vms-mobile-menu-trigger"
-            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
-            aria-expanded={mobileMenuOpen}
-            onClick={() => setMobileMenuOpen((prev) => !prev)}
-          >
-            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
-          </button>
+          {/* Mobile Header Actions */}
+          <div className="vms-mobile-header-actions">
+            <button
+              type="button"
+              className="vms-theme-toggle-btn vms-theme-toggle-mobile"
+              onClick={toggleTheme}
+              title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+          </div>
         </div>
 
         {/* Clean Red Accent Underline */}

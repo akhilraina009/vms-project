@@ -3923,6 +3923,66 @@ html.dark .sgp-action-footer p {
     display: block !important;
   }
 
+  #security-camera-reader-mob canvas {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    pointer-events: none !important;
+  }
+
+  .sgp-mob-camera-loading-overlay,
+  .sgp-mob-camera-error-overlay {
+    position: absolute !important;
+    inset: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 16px !important;
+    background: rgba(9, 14, 23, 0.94) !important;
+    z-index: 10 !important;
+    text-align: center !important;
+    gap: 10px !important;
+    border-radius: 14px !important;
+  }
+
+  .sgp-mob-camera-loading-overlay p {
+    color: #38bdf8 !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+  }
+
+  .sgp-mob-camera-error-text {
+    color: #fca5a5 !important;
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+    margin: 0 0 4px 0 !important;
+    max-width: 260px !important;
+  }
+
+  .sgp-mob-btn-retry-camera {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 7px 16px !important;
+    background: #0284c7 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4) !important;
+    margin-top: 4px !important;
+  }
+
+  .sgp-mob-btn-retry-camera:active {
+    transform: scale(0.97) !important;
+  }
+
   #html5-qrcode-anchor-scan-type-change,
   #security-camera-reader-mob__dashboard_section_fsr,
   #security-camera-reader-mob__header_message,

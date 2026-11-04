@@ -118,27 +118,35 @@ function ITAssetPhotoCapture({ index, photo, onPhotoChange }) {
   }
 
   function capturePhoto() {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) {
-      setCameraError("Please wait until camera preview is ready.");
-      return;
+    try {
+      const video = videoRef.current;
+      if (!video) {
+        setCameraError("Please wait until camera preview is ready.");
+        return;
+      }
+
+      const vw = video.videoWidth || video.clientWidth || 640;
+      const vh = video.videoHeight || video.clientHeight || 480;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = vw;
+      canvas.height = vh;
+      const ctx = canvas.getContext("2d");
+
+      if (facingMode === "user") {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+      onPhotoChange(dataUrl);
+      stopCamera();
+    } catch (err) {
+      console.error("Asset photo capture error:", err);
+      setCameraError("Failed to capture asset photo.");
     }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-
-    if (facingMode === "user") {
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-    }
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
-    onPhotoChange(dataUrl);
-    stopCamera();
   }
 
   function stopCamera() {
@@ -502,26 +510,36 @@ export default function ITVisitForm({ hosts = [] }) {
   }
 
   function captureSelfPhoto() {
-    const video = videoRef.current;
-    if (!video || !video.videoWidth) {
-      setCameraError("Please wait until the camera preview is ready.");
-      return;
+    try {
+      const video = videoRef.current;
+      if (!video) {
+        setCameraError("Please wait until the camera preview is ready.");
+        return;
+      }
+
+      const vw = video.videoWidth || video.clientWidth || 640;
+      const vh = video.videoHeight || video.clientHeight || 480;
+
+      const canvas = document.createElement("canvas");
+      canvas.width = vw;
+      canvas.height = vh;
+      const ctx = canvas.getContext("2d");
+
+      if (facingMode === "user") {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const capturedPhoto = canvas.toDataURL("image/jpeg", 0.88);
+      setPhoto(capturedPhoto);
+      setCameraError("");
+      stopSelfCamera();
+    } catch (err) {
+      console.error("Self photo capture error:", err);
+      setCameraError("Failed to capture photograph. Please try again.");
     }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-
-    if (facingMode === "user") {
-      context.translate(canvas.width, 0);
-      context.scale(-1, 1);
-    }
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    setPhoto(canvas.toDataURL("image/jpeg", 0.88));
-    stopSelfCamera();
   }
 
   function stopSelfCamera() {

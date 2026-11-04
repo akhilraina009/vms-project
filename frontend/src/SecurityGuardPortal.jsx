@@ -62,7 +62,7 @@ import {
   Smartphone,
 } from "lucide-react";
 import QRCode from "qrcode";
-import { Html5QrcodeScanner } from "html5-qrcode";
+import { Html5Qrcode } from "html5-qrcode";
 import "./App.css";
 import "./PremiumEnterprise.css";
 import "./SecurityGuardPortal.css";
@@ -200,6 +200,9 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const galleryInputRef = useRef(null);
   const mobPhotoInputRef = useRef(null);
+  const qrScannerRef = useRef(null);
+  const [cameraError, setCameraError] = useState("");
+  const [cameraLoading, setCameraLoading] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -1119,49 +1122,191 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
 
   // Start Camera QR Scanner
   useEffect(() => {
-    let scanner = null;
-    const isScanTabActive = isMobile ? mobileTab === "scan" : activeTab === "checkin";
-    if (isScanTabActive && scannerActive) {
-      try {
-        const scannerId = isMobile ? "security-camera-reader-mob" : "security-camera-reader";
-        scanner = new Html5QrcodeScanner(scannerId, {
-          fps: 10,
-          qrbox: (viewfinderWidth, viewfinderHeight) => {
-            const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-            const edgeRatio = isMobile ? 0.58 : 0.70;
-            const qrboxSize = isMobile
-              ? Math.max(120, Math.min(145, Math.floor(minEdge * edgeRatio)))
-              : Math.max(160, Math.floor(minEdge * edgeRatio));
-            return { width: qrboxSize, height: qrboxSize };
-          },
-          rememberLastUsedCamera: true,
-          videoConstraints: {
-            facingMode: { ideal: facingMode || "environment" },
-          },
-        });
+    let isCancelled = false;
+    const isScanTabActive = isMobile ? (mobileTab === "scan" && scanSubTab === "qr") : activeTab === "checkin";
 
-        scanner.render(
-          async (decodedText) => {
-            try {
-              await scanner.clear().catch(() => {});
-            } catch {}
-            setScannerActive(false);
-            setSearchQuery(decodedText);
-            verifyVisitorByInput(decodedText);
-          },
-          () => {}
-        );
-      } catch (err) {
-        console.error("Camera scanner error:", err);
+    // If not active, cleanup any existing scanner
+    if (!isScanTabActive || !scannerActive) {
+      if (qrScannerRef.current) {
+        const s = qrScannerRef.current;
+        qrScannerRef.current = null;
+        if (s.isScanning) {
+          s.stop().catch(() => {}).finally(() => {
+            try { s.clear(); } catch {}
+          });
+        } else {
+          try { s.clear(); } catch {}
+        }
+      }
+      setCameraLoading(false);
+      return;
+    }
+
+    const scannerId = isMobile ? "security-camera-reader-mob" : "security-camera-reader";
+
+    // Verify secure context & browser support
+    if (typeof window !== "undefined") {
+      const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (!window.isSecureContext && window.location.protocol !== "https:" && !isLocal) {
+        setCameraLoading(false);
+        setCameraError(`Camera requires HTTPS. Please access using https://${window.location.host}`);
+        return;
+      }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraLoading(false);
+        setCameraError("Camera API is not supported on this browser. Please open in Chrome or Safari over HTTPS.");
+        return;
       }
     }
 
-    return () => {
-      if (scanner) {
-        scanner.clear().catch(() => {});
+    setCameraLoading(true);
+    setCameraError("");
+
+    const startScanner = async () => {
+      try {
+        // Allow brief time for DOM element mounting
+        let targetEl = document.getElementById(scannerId);
+        if (!targetEl) {
+          await new Promise((resolve) => setTimeout(resolve, 150));
+          targetEl = document.getElementById(scannerId);
+        }
+        if (!targetEl || isCancelled) {
+          setCameraLoading(false);
+          return;
+        }
+
+        // Clean up prior instance if any
+        if (qrScannerRef.current) {
+          try {
+            if (qrScannerRef.current.isScanning) {
+              await qrScannerRef.current.stop();
+            }
+          } catch {}
+          try {
+            qrScannerRef.current.clear();
+          } catch {}
+          qrScannerRef.current = null;
+        }
+
+        if (isCancelled) return;
+
+        const html5QrCode = new Html5Qrcode(scannerId, { verbose: false });
+        qrScannerRef.current = html5QrCode;
+
+        const config = {
+          fps: 12,
+          qrbox: (w, h) => {
+            const minEdge = Math.min(w, h);
+            const size = Math.floor(minEdge * (isMobile ? 0.72 : 0.65));
+            const finalSize = Math.max(140, Math.min(240, size));
+            return { width: finalSize, height: finalSize };
+          },
+          aspectRatio: isMobile ? 1.0 : 1.333333,
+        };
+
+        const onScanSuccess = async (decodedText) => {
+          try {
+            if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
+          } catch {}
+          try {
+            if (qrScannerRef.current && qrScannerRef.current.isScanning) {
+              await qrScannerRef.current.stop();
+            }
+          } catch {}
+          setScannerActive(false);
+          setSearchQuery(decodedText);
+          verifyVisitorByInput(decodedText);
+          showToast(`QR Code scanned: ${decodedText}`);
+        };
+
+        const onScanFailure = () => {};
+
+        // Try primary preferred facingMode (must be valid string: 'environment' or 'user')
+        const cameraConfig = { facingMode: facingMode === "user" ? "user" : "environment" };
+
+        try {
+          await html5QrCode.start(
+            cameraConfig,
+            config,
+            onScanSuccess,
+            onScanFailure
+          );
+        } catch (primaryErr) {
+          console.warn("Primary camera start failed, attempting device fallback:", primaryErr);
+          if (isCancelled) return;
+
+          // Attempt fallback by enumerating available cameras with fresh instance
+          try {
+            try { html5QrCode.clear(); } catch {}
+            const devices = await Html5Qrcode.getCameras().catch(() => []);
+            if (devices && devices.length > 0) {
+              const backCam = devices.find((d) => /back|rear|environment|main/i.test(d.label)) || devices[devices.length - 1];
+              const selectedCam = facingMode === "user"
+                ? (devices.find((d) => /front|user|selfie/i.test(d.label)) || devices[0])
+                : backCam;
+              const fallbackScanner = new Html5Qrcode(scannerId, { verbose: false });
+              qrScannerRef.current = fallbackScanner;
+              await fallbackScanner.start(selectedCam.id, config, onScanSuccess, onScanFailure);
+            } else {
+              const fallbackScanner = new Html5Qrcode(scannerId, { verbose: false });
+              qrScannerRef.current = fallbackScanner;
+              await fallbackScanner.start(
+                { facingMode: "user" },
+                config,
+                onScanSuccess,
+                onScanFailure
+              );
+            }
+          } catch (secondErr) {
+            throw secondErr;
+          }
+        }
+
+        if (isCancelled) {
+          if (html5QrCode.isScanning) {
+            await html5QrCode.stop().catch(() => {});
+          }
+          return;
+        }
+
+        setCameraLoading(false);
+        setCameraError("");
+      } catch (err) {
+        console.error("Camera scanner error:", err);
+        if (isCancelled) return;
+        setCameraLoading(false);
+        const errStr = String(err).toLowerCase();
+        if (errStr.includes("notallowederror") || errStr.includes("permission")) {
+          setCameraError("Camera permission denied. Tap the lock icon in your browser address bar to allow camera access.");
+        } else if (errStr.includes("notfounderror") || errStr.includes("devicesnotfound")) {
+          setCameraError("No camera found on this device.");
+        } else if (errStr.includes("notreadableerror") || errStr.includes("trackstart")) {
+          setCameraError("Camera is busy or in use by another app. Please close other camera apps and retry.");
+        } else if (typeof window !== "undefined" && !window.isSecureContext) {
+          setCameraError(`Camera requires HTTPS. Please access using https://${window.location.host}`);
+        } else {
+          setCameraError("Could not start camera. Tap retry below.");
+        }
       }
     };
-  }, [activeTab, mobileTab, scannerActive, facingMode, isMobile]);
+
+    startScanner();
+
+    return () => {
+      isCancelled = true;
+      if (qrScannerRef.current) {
+        const s = qrScannerRef.current;
+        qrScannerRef.current = null;
+        if (s.isScanning) {
+          s.stop().catch(() => {}).finally(() => {
+            try { s.clear(); } catch {}
+          });
+        } else {
+          try { s.clear(); } catch {}
+        }
+      }
+    };
+  }, [activeTab, mobileTab, scanSubTab, scannerActive, facingMode, isMobile]);
 
   const rawStatus = String(verifiedVisit?.status || "").trim().toUpperCase();
   const isIT = (verifiedVisit?.purpose || "").includes("[IT_VISIT]");
@@ -1185,21 +1330,108 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
     return String(val);
   };
 
+  const toggleFlash = async () => {
+    if (!qrScannerRef.current || !qrScannerRef.current.isScanning) {
+      showToast("Start camera first to enable flashlight");
+      return;
+    }
+    try {
+      const next = !flashOn;
+      await qrScannerRef.current.applyVideoConstraints({
+        advanced: [{ torch: next }],
+      });
+      setFlashOn(next);
+      showToast(next ? "Torch turned ON" : "Torch turned OFF");
+    } catch (err) {
+      console.warn("Torch not supported on this device/camera:", err);
+      showToast("Flash/Torch not supported on this camera");
+    }
+  };
+
   const handleGalleryUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      if (window.Html5Qrcode) {
-        const qrScanner = new window.Html5Qrcode("security-camera-reader-mob-hidden");
-        const text = await qrScanner.scanFile(file, true);
-        setSearchQuery(text);
-        verifyVisitorByInput(text);
+      showToast("Scanning photo for QR badge...");
+      const tempScannerId = "security-camera-reader-mob-hidden";
+      let hiddenEl = document.getElementById(tempScannerId);
+      if (!hiddenEl) {
+        hiddenEl = document.createElement("div");
+        hiddenEl.id = tempScannerId;
+        hiddenEl.style.position = "fixed";
+        hiddenEl.style.left = "-9999px";
+        hiddenEl.style.top = "0";
+        hiddenEl.style.width = "800px";
+        hiddenEl.style.height = "800px";
+        hiddenEl.style.opacity = "0";
+        hiddenEl.style.pointerEvents = "none";
+        document.body.appendChild(hiddenEl);
+      }
+
+      const fileScanner = new Html5Qrcode(tempScannerId, { verbose: false });
+      let decodedResult = null;
+
+      try {
+        decodedResult = await fileScanner.scanFile(file, false);
+      } catch (scanErr) {
+        console.warn("Direct file scan failed, trying alternative rendering:", scanErr);
+      }
+
+      // Safe cleanup of file scanner instance
+      try {
+        fileScanner.clear();
+      } catch {}
+
+      // Fallback: If direct scan didn't find QR (e.g. high-res phone camera photo), normalize & retry
+      if (!decodedResult) {
+        try {
+          const img = new Image();
+          const imgUrl = URL.createObjectURL(file);
+          await new Promise((res, rej) => {
+            img.onload = res;
+            img.onerror = rej;
+            img.src = imgUrl;
+          });
+
+          const maxDim = 1200;
+          let w = img.naturalWidth || img.width;
+          let h = img.naturalHeight || img.height;
+          if (w > maxDim || h > maxDim) {
+            const scale = Math.min(maxDim / w, maxDim / h);
+            w = Math.round(w * scale);
+            h = Math.round(h * scale);
+            const normCanvas = document.createElement("canvas");
+            normCanvas.width = w;
+            normCanvas.height = h;
+            const ctx = normCanvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+
+            const normalizedBlob = await new Promise((r) => normCanvas.toBlob(r, "image/jpeg", 0.92));
+            if (normalizedBlob) {
+              const normFile = new File([normalizedBlob], "norm_pass.jpg", { type: "image/jpeg" });
+              const retryScanner = new Html5Qrcode(tempScannerId, { verbose: false });
+              decodedResult = await retryScanner.scanFile(normFile, false);
+              try { retryScanner.clear(); } catch {}
+            }
+          }
+          URL.revokeObjectURL(imgUrl);
+        } catch (retryErr) {
+          console.warn("Normalized fallback scan failed:", retryErr);
+        }
+      }
+
+      if (decodedResult) {
+        setSearchQuery(decodedResult);
+        verifyVisitorByInput(decodedResult);
         showToast("QR Code recognized from photo!");
       } else {
-        showToast("Scanning uploaded photo...");
+        showToast("Could not detect a valid QR badge in this image.");
       }
     } catch (err) {
+      console.warn("Gallery scan error:", err);
       showToast("Could not detect a valid QR badge in this image.");
+    } finally {
+      e.target.value = "";
     }
   };
 
@@ -3604,10 +3836,58 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                 <div className="sgp-mob-viewfinder-card">
                   <div
                     className="sgp-mob-viewfinder-lens"
-                    onClick={() => setScannerActive(true)}
+                    onClick={() => {
+                      if (!scannerActive) {
+                        setCameraError("");
+                        setScannerActive(true);
+                      }
+                    }}
                   >
                     <div id="security-camera-reader-mob" className="sgp-mob-camera-box"></div>
-                    {!scannerActive && (
+
+                    {/* Camera Loading Overlay */}
+                    {scannerActive && cameraLoading && !cameraError && (
+                      <div className="sgp-mob-camera-loading-overlay">
+                        <RefreshCw size={26} className="gt-spinner" color="#38bdf8" />
+                        <p>Starting Camera...</p>
+                      </div>
+                    )}
+
+                    {/* Camera Error / Permission Overlay */}
+                    {cameraError && (
+                      <div className="sgp-mob-camera-error-overlay">
+                        <AlertTriangle size={28} color="#ef4444" />
+                        <p className="sgp-mob-camera-error-text">{cameraError}</p>
+                        {typeof window !== "undefined" && !window.isSecureContext && window.location.protocol === "http:" ? (
+                          <button
+                            type="button"
+                            className="sgp-mob-btn-retry-camera"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.location.href = window.location.href.replace("http:", "https:");
+                            }}
+                          >
+                            <ShieldCheck size={14} /> Switch to HTTPS
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="sgp-mob-btn-retry-camera"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCameraError("");
+                              setScannerActive(false);
+                              setTimeout(() => setScannerActive(true), 150);
+                            }}
+                          >
+                            <RefreshCw size={14} /> Retry Camera
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Idle Placeholder */}
+                    {!scannerActive && !cameraLoading && !cameraError && (
                       <div className="sgp-mob-viewfinder-placeholder">
                         <div className="sgp-mob-reticle-box">
                           <QrCode size={44} color="#38bdf8" />
@@ -3618,6 +3898,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                           className="sgp-mob-btn-start-camera"
                           onClick={(e) => {
                             e.stopPropagation();
+                            setCameraError("");
                             setScannerActive(true);
                           }}
                         >
@@ -3632,19 +3913,18 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                     <button
                       type="button"
                       className={`sgp-mob-cam-action-btn ${flashOn ? "active" : ""}`}
-                      onClick={() => {
-                        setFlashOn((v) => !v);
-                        showToast(flashOn ? "Torch off" : "Torch on");
-                      }}
+                      onClick={toggleFlash}
+                      title={flashOn ? "Turn torch off" : "Turn torch on"}
                     >
                       <Flashlight size={16} />
-                      <span>Turn Flash</span>
+                      <span>{flashOn ? "Turn Off" : "Turn Flash"}</span>
                     </button>
 
                     <button
                       type="button"
                       className="sgp-mob-cam-action-btn"
                       onClick={() => galleryInputRef.current?.click()}
+                      title="Upload QR photo from phone gallery"
                     >
                       <ImageIcon size={16} />
                       <span>Gallery</span>
@@ -3660,9 +3940,13 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                     <button
                       type="button"
                       className="sgp-mob-cam-action-btn"
-                      onClick={() =>
-                        setFacingMode((prev) => (prev === "environment" ? "user" : "environment"))
-                      }
+                      onClick={() => {
+                        const nextMode = facingMode === "environment" ? "user" : "environment";
+                        setFacingMode(nextMode);
+                        setFlashOn(false);
+                        showToast(nextMode === "environment" ? "Switching to Back Camera" : "Switching to Front Camera");
+                      }}
+                      title="Switch between front and back camera"
                     >
                       <SwitchCamera size={16} />
                       <span>Switch</span>

@@ -15,6 +15,7 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  User,
 } from "lucide-react";
 import "./GuardLogin.css";
 import { authStorage } from "./utils/authStorage";
@@ -192,70 +193,108 @@ export default function GuardLogin({ onLogin }) {
           <div className="gt-guard-col">
             <div className="gt-guard-image-wrap">
               <img
-                src="/guard_hero_desktop_clean.png"
+                src="/vms_gate_guard_desktop.png"
                 alt="VMS Security Officer"
                 className="gt-guard-image"
               />
             </div>
           </div>
 
-          {/* 1.5 MOBILE HERO: Guard & Gate Banner (Mobile Only) */}
+          {/* 1.5 MOBILE HERO: Gate Access Terminal Banner (Mobile Only) */}
           <div className="gt-mobile-hero-banner">
-            <div className="gt-mobile-hero-badge">
-              <div className="gt-terminal-pill">
-                <ShieldCheck size={13} className="gt-pill-icon" />
-                <span>Gate Terminal</span>
-              </div>
-            </div>
             <img
-              src="/guard_hero_mobile_clean.png"
-              alt="Gate Terminal Guard"
+              src="/vms_gate_hero_mobile.jpg"
+              alt="Gate Terminal Entrance"
               className="gt-mobile-hero-image"
             />
-            {/* Red Curved Swoop under Hero */}
-            <div className="gt-mobile-hero-wave">
-              <svg viewBox="0 0 500 45" preserveAspectRatio="none" className="gt-wave-svg">
-                <path d="M0,0 C150,40 350,45 500,10 L500,45 L0,45 Z" fill="#e43b24" />
-              </svg>
+            <div className="gt-mobile-hero-overlay">
+              <div className="gt-mobile-hero-content">
+                <div className="gt-mobile-hero-badge">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="gt-hero-pill-icon">
+                    <rect x="3" y="5" width="6" height="14" rx="2" />
+                    <rect x="15" y="5" width="6" height="14" rx="2" />
+                    <line x1="9" y1="12" x2="15" y2="12" />
+                  </svg>
+                  <span>Gate Terminal</span>
+                </div>
+                <h1 className="gt-mobile-hero-title">Gate Access Terminal</h1>
+                <p className="gt-mobile-hero-desc">
+                  Visitor check-in, entry approval and real-time gate operations.
+                </p>
+                <div className="gt-mobile-hero-red-line" />
+              </div>
             </div>
           </div>
 
           {/* 2. CENTER: Premium White Login Card */}
           <div className="gt-card-col">
             <div className="gt-login-card">
-              {/* Card Header & Brand Ring */}
-              <div className="gt-card-brand">
-                <div className="gt-card-logo-ring">
-                  <img src="/vms-logo.png" alt="VMS Logo" className="gt-card-logo" />
+              {/* DESKTOP Card Intro (Hidden on mobile via CSS) */}
+              <div className="gt-card-desktop-intro">
+                <div className="gt-card-brand">
+                  <div className="gt-card-logo-ring">
+                    <img src="/vms-logo.png" alt="VMS Logo" className="gt-card-logo" />
+                  </div>
+                  <h1 className="gt-card-title">Gate Terminal Access</h1>
+                  <p className="gt-card-subtitle">Security Guard Kiosk · Optical Pass Clearance</p>
+                  <div className="gt-card-red-rule" />
                 </div>
-                <h1 className="gt-card-title">Gate Terminal Access</h1>
-                <p className="gt-card-subtitle">Security Guard Kiosk · Optical Pass Clearance</p>
-                <div className="gt-card-red-rule" />
+
+                {/* Operator Login Instructions */}
+                <div className="gt-card-intro">
+                  <h2 className="gt-intro-heading">Operator Login</h2>
+                  <p className="gt-intro-desc">
+                    Enter your security guard credentials to operate the gate terminal and verify visitor passes.
+                  </p>
+                </div>
               </div>
 
-              {/* Operator Login Instructions */}
-              <div className="gt-card-intro">
-                <h2 className="gt-intro-heading">Operator Login</h2>
-                <p className="gt-intro-desc">
-                  Enter your security guard credentials to operate the gate terminal and verify visitor passes.
-                </p>
+              {/* MOBILE Card Intro (Visible only on mobile <= 768px via CSS) */}
+              <div className="gt-card-mobile-intro">
+                <div className="gt-mob-card-brand-center">
+                  <div className="gt-mob-card-logo-wrap">
+                    <img src="/vms-logo.png" alt="VMS Logo" className="gt-mob-card-logo" />
+                    <span className="gt-mob-card-brand-name">VMS</span>
+                  </div>
+                  <div className="gt-mob-card-system-title">Visitor Management System</div>
+                  <div className="gt-mob-card-terminal-badge">Gate Terminal</div>
+                </div>
+
+                <div className="gt-mob-card-intro">
+                  <h2 className="gt-mob-card-signin-title">Sign In</h2>
+                  <p className="gt-mob-card-signin-desc">
+                    Access the gate terminal to manage visitor entry and exit.
+                  </p>
+                </div>
               </div>
 
               {/* Form with Clean Search-Box Inputs */}
               <form onSubmit={handleSubmit} className="gt-login-form">
-                {/* Search Box 1: Guard Email / ID */}
+                {/* Search Box 1: Guard Email / User ID */}
                 <div className="gt-search-box-wrap">
-                  <Mail size={16} className="gt-search-box-icon" />
+                  <span className="gt-input-icon-desktop"><Mail size={16} className="gt-search-box-icon" /></span>
+                  <span className="gt-input-icon-mobile"><User size={16} className="gt-search-box-icon" /></span>
                   <input
                     id="gt-email"
-                    type="email"
-                    className="gt-search-box-input"
+                    type="text"
+                    className="gt-search-box-input gt-desktop-input"
                     placeholder="Guard Email / ID"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="username"
                     aria-label="Guard Email or ID"
+                  />
+                  <input
+                    id="gt-email-mob"
+                    type="text"
+                    className="gt-search-box-input gt-mobile-input"
+                    placeholder="User ID / Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    autoComplete="username"
+                    aria-label="User ID or Email"
                   />
                 </div>
 
@@ -265,13 +304,24 @@ export default function GuardLogin({ onLogin }) {
                   <input
                     id="gt-password"
                     type={showPassword ? "text" : "password"}
-                    className="gt-search-box-input gt-password-input"
+                    className="gt-search-box-input gt-password-input gt-desktop-input"
                     placeholder="Security Password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
                     aria-label="Security Password"
+                  />
+                  <input
+                    id="gt-password-mob"
+                    type={showPassword ? "text" : "password"}
+                    className="gt-search-box-input gt-password-input gt-mobile-input"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    autoComplete="current-password"
+                    aria-label="Password"
                   />
                   <button
                     type="button"
@@ -298,29 +348,118 @@ export default function GuardLogin({ onLogin }) {
                   disabled={loading}
                 >
                   {loading ? (
-                    <>
+                    <span className="gt-loading-state">
                       <RefreshCw size={16} className="gt-spinner" />
                       <span>Authorizing gate terminal...</span>
-                    </>
+                    </span>
                   ) : (
                     <>
-                      <Scan size={16} className="gt-btn-scan-icon" />
-                      <span className="gt-btn-text">Access Guard Station</span>
-                      <ArrowRight size={16} className="gt-btn-arrow" />
+                      <span className="gt-btn-content-desktop">
+                        <Scan size={16} strokeWidth={2.2} className="gt-btn-scan-icon" />
+                        <span className="gt-btn-text">Access Guard Station</span>
+                        <ArrowRight size={16} strokeWidth={2.2} className="gt-btn-arrow" />
+                      </span>
+                      <span className="gt-btn-content-mobile">
+                        <span className="gt-btn-text">Sign In to Gate</span>
+                        <ArrowRight size={16} strokeWidth={2.2} className="gt-btn-arrow" />
+                      </span>
                     </>
                   )}
                 </button>
               </form>
 
               {/* Card Security Note */}
-              <div className="gt-card-security-note">
+              <div className="gt-card-security-note gt-desktop-only">
                 <ShieldCheck size={13} className="gt-note-shield" />
                 <span>Gate Clearance Terminal · Authenticated Officer Access</span>
+              </div>
+              <div className="gt-card-security-note gt-mobile-only">
+                <ShieldCheck size={14} className="gt-note-shield" />
+                <span>Protected by Role-Based Access Control (RBAC)</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. RIGHT HERO: 4 Vertical Capability Cards (Desktop Viewport) */}
+          <div className="gt-desktop-features-col">
+            {/* Capability 1 */}
+            <div className="gt-dfc-card">
+              <div className="gt-dfc-icon-box">
+                <Scan size={18} />
+              </div>
+              <div className="gt-dfc-text">
+                <h3 className="gt-dfc-title">Scan Visitor Pass</h3>
+                <p className="gt-dfc-sub">QR / Barcode Verification</p>
+              </div>
+            </div>
+
+            {/* Capability 2 */}
+            <div className="gt-dfc-card">
+              <div className="gt-dfc-icon-box">
+                <ShieldCheck size={18} />
+              </div>
+              <div className="gt-dfc-text">
+                <h3 className="gt-dfc-title">Verify Visit</h3>
+                <p className="gt-dfc-sub">Approval &amp; Validity</p>
+              </div>
+            </div>
+
+            {/* Capability 3 */}
+            <div className="gt-dfc-card">
+              <div className="gt-dfc-icon-box">
+                <Package size={18} />
+              </div>
+              <div className="gt-dfc-text">
+                <h3 className="gt-dfc-title">Manage Assets</h3>
+                <p className="gt-dfc-sub">Entry &amp; Exit Clearance</p>
+              </div>
+            </div>
+
+            {/* Capability 4 */}
+            <div className="gt-dfc-card">
+              <div className="gt-dfc-icon-box">
+                <FileText size={18} />
+              </div>
+              <div className="gt-dfc-text">
+                <h3 className="gt-dfc-title">Record Activity</h3>
+                <p className="gt-dfc-sub">Real-time Logs</p>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Desktop Red Wave Accents at bottom corners */}
+        <div className="gt-desktop-wave-left">
+          <svg viewBox="0 0 320 60" preserveAspectRatio="none" className="gt-wave-svg">
+            <path d="M0,60 L0,15 C90,30 200,50 320,60 Z" fill="#e43b24" />
+          </svg>
+        </div>
+        <div className="gt-desktop-wave-right">
+          <svg viewBox="0 0 350 70" preserveAspectRatio="none" className="gt-wave-svg">
+            <path d="M0,70 C100,60 220,15 350,25 L350,70 Z" fill="#e43b24" />
+          </svg>
+        </div>
+
+        {/* Mobile Decorative Bottom Swoosh */}
+        <div className="gt-mobile-bottom-wave-wrap">
+          <svg viewBox="0 0 390 85" preserveAspectRatio="none" className="gt-mob-bottom-svg">
+            <path d="M0,85 L0,70 C120,70 240,90 320,65 C355,54 375,46 390,42 L390,85 Z" fill="#011b4c" />
+            <path d="M0,85 L0,58 C80,62 170,82 250,70 C310,60 360,46 390,40 L390,55 C360,60 310,72 250,82 C170,92 80,72 0,85 Z" fill="#e43b24" />
+          </svg>
+        </div>
       </main>
+
+      {/* =========================================================================
+          DESKTOP FOOTER BAR (Matching Desktop Master Mockup)
+          ========================================================================= */}
+      <footer className="gt-desktop-footer-bar">
+        <div className="gt-desktop-footer-inner">
+          <ShieldCheck size={14} className="gt-df-icon" />
+          <span className="gt-df-brand">VMS Gate Operations</span>
+          <span className="gt-df-divider">|</span>
+          <span className="gt-df-desc">Secure · Compliant · Monitored</span>
+        </div>
+      </footer>
 
       {/* =========================================================================
           BOTTOM 4-FEATURE STRIP (Matching new reference design)
