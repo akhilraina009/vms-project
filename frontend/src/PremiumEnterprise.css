@@ -11913,14 +11913,13 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
   .pass-print-header,
   .it-cert-header,
   .pass-executive-header {
-    .it-cert-header {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
-      border-bottom: 2.5px solid #e43b24 !important;
-      padding-bottom: 12px !important;
-      margin-bottom: 14px !important;
-    }
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    border-bottom: 2.5px solid #e43b24 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 14px !important;
+  }
 
     .pass-brand-h1,
     .it-cert-title-h2 {
@@ -15034,22 +15033,14 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
     }
 
     /* Universal dark-mode purge in print */
-    html.dark,
-    html[data-theme="dark"],
-    [data-theme="dark"],
-    html.dark body,
-    html[data-theme="dark"] body,
-    html.dark body *,
-    html[data-theme="dark"] body * {
-
-      html.dark body *:not(.public-pass-card):not(.public-pass-card *),
-      html[data-theme="dark"] body *:not(.public-pass-card):not(.public-pass-card *) {
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border-color: #cbd5e1 !important;
-        box-shadow: none !important;
-        text-shadow: none !important;
-      }
+    html.dark body *:not(.public-pass-card):not(.public-pass-card *),
+    html[data-theme="dark"] body *:not(.public-pass-card):not(.public-pass-card *) {
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
+      box-shadow: none !important;
+      text-shadow: none !important;
+    }
 
       /* Universal Screen Chrome Suppression */
       .sidebar,
@@ -15540,6 +15531,20 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
         flex: 0 0 calc(50% - 4px) !important;
         min-width: 0 !important;
         box-sizing: border-box !important;
+      }
+
+      body .it-header-controls .it-portal-full-btn {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+      }
+
+      body .it-header-controls:not(:has(.it-back-dashboard-btn)) .it-portal-full-btn {
+        width: calc(100% - 46px) !important;
+        max-width: calc(100% - 46px) !important;
+        flex: 1 1 calc(100% - 46px) !important;
       }
 
       body .it-header-controls .it-back-dashboard-btn {

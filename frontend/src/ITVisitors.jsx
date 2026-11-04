@@ -1005,13 +1005,24 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
         <div className="it-header-controls">
           <button
             type="button"
-            className="it-qr-portal-btn"
+            className="it-qr-portal-btn it-portal-full-btn"
             onClick={handleOpenPortalQR}
             title="Show IT Visit Registration Portal QR Code and Link"
           >
             <QrCode size={15} />
             <span>IT Visit Portal QR</span>
           </button>
+
+          {onBack && (
+            <button
+              type="button"
+              className="it-qr-portal-btn it-back-dashboard-btn"
+              onClick={onBack}
+            >
+              <ArrowLeft size={14} />
+              <span>Back to Dashboard</span>
+            </button>
+          )}
 
           <button
             type="button"
@@ -1022,13 +1033,6 @@ export default function ITVisitors({ onBack, onNotification, onOpenScanner }) {
           >
             <RefreshCw size={15} className={loading ? "spin" : ""} />
           </button>
-
-          {onBack && (
-            <button type="button" className="it-qr-portal-btn" onClick={onBack}>
-              <ArrowLeft size={14} />
-              <span>Back to Dashboard</span>
-            </button>
-          )}
         </div>
       </div>
 
