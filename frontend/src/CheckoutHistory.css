@@ -122,13 +122,222 @@
 .ch-metric-card {
   background: #ffffff;
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 16px 18px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
   display: flex;
   align-items: center;
-  gap: 16px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  gap: 14px;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, background-color 0.2s;
+  position: relative;
+}
+
+.ch-metric-card.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.ch-metric-card.clickable:focus-visible {
+  outline: 2px solid #e43b24;
+  outline-offset: 2px;
+}
+
+.ch-metric-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.ch-metric-arrow {
+  margin-left: auto;
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.ch-metric-card.clickable:hover .ch-metric-arrow {
+  transform: translateX(3px);
+  color: #0f172a;
+}
+
+.ch-metric-arrow.arrow-active {
+  transform: translateX(3px);
+  color: inherit !important;
+}
+
+.ch-metric-hint {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 4px;
+  color: #64748b;
+  transition: color 0.15s ease;
+}
+
+.ch-metric-card.clickable:hover .ch-metric-hint {
+  color: #334155;
+}
+
+/* Light Theme Active Filters */
+.ch-metric-card.active-filter.filter-red,
+.ch-metric-card.active-filter.filter-blue {
+  border-color: #e43b24 !important;
+  background: #fff5f5 !important;
+  box-shadow: 0 0 0 1px #e43b24, 0 4px 14px rgba(228, 59, 36, 0.12) !important;
+}
+.ch-metric-card.active-filter.filter-red .ch-metric-hint,
+.ch-metric-card.active-filter.filter-blue .ch-metric-hint {
+  color: #e43b24 !important;
+  font-weight: 700 !important;
+}
+.ch-metric-card.active-filter.filter-red .ch-metric-arrow,
+.ch-metric-card.active-filter.filter-blue .ch-metric-arrow {
+  color: #e43b24 !important;
+}
+
+.ch-metric-card.active-filter.filter-emerald,
+.ch-metric-card.active-filter.filter-green {
+  border-color: #059669 !important;
+  background: #ecfdf5 !important;
+  box-shadow: 0 0 0 1px #059669, 0 4px 14px rgba(5, 150, 105, 0.12) !important;
+}
+.ch-metric-card.active-filter.filter-emerald .ch-metric-hint,
+.ch-metric-card.active-filter.filter-green .ch-metric-hint {
+  color: #059669 !important;
+  font-weight: 700 !important;
+}
+.ch-metric-card.active-filter.filter-emerald .ch-metric-arrow,
+.ch-metric-card.active-filter.filter-green .ch-metric-arrow {
+  color: #059669 !important;
+}
+
+.ch-metric-card.active-filter.filter-purple {
+  border-color: #7c3aed !important;
+  background: #faf5ff !important;
+  box-shadow: 0 0 0 1px #7c3aed, 0 4px 14px rgba(124, 58, 237, 0.12) !important;
+}
+.ch-metric-card.active-filter.filter-purple .ch-metric-hint {
+  color: #7c3aed !important;
+  font-weight: 700 !important;
+}
+.ch-metric-card.active-filter.filter-purple .ch-metric-arrow {
+  color: #7c3aed !important;
+}
+
+.ch-metric-card.active-filter.filter-amber {
+  border-color: #d97706 !important;
+  background: #fffbeb !important;
+  box-shadow: 0 0 0 1px #d97706, 0 4px 14px rgba(217, 119, 6, 0.12) !important;
+}
+.ch-metric-card.active-filter.filter-amber .ch-metric-hint {
+  color: #d97706 !important;
+  font-weight: 700 !important;
+}
+.ch-metric-card.active-filter.filter-amber .ch-metric-arrow {
+  color: #d97706 !important;
+}
+
+/* Active Filter Banner (Above Filters) */
+.ch-active-filter-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 16px;
+  margin-top: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  animation: filter-slide-down 0.18s ease-out;
+}
+
+.ch-active-filter-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ch-active-filter-icon {
+  color: #e43b24;
+  flex-shrink: 0;
+}
+
+.ch-active-filter-lead {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #475569;
+}
+
+.ch-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-size: 11.5px;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+}
+
+.ch-filter-pill strong {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.ch-filter-pill button {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  display: inline-flex;
+  align-items: center;
+  color: #64748b;
+  border-radius: 50%;
+  transition: color 0.15s, background 0.15s;
+}
+
+.ch-filter-pill button:hover {
+  color: #dc2626;
+  background: rgba(220, 38, 38, 0.1);
+}
+
+.ch-filter-results-badge {
+  font-size: 11.5px;
+  color: #64748b;
+  margin-left: 6px;
+}
+
+.ch-filter-results-badge strong {
+  color: #0f172a;
+}
+
+.ch-btn-reset-filters {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ch-btn-reset-filters:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
 }
 
 .ch-metric-card:hover {
@@ -1832,6 +2041,184 @@ html.dark .ch-metric-icon.amber {
   background: rgba(245, 158, 11, 0.16) !important;
   color: #fbbf24 !important;
   border: 1px solid rgba(245, 158, 11, 0.35) !important;
+}
+
+/* Dark Mode Active KPI Cards & Glows */
+[data-theme="dark"] .ch-metric-card.clickable:hover,
+html[data-theme="dark"] .ch-metric-card.clickable:hover,
+html.dark .ch-metric-card.clickable:hover {
+  border-color: rgba(228, 59, 36, 0.45) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 16px rgba(228, 59, 36, 0.12) !important;
+}
+
+[data-theme="dark"] .ch-metric-card.clickable:hover .ch-metric-arrow,
+html[data-theme="dark"] .ch-metric-card.clickable:hover .ch-metric-arrow,
+html.dark .ch-metric-card.clickable:hover .ch-metric-arrow {
+  color: #f8fafc !important;
+}
+
+[data-theme="dark"] .ch-metric-card.active-filter.filter-red,
+[data-theme="dark"] .ch-metric-card.active-filter.filter-blue,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-red,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-blue,
+html.dark .ch-metric-card.active-filter.filter-red,
+html.dark .ch-metric-card.active-filter.filter-blue {
+  border-color: #e43b24 !important;
+  background: rgba(228, 59, 36, 0.12) !important;
+  box-shadow: 0 0 0 1px #e43b24, 0 6px 20px rgba(228, 59, 36, 0.32) !important;
+}
+[data-theme="dark"] .ch-metric-card.active-filter.filter-red .ch-metric-hint,
+[data-theme="dark"] .ch-metric-card.active-filter.filter-blue .ch-metric-hint,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-red .ch-metric-hint,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-blue .ch-metric-hint,
+html.dark .ch-metric-card.active-filter.filter-red .ch-metric-hint,
+html.dark .ch-metric-card.active-filter.filter-blue .ch-metric-hint {
+  color: #f87171 !important;
+  font-weight: 700 !important;
+}
+[data-theme="dark"] .ch-metric-card.active-filter.filter-red .ch-metric-arrow,
+[data-theme="dark"] .ch-metric-card.active-filter.filter-blue .ch-metric-arrow,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-red .ch-metric-arrow,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-blue .ch-metric-arrow,
+html.dark .ch-metric-card.active-filter.filter-red .ch-metric-arrow,
+html.dark .ch-metric-card.active-filter.filter-blue .ch-metric-arrow {
+  color: #f87171 !important;
+}
+
+[data-theme="dark"] .ch-metric-card.active-filter.filter-emerald,
+[data-theme="dark"] .ch-metric-card.active-filter.filter-green,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-emerald,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-green,
+html.dark .ch-metric-card.active-filter.filter-emerald,
+html.dark .ch-metric-card.active-filter.filter-green {
+  border-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  box-shadow: 0 0 0 1px #10b981, 0 6px 20px rgba(16, 185, 129, 0.32) !important;
+}
+[data-theme="dark"] .ch-metric-card.active-filter.filter-emerald .ch-metric-hint,
+[data-theme="dark"] .ch-metric-card.active-filter.filter-green .ch-metric-hint,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-emerald .ch-metric-hint,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-green .ch-metric-hint,
+html.dark .ch-metric-card.active-filter.filter-emerald .ch-metric-hint,
+html.dark .ch-metric-card.active-filter.filter-green .ch-metric-hint {
+  color: #34d399 !important;
+  font-weight: 700 !important;
+}
+[data-theme="dark"] .ch-metric-card.active-filter.filter-emerald .ch-metric-arrow,
+[data-theme="dark"] .ch-metric-card.active-filter.filter-green .ch-metric-arrow,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-emerald .ch-metric-arrow,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-green .ch-metric-arrow,
+html.dark .ch-metric-card.active-filter.filter-emerald .ch-metric-arrow,
+html.dark .ch-metric-card.active-filter.filter-green .ch-metric-arrow {
+  color: #34d399 !important;
+}
+
+[data-theme="dark"] .ch-metric-card.active-filter.filter-purple,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-purple,
+html.dark .ch-metric-card.active-filter.filter-purple {
+  border-color: #a855f7 !important;
+  background: rgba(168, 85, 247, 0.12) !important;
+  box-shadow: 0 0 0 1px #a855f7, 0 6px 20px rgba(168, 85, 247, 0.32) !important;
+}
+[data-theme="dark"] .ch-metric-card.active-filter.filter-purple .ch-metric-hint,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-purple .ch-metric-hint,
+html.dark .ch-metric-card.active-filter.filter-purple .ch-metric-hint {
+  color: #c084fc !important;
+  font-weight: 700 !important;
+}
+[data-theme="dark"] .ch-metric-card.active-filter.filter-purple .ch-metric-arrow,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-purple .ch-metric-arrow,
+html.dark .ch-metric-card.active-filter.filter-purple .ch-metric-arrow {
+  color: #c084fc !important;
+}
+
+[data-theme="dark"] .ch-metric-card.active-filter.filter-amber,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-amber,
+html.dark .ch-metric-card.active-filter.filter-amber {
+  border-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  box-shadow: 0 0 0 1px #f59e0b, 0 6px 20px rgba(245, 158, 11, 0.32) !important;
+}
+[data-theme="dark"] .ch-metric-card.active-filter.filter-amber .ch-metric-hint,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-amber .ch-metric-hint,
+html.dark .ch-metric-card.active-filter.filter-amber .ch-metric-hint {
+  color: #fbbf24 !important;
+  font-weight: 700 !important;
+}
+[data-theme="dark"] .ch-metric-card.active-filter.filter-amber .ch-metric-arrow,
+html[data-theme="dark"] .ch-metric-card.active-filter.filter-amber .ch-metric-arrow,
+html.dark .ch-metric-card.active-filter.filter-amber .ch-metric-arrow {
+  color: #fbbf24 !important;
+}
+
+/* Dark Mode Active Filter Banner */
+[data-theme="dark"] .ch-active-filter-banner,
+html[data-theme="dark"] .ch-active-filter-banner,
+html.dark .ch-active-filter-banner {
+  background: #0f172a !important;
+  border-color: #1e293b !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+[data-theme="dark"] .ch-active-filter-lead,
+html[data-theme="dark"] .ch-active-filter-lead,
+html.dark .ch-active-filter-lead {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .ch-filter-pill,
+html[data-theme="dark"] .ch-filter-pill,
+html.dark .ch-filter-pill {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .ch-filter-pill strong,
+html[data-theme="dark"] .ch-filter-pill strong,
+html.dark .ch-filter-pill strong {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .ch-filter-pill button,
+html[data-theme="dark"] .ch-filter-pill button,
+html.dark .ch-filter-pill button {
+  color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .ch-filter-pill button:hover,
+html[data-theme="dark"] .ch-filter-pill button:hover,
+html.dark .ch-filter-pill button:hover {
+  color: #f87171 !important;
+  background: rgba(228, 59, 36, 0.15) !important;
+}
+
+[data-theme="dark"] .ch-filter-results-badge,
+html[data-theme="dark"] .ch-filter-results-badge,
+html.dark .ch-filter-results-badge {
+  color: #64748b !important;
+}
+
+[data-theme="dark"] .ch-filter-results-badge strong,
+html[data-theme="dark"] .ch-filter-results-badge strong,
+html.dark .ch-filter-results-badge strong {
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .ch-btn-reset-filters,
+html[data-theme="dark"] .ch-btn-reset-filters,
+html.dark .ch-btn-reset-filters {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .ch-btn-reset-filters:hover,
+html[data-theme="dark"] .ch-btn-reset-filters:hover,
+html.dark .ch-btn-reset-filters:hover {
+  background: rgba(228, 59, 36, 0.18) !important;
+  border-color: #e43b24 !important;
+  color: #f87171 !important;
 }
 
 /* Control Card & Filter System */
@@ -4274,4 +4661,35 @@ html:not([data-theme="dark"]):not(.dark) body .ch-search-icon,
 html:not([data-theme="dark"]):not(.dark) .ch-search-icon,
 body:not(.dark):not([data-theme="dark"]) .ch-search-icon {
   color: #94a3b8 !important;
+}
+
+/* Ensure IT Dossier Switcher Bar is Centered Above Modal Cards */
+.it-dossier-desktop-view,
+body .it-dossier-desktop-view,
+.ch-dossier-overlay .it-dossier-desktop-view {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto !important;
+}
+
+.it-asset-view-switcher-bar,
+body .it-asset-view-switcher-bar,
+.it-dossier-desktop-view .it-asset-view-switcher-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 auto 16px auto !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  align-self: center !important;
+  width: fit-content !important;
+}
+
+.it-dossier-desktop-view > div:not(.it-asset-view-switcher-bar) {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
 }

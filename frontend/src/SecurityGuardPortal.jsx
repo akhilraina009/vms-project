@@ -196,6 +196,8 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
   const [kioskSubTab, setKioskSubTab] = useState("it-visitor"); // 'it-visitor' | 'reception-qr' | 'both'
   const [flashOn, setFlashOn] = useState(false);
   const [facingMode, setFacingMode] = useState("environment");
+  const [availableCameras, setAvailableCameras] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
   const [dossierTab, setDossierTab] = useState("overview"); // 'overview' | 'assets' | 'history'
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const galleryInputRef = useRef(null);
@@ -1188,6 +1190,29 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
           qrScannerRef.current = null;
         }
 
+        // Stop any leftover media tracks on video elements in container
+        if (targetEl) {
+          const leftoverVideos = targetEl.querySelectorAll("video");
+          leftoverVideos.forEach((v) => {
+            if (v.srcObject && v.srcObject.getTracks) {
+              v.srcObject.getTracks().forEach((t) => t.stop());
+            }
+            v.srcObject = null;
+          });
+          targetEl.innerHTML = "";
+        }
+
+        if (isCancelled) return;
+
+        // Query available cameras
+        let devices = [];
+        try {
+          devices = await Html5Qrcode.getCameras().catch(() => []);
+          if (devices && devices.length > 0) {
+            setAvailableCameras(devices);
+          }
+        } catch {}
+
         if (isCancelled) return;
 
         const html5QrCode = new Html5Qrcode(scannerId, { verbose: false });
@@ -1221,12 +1246,25 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
 
         const onScanFailure = () => {};
 
-        // Try primary preferred facingMode (must be valid string: 'environment' or 'user')
-        const cameraConfig = { facingMode: facingMode === "user" ? "user" : "environment" };
+        // Determine target camera source
+        let cameraTarget = null;
+        if (selectedCameraId) {
+          cameraTarget = selectedCameraId;
+        } else if (devices && devices.length > 0) {
+          if (facingMode === "user") {
+            const front = devices.find((d) => /front|user|selfie/i.test(d.label)) || devices[0];
+            cameraTarget = front.id;
+          } else {
+            const back = devices.find((d) => /back|rear|environment|main/i.test(d.label)) || devices[devices.length - 1];
+            cameraTarget = back.id;
+          }
+        } else {
+          cameraTarget = { facingMode: facingMode === "user" ? "user" : "environment" };
+        }
 
         try {
           await html5QrCode.start(
-            cameraConfig,
+            cameraTarget,
             config,
             onScanSuccess,
             onScanFailure
@@ -1235,22 +1273,15 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
           console.warn("Primary camera start failed, attempting device fallback:", primaryErr);
           if (isCancelled) return;
 
-          // Attempt fallback by enumerating available cameras with fresh instance
+          // Brief pause to allow camera source release
+          await new Promise((resolve) => setTimeout(resolve, 200));
+          if (isCancelled) return;
+
           try {
-            try { html5QrCode.clear(); } catch {}
-            const devices = await Html5Qrcode.getCameras().catch(() => []);
             if (devices && devices.length > 0) {
-              const backCam = devices.find((d) => /back|rear|environment|main/i.test(d.label)) || devices[devices.length - 1];
-              const selectedCam = facingMode === "user"
-                ? (devices.find((d) => /front|user|selfie/i.test(d.label)) || devices[0])
-                : backCam;
-              const fallbackScanner = new Html5Qrcode(scannerId, { verbose: false });
-              qrScannerRef.current = fallbackScanner;
-              await fallbackScanner.start(selectedCam.id, config, onScanSuccess, onScanFailure);
+              await html5QrCode.start(devices[0].id, config, onScanSuccess, onScanFailure);
             } else {
-              const fallbackScanner = new Html5Qrcode(scannerId, { verbose: false });
-              qrScannerRef.current = fallbackScanner;
-              await fallbackScanner.start(
+              await html5QrCode.start(
                 { facingMode: "user" },
                 config,
                 onScanSuccess,
@@ -1306,7 +1337,31 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
         }
       }
     };
-  }, [activeTab, mobileTab, scanSubTab, scannerActive, facingMode, isMobile]);
+  }, [activeTab, mobileTab, scanSubTab, scannerActive, facingMode, selectedCameraId, isMobile]);
+
+  const handleSwitchCamera = () => {
+    if (availableCameras && availableCameras.length > 1) {
+      const curId = selectedCameraId;
+      const curIndex = availableCameras.findIndex((d) => d.id === curId);
+      const nextIndex = curIndex >= 0 ? (curIndex + 1) % availableCameras.length : 1;
+      const nextDev = availableCameras[nextIndex];
+      const nextMode = /front|user|selfie/i.test(nextDev.label)
+        ? "user"
+        : /back|rear|environment|main/i.test(nextDev.label)
+        ? "environment"
+        : facingMode === "environment" ? "user" : "environment";
+      setSelectedCameraId(nextDev.id);
+      setFacingMode(nextMode);
+      setFlashOn(false);
+      showToast(`Switched to: ${nextDev.label || (nextMode === "environment" ? "Back Camera" : "Front Camera")}`);
+    } else {
+      const nextMode = facingMode === "environment" ? "user" : "environment";
+      setFacingMode(nextMode);
+      setSelectedCameraId("");
+      setFlashOn(false);
+      showToast(nextMode === "environment" ? "Switching to Back Camera" : "Switching to Front Camera");
+    }
+  };
 
   const rawStatus = String(verifiedVisit?.status || "").trim().toUpperCase();
   const isIT = (verifiedVisit?.purpose || "").includes("[IT_VISIT]");
@@ -2871,7 +2926,63 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                     </button>
 
                     {scannerActive && (
-                      <div className="sgp-camera-container">
+                      <div className="sgp-camera-container" style={{ position: "relative", overflow: "hidden", borderRadius: "10px" }}>
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          padding: "8px 14px",
+                          background: "#0f172a",
+                          borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                          color: "#f8fafc"
+                        }}>
+                          <span style={{ fontSize: "12px", fontWeight: 700, color: "#38bdf8", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                            <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#10b981", display: "inline-block" }}></span>
+                            {availableCameras.find(d => d.id === selectedCameraId)?.label || (facingMode === "environment" ? "Back / External Camera" : "Front / User Camera")}
+                          </span>
+                          <div style={{ display: "flex", gap: "8px" }}>
+                            <button
+                              type="button"
+                              onClick={handleSwitchCamera}
+                              style={{
+                                padding: "5px 12px",
+                                background: "rgba(255, 255, 255, 0.12)",
+                                color: "#fff",
+                                border: "1px solid rgba(255, 255, 255, 0.25)",
+                                borderRadius: "6px",
+                                fontSize: "11.5px",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px"
+                              }}
+                              title="Switch camera device / facing mode"
+                            >
+                              <RefreshCw size={12} /> Switch Camera
+                            </button>
+                            <button
+                              type="button"
+                              onClick={toggleFlash}
+                              style={{
+                                padding: "5px 12px",
+                                background: flashOn ? "#2563eb" : "rgba(255, 255, 255, 0.12)",
+                                color: "#fff",
+                                border: "1px solid rgba(255, 255, 255, 0.25)",
+                                borderRadius: "6px",
+                                fontSize: "11.5px",
+                                fontWeight: 600,
+                                cursor: "pointer",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "6px"
+                              }}
+                              title="Toggle Torch / Flashlight"
+                            >
+                              <Flashlight size={12} /> {flashOn ? "Torch On" : "Torch"}
+                            </button>
+                          </div>
+                        </div>
                         <div id="security-camera-reader" style={{ width: "100%" }}></div>
                       </div>
                     )}
@@ -3578,7 +3689,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                 tabIndex={0}
               >
                 <span className="mobile-brand-title">VMS</span>
-                <span className="mobile-brand-sub">Visitor Management</span>
+                <span className="mobile-brand-sub">Visitor Management System</span>
               </div>
             </div>
             <div className="mobile-topbar-actions">
@@ -3940,12 +4051,7 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                     <button
                       type="button"
                       className="sgp-mob-cam-action-btn"
-                      onClick={() => {
-                        const nextMode = facingMode === "environment" ? "user" : "environment";
-                        setFacingMode(nextMode);
-                        setFlashOn(false);
-                        showToast(nextMode === "environment" ? "Switching to Back Camera" : "Switching to Front Camera");
-                      }}
+                      onClick={handleSwitchCamera}
                       title="Switch between front and back camera"
                     >
                       <SwitchCamera size={16} />

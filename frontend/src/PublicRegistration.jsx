@@ -37,25 +37,33 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
+  const currentDeviceIdRef = useRef("");
+  const devicesListRef = useRef([]);
 
   useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
     };
   }, []);
 
-  useEffect(() => {
-    if (cameraActive && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.onloadedmetadata = () => {
-        videoRef.current?.play().catch(() => {});
-      };
+  const refreshVideoDevices = async () => {
+    try {
+      if (navigator.mediaDevices?.enumerateDevices) {
+        const allDevices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevs = allDevices.filter((d) => d.kind === "videoinput");
+        devicesListRef.current = videoDevs;
+        return videoDevs;
+      }
+    } catch {
+      // fallback
     }
-  }, [cameraActive]);
+    return [];
+  };
 
-  async function startCamera(requestedMode) {
+  async function startCamera(requestedMode, targetDeviceId = null) {
     const mode = typeof requestedMode === "string" ? requestedMode : facingMode;
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -69,27 +77,65 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
         streamRef.current = null;
       }
 
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: mode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
-      } catch {
+      const devs = await refreshVideoDevices();
+      let stream = null;
+
+      // 1. Try target device id if specified
+      if (targetDeviceId) {
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: mode } },
+            video: {
+              deviceId: { exact: targetDeviceId },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+          currentDeviceIdRef.current = targetDeviceId;
+        } catch {
+          stream = null;
+        }
+      }
+
+      // 2. Try with facingMode ideal
+      if (!stream) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: mode },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
             audio: false,
           });
         } catch {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false,
-          });
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: mode } },
+              audio: false,
+            });
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false,
+            });
+          }
+        }
+      }
+
+      const videoTrack = stream?.getVideoTracks?.()?.[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
+        if (settings.deviceId) currentDeviceIdRef.current = settings.deviceId;
+        if (settings.facingMode) {
+          setFacingMode(settings.facingMode);
+        } else if (targetDeviceId && devs.length > 0) {
+          const matchDev = devs.find((d) => d.deviceId === targetDeviceId);
+          if (matchDev && /front|user|selfie/i.test(matchDev.label)) {
+            setFacingMode("user");
+          } else if (matchDev && /back|rear|environment|main/i.test(matchDev.label)) {
+            setFacingMode("environment");
+          }
         }
       }
 
@@ -98,6 +144,7 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
         videoRef.current.onloadedmetadata = () => {
           videoRef.current?.play().catch((e) => console.warn("Asset video play error:", e));
         };
@@ -110,9 +157,24 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
   }
 
   async function toggleCameraFacing() {
-    const nextMode = facingMode === "environment" ? "user" : "environment";
-    setFacingMode(nextMode);
-    await startCamera(nextMode);
+    const devs = await refreshVideoDevices();
+    if (devs && devs.length > 1) {
+      const curId = currentDeviceIdRef.current;
+      const curIndex = devs.findIndex((d) => d.deviceId === curId);
+      const nextIndex = curIndex >= 0 ? (curIndex + 1) % devs.length : 1;
+      const nextDev = devs[nextIndex];
+      const nextMode = /front|user|selfie/i.test(nextDev.label)
+        ? "user"
+        : /back|rear|environment|main/i.test(nextDev.label)
+        ? "environment"
+        : facingMode === "environment" ? "user" : "environment";
+      setFacingMode(nextMode);
+      await startCamera(nextMode, nextDev.deviceId);
+    } else {
+      const nextMode = facingMode === "environment" ? "user" : "environment";
+      setFacingMode(nextMode);
+      await startCamera(nextMode);
+    }
   }
 
   function capturePhoto() {
@@ -143,6 +205,9 @@ function AssetPhotoCapture({ index, photo, onPhotoChange }) {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setCameraActive(false);
     setCameraError("");
@@ -390,6 +455,8 @@ export default function PublicRegistration() {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const photoFileInputRef = useRef(null);
+  const visitorDeviceIdRef = useRef("");
+  const visitorDevicesListRef = useRef([]);
 
   useEffect(() => {
     if (cameraActive && videoRef.current && streamRef.current) {
@@ -486,7 +553,21 @@ export default function PublicRegistration() {
     event.target.value = "";
   }
 
-  async function startCamera(requestedMode) {
+  const refreshVisitorVideoDevices = async () => {
+    try {
+      if (navigator.mediaDevices?.enumerateDevices) {
+        const allDevices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevs = allDevices.filter((d) => d.kind === "videoinput");
+        visitorDevicesListRef.current = videoDevs;
+        return videoDevs;
+      }
+    } catch {
+      // fallback
+    }
+    return [];
+  };
+
+  async function startCamera(requestedMode, targetDeviceId = null) {
     const mode = typeof requestedMode === "string" ? requestedMode : facingMode;
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -500,27 +581,63 @@ export default function PublicRegistration() {
         streamRef.current = null;
       }
 
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: mode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
-      } catch {
+      const devs = await refreshVisitorVideoDevices();
+      let stream = null;
+
+      if (targetDeviceId) {
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: mode } },
+            video: {
+              deviceId: { exact: targetDeviceId },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+          visitorDeviceIdRef.current = targetDeviceId;
+        } catch {
+          stream = null;
+        }
+      }
+
+      if (!stream) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: mode },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
             audio: false,
           });
         } catch {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false,
-          });
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: mode } },
+              audio: false,
+            });
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false,
+            });
+          }
+        }
+      }
+
+      const videoTrack = stream?.getVideoTracks?.()?.[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
+        if (settings.deviceId) visitorDeviceIdRef.current = settings.deviceId;
+        if (settings.facingMode) {
+          setFacingMode(settings.facingMode);
+        } else if (targetDeviceId && devs.length > 0) {
+          const matchDev = devs.find((d) => d.deviceId === targetDeviceId);
+          if (matchDev && /back|rear|environment|main/i.test(matchDev.label)) {
+            setFacingMode("environment");
+          } else if (matchDev && /front|user|selfie/i.test(matchDev.label)) {
+            setFacingMode("user");
+          }
         }
       }
 
@@ -529,6 +646,7 @@ export default function PublicRegistration() {
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
         videoRef.current.onloadedmetadata = () => {
           videoRef.current?.play().catch((err) => {
             console.warn("Video play warning:", err);
@@ -542,9 +660,24 @@ export default function PublicRegistration() {
   }
 
   async function toggleCameraFacing() {
-    const nextMode = facingMode === "user" ? "environment" : "user";
-    setFacingMode(nextMode);
-    await startCamera(nextMode);
+    const devs = await refreshVisitorVideoDevices();
+    if (devs && devs.length > 1) {
+      const curId = visitorDeviceIdRef.current;
+      const curIndex = devs.findIndex((d) => d.deviceId === curId);
+      const nextIndex = curIndex >= 0 ? (curIndex + 1) % devs.length : 1;
+      const nextDev = devs[nextIndex];
+      const nextMode = /back|rear|environment|main/i.test(nextDev.label)
+        ? "environment"
+        : /front|user|selfie/i.test(nextDev.label)
+        ? "user"
+        : facingMode === "user" ? "environment" : "user";
+      setFacingMode(nextMode);
+      await startCamera(nextMode, nextDev.deviceId);
+    } else {
+      const nextMode = facingMode === "user" ? "environment" : "user";
+      setFacingMode(nextMode);
+      await startCamera(nextMode);
+    }
   }
 
   function capturePhoto() {
@@ -576,6 +709,9 @@ export default function PublicRegistration() {
         streamRef.current.getTracks().forEach((track) => track.stop());
         streamRef.current = null;
       }
+      if (videoRef.current) {
+        videoRef.current.srcObject = null;
+      }
       setCameraActive(false);
       setCameraError("");
     } catch (err) {
@@ -588,6 +724,9 @@ export default function PublicRegistration() {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setCameraActive(false);
   }
@@ -730,7 +869,7 @@ export default function PublicRegistration() {
               <img src="/vms-logo.png" alt="VMS Logo" />
             </div>
             <div className="public-brand-text">
-              <h1>Visitor Management</h1>
+              <h1>Visitor Management System</h1>
               <p>Visitor Registration Portal</p>
             </div>
           </div>

@@ -277,6 +277,7 @@ export default function CheckoutHistory({
   const [companyFilter, setCompanyFilter] = useState("all");
   const [hostFilter, setHostFilter] = useState("all");
   const [assetFilter, setAssetFilter] = useState("all"); // "all" | "has_assets" | "no_assets" | "cleared"
+  const [dwellFilter, setDwellFilter] = useState("all"); // "all" | "standard" | "extended"
   const [sortBy, setSortBy] = useState("newest"); // "newest" | "oldest" | "longest" | "shortest"
   const [copiedId, setCopiedId] = useState("");
   const [selectedVisitIds, setSelectedVisitIds] = useState([]);
@@ -296,6 +297,7 @@ export default function CheckoutHistory({
     setCompanyFilter("all");
     setHostFilter("all");
     setAssetFilter("all");
+    setDwellFilter("all");
     setSortBy("newest");
   };
 
@@ -492,6 +494,15 @@ export default function CheckoutHistory({
           if (!hasCarried) return false;
         }
 
+        // 4b. Dwell Duration Filter (from Metric Card 3)
+        if (dwellFilter === "standard") {
+          const dwell = calculateDwellTime(item.check_in_time, item.check_out_time);
+          if (dwell.minutes > 24 * 60) return false;
+        } else if (dwellFilter === "extended") {
+          const dwell = calculateDwellTime(item.check_in_time, item.check_out_time);
+          if (dwell.minutes <= 24 * 60) return false;
+        }
+
         // 5. Calendar Date Range Filter
         const targetDateVal = dateBasis === "checkout" ? item.check_out_time : item.check_in_time;
         if ((startDate || endDate) && targetDateVal) {
@@ -523,11 +534,11 @@ export default function CheckoutHistory({
         }
         return 0;
       });
-  }, [baseHistory, search, companyFilter, hostFilter, assetFilter, startDate, endDate, dateBasis, sortBy]);
+  }, [baseHistory, search, companyFilter, hostFilter, assetFilter, dwellFilter, startDate, endDate, dateBasis, sortBy]);
 
-  // Executive Metrics
-  const metrics = useMemo(() => {
-    const total = filteredList.length;
+  // Executive Scope Metrics: Evaluated across baseHistory so cards retain scope totals during filter toggles
+  const scopeMetrics = useMemo(() => {
+    const total = baseHistory.length;
     const todayStr = getLocalDateString(new Date());
     let todayCount = 0;
     let standardDwellMinutes = 0;
@@ -540,7 +551,7 @@ export default function CheckoutHistory({
     let totalRetainedAssets = 0;
     let totalCarriedOutAssets = 0;
 
-    filteredList.forEach((item) => {
+    baseHistory.forEach((item) => {
       const outDateStr = getLocalDateString(item.check_out_time);
       if (outDateStr && outDateStr === todayStr) {
         todayCount++;
@@ -550,7 +561,6 @@ export default function CheckoutHistory({
         totalDwellMinutes += dwell.minutes;
         validDwellCount++;
         // Standard operational visits: <= 24 hours (1440 mins)
-        // Multi-day test stays or multi-week visits are counted as extended
         if (dwell.minutes <= 24 * 60) {
           standardDwellMinutes += dwell.minutes;
           standardDwellCount++;
@@ -571,7 +581,6 @@ export default function CheckoutHistory({
     });
 
     // Realistic operational dwell time: prioritize standard visits (<=24h)
-    // to avoid skew from forgotten checkouts or multi-week test badges
     const targetMinutes =
       standardDwellCount > 0
         ? Math.round(standardDwellMinutes / standardDwellCount)
@@ -606,7 +615,19 @@ export default function CheckoutHistory({
       totalRetainedAssets,
       totalCarriedOutAssets,
     };
-  }, [filteredList]);
+  }, [baseHistory]);
+
+  const metrics = scopeMetrics;
+
+  const isAllActive =
+    datePreset === "all" &&
+    !startDate &&
+    !endDate &&
+    assetFilter === "all" &&
+    dwellFilter === "all" &&
+    companyFilter === "all" &&
+    hostFilter === "all" &&
+    !search.trim();
 
   // Copy Badge Reference
   const handleCopyBadge = (visitId, e) => {
@@ -781,66 +802,224 @@ export default function CheckoutHistory({
         </div>
       </div>
 
-      {/* Metric KPI Summary Cards */}
+      {/* Metric KPI Summary Cards (Workable & Interactive Filter System) */}
       <section className="ch-metrics-grid">
-        <div className="ch-metric-card">
+        <div
+          className={`ch-metric-card clickable ${isAllActive ? "active-filter filter-red" : ""}`}
+          onClick={handleResetAllFilters}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handleResetAllFilters();
+            }
+          }}
+          title="Click to view all departures in scope"
+        >
           <div className="ch-metric-icon blue">
             <CheckCircle2 size={24} />
           </div>
-          <div>
+          <div className="ch-metric-content">
             <div className="ch-metric-val">{metrics.total}</div>
             <div className="ch-metric-lbl">Total Departures in Scope</div>
+            <span className="ch-metric-hint">
+              {isAllActive ? "● Active View" : "Click to view all"}
+            </span>
           </div>
-        </div>
-
-        <div className="ch-metric-card">
-          <div className="ch-metric-icon emerald">
-            <Clock size={24} />
-          </div>
-          <div>
-            <div className="ch-metric-val">{metrics.todayCount}</div>
-            <div className="ch-metric-lbl">Checked Out Today</div>
-          </div>
+          <ChevronRight size={18} className={`ch-metric-arrow ${isAllActive ? "arrow-active" : ""}`} />
         </div>
 
         <div
-          className="ch-metric-card"
+          className={`ch-metric-card clickable ${datePreset === "today" ? "active-filter filter-emerald" : ""}`}
+          onClick={() => {
+            if (datePreset === "today") {
+              handlePresetChange("all");
+            } else {
+              handlePresetChange("today");
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              handlePresetChange(datePreset === "today" ? "all" : "today");
+            }
+          }}
+          title={datePreset === "today" ? "Click to view all departures" : "Click to filter departures checked out today"}
+        >
+          <div className="ch-metric-icon emerald">
+            <Clock size={24} />
+          </div>
+          <div className="ch-metric-content">
+            <div className="ch-metric-val">{metrics.todayCount}</div>
+            <div className="ch-metric-lbl">Checked Out Today</div>
+            <span className="ch-metric-hint">
+              {datePreset === "today" ? "● Active View" : "Click to filter"}
+            </span>
+          </div>
+          <ChevronRight size={18} className={`ch-metric-arrow ${datePreset === "today" ? "arrow-active" : ""}`} />
+        </div>
+
+        <div
+          className={`ch-metric-card clickable ${dwellFilter !== "all" ? "active-filter filter-purple" : ""}`}
+          onClick={() => {
+            if (dwellFilter === "all") {
+              setDwellFilter(metrics.standardDwellCount > 0 ? "standard" : "extended");
+            } else if (dwellFilter === "standard" && metrics.extendedDwellCount > 0) {
+              setDwellFilter("extended");
+            } else {
+              setDwellFilter("all");
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (dwellFilter === "all") setDwellFilter(metrics.standardDwellCount > 0 ? "standard" : "extended");
+              else if (dwellFilter === "standard" && metrics.extendedDwellCount > 0) setDwellFilter("extended");
+              else setDwellFilter("all");
+            }
+          }}
           title={
-            metrics.extendedDwellCount > 0
-              ? `Average dwell time for standard visits (≤24h). Excludes ${metrics.extendedDwellCount} multi-day stays.`
-              : "Average duration on-site across visits"
+            dwellFilter === "standard"
+              ? "Filtering standard visits (≤24h). Click to switch or reset."
+              : dwellFilter === "extended"
+              ? "Filtering multi-day stays (>24h). Click to reset."
+              : "Click to filter by dwell duration (standard ≤24h vs multi-day stays)"
           }
         >
           <div className="ch-metric-icon purple">
             <History size={24} />
           </div>
-          <div>
+          <div className="ch-metric-content">
             <div className="ch-metric-val">{metrics.avgDwellLabel}</div>
             <div className="ch-metric-lbl">Average Dwell Time</div>
-            {metrics.extendedDwellCount > 0 ? (
-              <div className="ch-metric-sublbl">
-                Standard (≤24h) · {metrics.extendedDwellCount} multi-day
-              </div>
-            ) : metrics.standardDwellCount > 0 ? (
-              <div className="ch-metric-sublbl">
-                Standard visits ({metrics.standardDwellCount})
-              </div>
-            ) : null}
+            <span className="ch-metric-hint">
+              {dwellFilter === "standard" ? (
+                "● Standard (≤24h)"
+              ) : dwellFilter === "extended" ? (
+                `● Multi-day (${metrics.extendedDwellCount})`
+              ) : metrics.extendedDwellCount > 0 ? (
+                `Standard (≤24h) · ${metrics.extendedDwellCount} multi-day`
+              ) : metrics.standardDwellCount > 0 ? (
+                `Standard visits (${metrics.standardDwellCount})`
+              ) : (
+                "Click to filter"
+              )}
+            </span>
           </div>
+          <ChevronRight size={18} className={`ch-metric-arrow ${dwellFilter !== "all" ? "arrow-active" : ""}`} />
         </div>
 
-        <div className="ch-metric-card">
+        <div
+          className={`ch-metric-card clickable ${assetFilter !== "all" ? "active-filter filter-amber" : ""}`}
+          onClick={() => {
+            if (assetFilter === "all") {
+              setAssetFilter("has_assets");
+            } else if (assetFilter === "has_assets" && metrics.totalRetainedAssets > 0) {
+              setAssetFilter("has_retained");
+            } else {
+              setAssetFilter("all");
+            }
+          }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              if (assetFilter === "all") setAssetFilter("has_assets");
+              else if (assetFilter === "has_assets" && metrics.totalRetainedAssets > 0) setAssetFilter("has_retained");
+              else setAssetFilter("all");
+            }
+          }}
+          title={
+            assetFilter !== "all"
+              ? "Filtering departures with hardware. Click to reset."
+              : "Click to filter departures with declared hardware / assets"
+          }
+        >
           <div className="ch-metric-icon amber">
             <ShieldCheck size={24} />
           </div>
-          <div>
+          <div className="ch-metric-content">
             <div className="ch-metric-val">{metrics.totalDeclaredAssets}</div>
             <div className="ch-metric-lbl">
               Check-In Hardware ({metrics.totalCarriedOutAssets || 0} Carried Out · {metrics.totalRetainedAssets || 0} Retained)
             </div>
+            <span className="ch-metric-hint">
+              {assetFilter === "has_assets"
+                ? "● Active View (With Hardware)"
+                : assetFilter === "has_retained"
+                ? "● Active View (Retained)"
+                : assetFilter === "has_carried"
+                ? "● Active View (Carried Out)"
+                : "Click to filter"}
+            </span>
           </div>
+          <ChevronRight size={18} className={`ch-metric-arrow ${assetFilter !== "all" ? "arrow-active" : ""}`} />
         </div>
       </section>
+
+      {/* Active Filter Banner (Visible when any filter is engaged) */}
+      {!isAllActive && (
+        <div className="ch-active-filter-banner">
+          <div className="ch-active-filter-left">
+            <Filter size={14} className="ch-active-filter-icon" />
+            <span className="ch-active-filter-lead">Active Filter:</span>
+            {datePreset !== "all" && (
+              <span className="ch-filter-pill">
+                Date: <strong>{datePreset === "today" ? "Today" : datePreset === "yesterday" ? "Yesterday" : datePreset === "week" ? "Last 7 Days" : datePreset === "month" ? "This Month" : "Custom Range"}</strong>
+                <button type="button" onClick={() => handlePresetChange("all")} title="Remove date filter"><X size={11} /></button>
+              </span>
+            )}
+            {dwellFilter !== "all" && (
+              <span className="ch-filter-pill">
+                Dwell: <strong>{dwellFilter === "standard" ? "Standard (≤24h)" : "Multi-day Stays (>24h)"}</strong>
+                <button type="button" onClick={() => setDwellFilter("all")} title="Remove dwell filter"><X size={11} /></button>
+              </span>
+            )}
+            {assetFilter !== "all" && (
+              <span className="ch-filter-pill">
+                Hardware: <strong>{assetFilter === "has_assets" ? "With Hardware" : assetFilter === "has_retained" ? "Retained on Premises" : "Carried Out"}</strong>
+                <button type="button" onClick={() => setAssetFilter("all")} title="Remove hardware filter"><X size={11} /></button>
+              </span>
+            )}
+            {companyFilter !== "all" && (
+              <span className="ch-filter-pill">
+                Company: <strong>{companyFilter}</strong>
+                <button type="button" onClick={() => setCompanyFilter("all")} title="Remove company filter"><X size={11} /></button>
+              </span>
+            )}
+            {hostFilter !== "all" && (
+              <span className="ch-filter-pill">
+                Host: <strong>{hostFilter}</strong>
+                <button type="button" onClick={() => setHostFilter("all")} title="Remove host filter"><X size={11} /></button>
+              </span>
+            )}
+            {search.trim() && (
+              <span className="ch-filter-pill">
+                Search: <strong>"{search.trim()}"</strong>
+                <button type="button" onClick={() => setSearch("")} title="Clear search query"><X size={11} /></button>
+              </span>
+            )}
+            <span className="ch-filter-results-badge">
+              Matching: <strong>{filteredList.length}</strong> of <strong>{metrics.total}</strong> records
+            </span>
+          </div>
+          <button
+            type="button"
+            className="ch-btn-reset-filters"
+            onClick={handleResetAllFilters}
+            title="Clear all active filters and return to all departure records"
+          >
+            <RefreshCw size={12} />
+            <span>Reset to All</span>
+          </button>
+        </div>
+      )}
 
       {/* Mobile View: Dedicated Clean Filter Card (Exact ITPreApprovals Match) */}
       <div className="it-mobile-filter-card vms-mobile-only">
@@ -2852,7 +3031,7 @@ export default function CheckoutHistory({
 
           return (
             <div
-              className="it-asset-modal-overlay has-mobile-dossier"
+              className="it-asset-modal-overlay has-mobile-dossier ch-dossier-overlay"
               onClick={() => setSelectedVisit(null)}
               role="dialog"
               aria-modal="true"

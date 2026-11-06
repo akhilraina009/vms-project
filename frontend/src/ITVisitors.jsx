@@ -117,25 +117,33 @@ function AssetPhotoPicker({ photoData, photoUrl, onPhotoChange, label = "Hardwar
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
+  const currentDeviceIdRef = useRef("");
+  const devicesListRef = useRef([]);
 
   useEffect(() => {
     return () => {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
     };
   }, []);
 
-  useEffect(() => {
-    if (cameraActive && videoRef.current && streamRef.current) {
-      videoRef.current.srcObject = streamRef.current;
-      videoRef.current.onloadedmetadata = () => {
-        videoRef.current?.play().catch(() => {});
-      };
+  const refreshVideoDevices = async () => {
+    try {
+      if (navigator.mediaDevices?.enumerateDevices) {
+        const allDevices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevs = allDevices.filter((d) => d.kind === "videoinput");
+        devicesListRef.current = videoDevs;
+        return videoDevs;
+      }
+    } catch {
+      // fallback
     }
-  }, [cameraActive]);
+    return [];
+  };
 
-  const startCamera = async (requestedMode) => {
+  const startCamera = async (requestedMode, targetDeviceId = null) => {
     const mode = typeof requestedMode === "string" ? requestedMode : facingMode;
     setCameraError("");
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -149,27 +157,65 @@ function AssetPhotoPicker({ photoData, photoUrl, onPhotoChange, label = "Hardwar
         streamRef.current = null;
       }
 
-      let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: mode },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-          audio: false,
-        });
-      } catch {
+      const devs = await refreshVideoDevices();
+      let stream = null;
+
+      // 1. Try target device id if specified
+      if (targetDeviceId) {
         try {
           stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: mode } },
+            video: {
+              deviceId: { exact: targetDeviceId },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+            audio: false,
+          });
+          currentDeviceIdRef.current = targetDeviceId;
+        } catch {
+          stream = null;
+        }
+      }
+
+      // 2. Try with facingMode ideal
+      if (!stream) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              facingMode: { ideal: mode },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
             audio: false,
           });
         } catch {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
-            audio: false,
-          });
+          try {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: { facingMode: { ideal: mode } },
+              audio: false,
+            });
+          } catch {
+            stream = await navigator.mediaDevices.getUserMedia({
+              video: true,
+              audio: false,
+            });
+          }
+        }
+      }
+
+      const videoTrack = stream?.getVideoTracks?.()?.[0];
+      if (videoTrack) {
+        const settings = videoTrack.getSettings ? videoTrack.getSettings() : {};
+        if (settings.deviceId) currentDeviceIdRef.current = settings.deviceId;
+        if (settings.facingMode) {
+          setFacingMode(settings.facingMode);
+        } else if (targetDeviceId && devs.length > 0) {
+          const matchDev = devs.find((d) => d.deviceId === targetDeviceId);
+          if (matchDev && /front|user|selfie/i.test(matchDev.label)) {
+            setFacingMode("user");
+          } else if (matchDev && /back|rear|environment|main/i.test(matchDev.label)) {
+            setFacingMode("environment");
+          }
         }
       }
 
@@ -178,6 +224,7 @@ function AssetPhotoPicker({ photoData, photoUrl, onPhotoChange, label = "Hardwar
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(() => {});
         videoRef.current.onloadedmetadata = () => {
           videoRef.current?.play().catch((e) => console.warn("Video play error:", e));
         };
@@ -190,9 +237,24 @@ function AssetPhotoPicker({ photoData, photoUrl, onPhotoChange, label = "Hardwar
   };
 
   const toggleCameraFacing = async () => {
-    const nextMode = facingMode === "environment" ? "user" : "environment";
-    setFacingMode(nextMode);
-    await startCamera(nextMode);
+    const devs = await refreshVideoDevices();
+    if (devs && devs.length > 1) {
+      const curId = currentDeviceIdRef.current;
+      const curIndex = devs.findIndex((d) => d.deviceId === curId);
+      const nextIndex = curIndex >= 0 ? (curIndex + 1) % devs.length : 1;
+      const nextDev = devs[nextIndex];
+      const nextMode = /front|user|selfie/i.test(nextDev.label)
+        ? "user"
+        : /back|rear|environment|main/i.test(nextDev.label)
+        ? "environment"
+        : facingMode === "environment" ? "user" : "environment";
+      setFacingMode(nextMode);
+      await startCamera(nextMode, nextDev.deviceId);
+    } else {
+      const nextMode = facingMode === "environment" ? "user" : "environment";
+      setFacingMode(nextMode);
+      await startCamera(nextMode);
+    }
   };
 
   const capturePhoto = () => {
@@ -223,6 +285,9 @@ function AssetPhotoPicker({ photoData, photoUrl, onPhotoChange, label = "Hardwar
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
     setCameraActive(false);
     setCameraError("");
@@ -310,7 +375,14 @@ function AssetPhotoPicker({ photoData, photoUrl, onPhotoChange, label = "Hardwar
           </div>
           <div style={{ position: "relative", width: "100%", maxHeight: "240px", overflow: "hidden", background: "#000" }}>
             <video
-              ref={videoRef}
+              ref={(el) => {
+                videoRef.current = el;
+                if (el && streamRef.current && el.srcObject !== streamRef.current) {
+                  el.srcObject = streamRef.current;
+                  el.play().catch(() => {});
+                  el.onloadedmetadata = () => el.play().catch(() => {});
+                }
+              }}
               autoPlay
               playsInline
               muted

@@ -1414,10 +1414,6 @@ html.dark .gt-bottom-feature-divider {
     display: none !important;
   }
 
-  .gt-header-actions {
-    display: none !important;
-  }
-
   .gt-mobile-drawer {
     display: none !important;
   }
@@ -1426,62 +1422,96 @@ html.dark .gt-bottom-feature-divider {
     display: none !important;
   }
 
-  /* Compact Mobile Header */
+  /* Compact Mobile Header (Clean & Exact to Reference) */
   .gt-header-inner {
-    padding: 14px 18px;
+    padding: 12px 16px;
     display: flex;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
+    background: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
   }
 
   .gt-brand-wrap {
     display: flex;
     align-items: center;
     gap: 8px;
+    min-width: 0;
+    flex-shrink: 1;
   }
 
   .gt-brand-logo {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     object-fit: contain;
+    flex-shrink: 0;
   }
 
   .gt-brand-title {
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 800;
-    color: #0a1128;
+    color: #0b1b3b;
     letter-spacing: -0.4px;
+    flex-shrink: 0;
   }
 
   .gt-brand-divider {
-    color: #94a3b8;
-    font-size: 14px;
+    color: #cbd5e1;
+    font-size: 13px;
     margin: 0 4px;
+    flex-shrink: 0;
   }
 
   .gt-brand-subtitle {
-    font-size: 13px;
+    font-size: 11.5px;
     font-weight: 600;
-    color: #0a1128;
+    color: #0b1b3b;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  /* Main Stage Container */
+  .gt-header-actions {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .gt-mobile-header-badge {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 6px;
+    background: #edf4ff;
+    border: 1px solid #c7dcff;
+    color: #1351b4;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .gt-mob-turnstile-icon {
+    color: #1351b4;
+    flex-shrink: 0;
+  }
+
+  /* Main Stage Container (Soft Executive Tone) */
   .gt-main-stage {
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
     padding: 0;
-    background: linear-gradient(180deg, #f8fafc 0%, #edf1fa 100%);
+    background: linear-gradient(180deg, #f1f5f9 0%, #edf3fc 100%);
     min-height: calc(100vh - 54px);
     position: relative;
     overflow-x: hidden;
   }
 
   .gt-stage-background {
-    display: none;
+    display: none !important;
   }
 
   .gt-stage-container {
@@ -1497,7 +1527,7 @@ html.dark .gt-bottom-feature-divider {
   .gt-mobile-hero-banner {
     display: block !important;
     width: 100%;
-    height: 215px;
+    height: 220px;
     position: relative;
     overflow: hidden;
   }
@@ -1506,7 +1536,7 @@ html.dark .gt-bottom-feature-divider {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 25%;
+    object-position: 70% 25%;
     display: block;
   }
 
@@ -1515,9 +1545,9 @@ html.dark .gt-bottom-feature-divider {
     inset: 0;
     background: linear-gradient(
       90deg,
-      rgba(15, 23, 42, 0.70) 0%,
-      rgba(15, 23, 42, 0.44) 48%,
-      rgba(15, 23, 42, 0.05) 78%,
+      rgba(11, 27, 59, 0.78) 0%,
+      rgba(11, 27, 59, 0.52) 48%,
+      rgba(11, 27, 59, 0.12) 78%,
       transparent 100%
     );
     display: flex;
@@ -1527,7 +1557,7 @@ html.dark .gt-bottom-feature-divider {
   }
 
   .gt-mobile-hero-content {
-    max-width: 255px;
+    max-width: 250px;
     z-index: 2;
   }
 
@@ -1538,11 +1568,11 @@ html.dark .gt-bottom-feature-divider {
     background: rgba(255, 255, 255, 0.16);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.45);
     color: #ffffff;
-    font-size: 12px;
+    font-size: 11.5px;
     font-weight: 600;
-    padding: 4px 12px;
+    padding: 4px 10px;
     border-radius: 9999px;
     margin-bottom: 8px;
   }
@@ -1553,28 +1583,28 @@ html.dark .gt-bottom-feature-divider {
   }
 
   .gt-mobile-hero-title {
-    font-size: 22px;
+    font-size: 21px;
     font-weight: 800;
     color: #ffffff;
     letter-spacing: -0.4px;
     line-height: 1.18;
     margin: 0 0 6px;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
   }
 
   .gt-mobile-hero-desc {
     font-size: 12px;
     line-height: 1.4;
-    color: #f8fafc;
+    color: #f1f5f9;
     margin: 0 0 8px;
     max-width: 240px;
-    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
   }
 
   .gt-mobile-hero-red-line {
     width: 36px;
     height: 3px;
-    background: #e43b24;
+    background: #ed202b;
     border-radius: 2px;
   }
 
@@ -1586,21 +1616,24 @@ html.dark .gt-bottom-feature-divider {
     z-index: 15;
     width: 100%;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   /* Mobile Gate Terminal Login Card */
   .gt-login-card {
     background: #ffffff;
     border: 1px solid rgba(226, 232, 240, 0.85);
-    border-radius: 24px;
-    padding: 24px 20px 22px;
-    box-shadow: 0 12px 36px rgba(10, 20, 50, 0.08), 0 2px 6px rgba(10, 20, 50, 0.04);
+    border-radius: 22px;
+    padding: 22px 18px 20px;
+    box-shadow: 0 10px 30px rgba(11, 27, 59, 0.08), 0 2px 6px rgba(11, 27, 59, 0.03);
     box-sizing: border-box;
     width: 100%;
     max-width: 100%;
   }
 
-  /* Mobile Card Brand (Centered) */
+  /* Mobile Card Intro */
   .gt-card-mobile-intro {
     display: block !important;
   }
@@ -1609,74 +1642,104 @@ html.dark .gt-bottom-feature-divider {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 16px;
+    text-align: center;
+    margin-bottom: 12px;
   }
 
   .gt-mob-card-logo-wrap {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   .gt-mob-card-logo {
-    width: 34px;
-    height: 34px;
+    width: 32px;
+    height: 32px;
     object-fit: contain;
   }
 
   .gt-mob-card-brand-name {
-    font-size: 26px;
+    font-size: 24px;
     font-weight: 900;
-    color: #0a1128;
-    letter-spacing: -0.6px;
+    color: #0b1b3b;
+    letter-spacing: -0.5px;
   }
 
   .gt-mob-card-system-title {
-    font-size: 15.5px;
+    font-size: 18.5px;
     font-weight: 800;
-    color: #0a1128;
-    margin-bottom: 8px;
+    color: #0b1b3b;
+    margin: 2px 0 3px;
+    letter-spacing: -0.3px;
     text-align: center;
+  }
+
+  .gt-mob-card-system-sub {
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+    margin: 0;
+    text-align: center;
+  }
+
+  .gt-mob-card-red-bar {
+    width: 36px;
+    height: 3px;
+    background: #ed202b;
+    border-radius: 2px;
+    margin: 10px auto 14px;
+  }
+
+  /* Operator Login Subheader */
+  .gt-mob-operator-wrap {
+    text-align: left;
+    margin-bottom: 12px;
+  }
+
+  .gt-mob-operator-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+  }
+
+  .gt-mob-operator-icon {
+    flex-shrink: 0;
+  }
+
+  .gt-mob-operator-heading {
+    font-size: 17px;
+    font-weight: 800;
+    color: #0b1b3b;
+    margin: 0;
     letter-spacing: -0.2px;
   }
 
-  .gt-mob-card-terminal-badge {
-    background: #dbeafe;
-    color: #1e3a8a;
+  .gt-mob-operator-desc {
     font-size: 12px;
-    font-weight: 700;
-    padding: 4px 14px;
-    border-radius: 9999px;
-  }
-
-  /* Mobile Card Sign In Subheader (Left-aligned) */
-  .gt-mob-card-intro {
-    text-align: left;
-    margin-bottom: 14px;
-  }
-
-  .gt-mob-card-signin-title {
-    font-size: 20px;
-    font-weight: 800;
-    color: #0a1128;
-    margin: 14px 0 4px;
-    letter-spacing: -0.3px;
-  }
-
-  .gt-mob-card-signin-desc {
-    font-size: 12.5px;
     color: #64748b;
-    margin: 0 0 14px;
+    margin: 0;
     line-height: 1.4;
   }
 
-  /* Form & Inputs */
+  /* Form & Labels */
   .gt-login-form {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
+  }
+
+  .gt-mob-input-label.gt-mobile-only {
+    display: block !important;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #0b1b3b;
+    margin-bottom: -4px;
+    margin-top: 2px;
+    letter-spacing: -0.1px;
+    text-align: left;
   }
 
   .gt-search-box-wrap {
@@ -1684,7 +1747,7 @@ html.dark .gt-bottom-feature-divider {
     display: flex;
     align-items: center;
     width: 100%;
-    height: 48px;
+    height: 46px;
   }
 
   .gt-input-icon-mobile {
@@ -1708,23 +1771,29 @@ html.dark .gt-bottom-feature-divider {
   .gt-search-box-wrap input.gt-mobile-input {
     display: block !important;
     width: 100% !important;
-    height: 48px !important;
+    height: 46px !important;
     padding-left: 42px !important;
     padding-right: 44px !important;
     border-radius: 12px !important;
     border: 1px solid #cbd5e1 !important;
     background: #ffffff !important;
     font-size: 16px !important;
-    color: #0a1128 !important;
+    color: #0b1b3b !important;
     box-sizing: border-box !important;
     outline: none !important;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
   }
 
+  .gt-login-card .gt-search-box-wrap .gt-search-box-input.gt-mobile-input::placeholder,
+  .gt-search-box-wrap input.gt-mobile-input::placeholder {
+    font-size: 13.5px !important;
+    color: #94a3b8 !important;
+  }
+
   .gt-login-card .gt-search-box-wrap .gt-search-box-input.gt-mobile-input:focus,
   .gt-search-box-wrap input.gt-mobile-input:focus {
-    border-color: #e43b24 !important;
-    box-shadow: 0 0 0 3px rgba(228, 59, 36, 0.15) !important;
+    border-color: #ed202b !important;
+    box-shadow: 0 0 0 3px rgba(237, 32, 43, 0.15) !important;
   }
 
   .gt-password-toggle {
@@ -1745,18 +1814,18 @@ html.dark .gt-bottom-feature-divider {
   .gt-submit-btn {
     width: 100%;
     height: 48px;
-    background: #e43b24;
+    background: #ed202b;
     color: #ffffff;
     border: none;
     border-radius: 12px;
-    font-size: 15.5px;
+    font-size: 15px;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    margin-top: 4px;
-    box-shadow: 0 4px 14px rgba(228, 59, 36, 0.35);
+    margin-top: 6px;
+    box-shadow: 0 4px 14px rgba(237, 32, 43, 0.30);
     transition: background 0.15s ease, transform 0.1s ease;
   }
 
@@ -1768,7 +1837,7 @@ html.dark .gt-bottom-feature-divider {
   }
 
   .gt-submit-btn:hover {
-    background: #cf321c;
+    background: #db1924;
   }
 
   .gt-submit-btn:disabled {
@@ -1776,14 +1845,14 @@ html.dark .gt-bottom-feature-divider {
     cursor: not-allowed;
   }
 
-  /* RBAC Security Footer */
+  /* Card Security Note */
   .gt-card-security-note.gt-mobile-only {
     display: flex !important;
     align-items: center;
     justify-content: center;
     gap: 6px;
     color: #64748b;
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 500;
     margin-top: 14px;
   }
@@ -1793,29 +1862,73 @@ html.dark .gt-bottom-feature-divider {
     flex-shrink: 0;
   }
 
-  /* Mobile Decorative Bottom Swoosh */
-  .gt-mobile-bottom-wave-wrap {
-    display: block !important;
-    position: relative;
+  /* Quick Actions Strip (Mobile Only) */
+  .gt-mobile-quick-actions {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 14px 10px;
+    margin-top: 14px;
+    box-shadow: 0 4px 16px rgba(11, 27, 59, 0.04);
     width: 100%;
-    margin-top: auto;
-    overflow: hidden;
-    line-height: 0;
-    pointer-events: none;
+    box-sizing: border-box;
   }
 
-  .gt-mob-bottom-svg {
+  .gt-quick-action-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+  }
+
+  .gt-quick-action-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .gt-quick-action-text {
+    font-size: 12px;
+    font-weight: 700;
+    color: #0b1b3b;
+    letter-spacing: -0.2px;
+  }
+
+  .gt-quick-action-divider {
+    width: 1px;
+    height: 32px;
+    background: #e2e8f0;
+    flex-shrink: 0;
+  }
+
+  /* Mobile Centered Page Footer */
+  .gt-mobile-page-footer {
+    display: block !important;
+    text-align: center;
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+    padding: 18px 0 24px;
     width: 100%;
-    height: 65px;
-    display: block;
+  }
+
+  /* Mobile Decorative Bottom Swoosh - Hidden */
+  .gt-mobile-bottom-wave-wrap {
+    display: none !important;
   }
 }
 
-/* Extra small devices (<= 360px: iPhone SE, Galaxy S8, etc.) */
-@media (max-width: 360px) {
+/* Extra small devices (<= 380px: iPhone SE, Galaxy S8, iPhone 13 mini, etc.) */
+@media (max-width: 380px) {
   .gt-brand-subtitle,
   .gt-brand-divider {
-    display: none;
+    display: none !important;
   }
 
   .gt-card-col {
@@ -1833,6 +1946,10 @@ html.dark .gt-bottom-feature-divider {
   .gt-mobile-hero-desc {
     font-size: 10.5px;
   }
+
+  .gt-quick-action-text {
+    font-size: 10.5px;
+  }
 }
 
 /* Mobile Dark Mode Styles */
@@ -1840,18 +1957,37 @@ html[data-theme="dark"] .gt-mob-card-brand-name,
 html.dark .gt-mob-card-brand-name,
 html[data-theme="dark"] .gt-mob-card-system-title,
 html.dark .gt-mob-card-system-title,
-html[data-theme="dark"] .gt-mob-card-signin-title,
-html.dark .gt-mob-card-signin-title {
+html[data-theme="dark"] .gt-mob-operator-heading,
+html.dark .gt-mob-operator-heading,
+html[data-theme="dark"] .gt-mob-input-label,
+html.dark .gt-mob-input-label {
   color: #f8fafc !important;
 }
 
-html[data-theme="dark"] .gt-mob-card-terminal-badge,
-html.dark .gt-mob-card-terminal-badge {
-  background: #1e293b !important;
-  color: #38bdf8 !important;
+html[data-theme="dark"] .gt-mob-operator-icon,
+html.dark .gt-mob-operator-icon {
+  stroke: #f8fafc !important;
 }
 
-html[data-theme="dark"] .gt-mob-card-signin-desc,
-html.dark .gt-mob-card-signin-desc {
+html[data-theme="dark"] .gt-mob-card-system-sub,
+html.dark .gt-mob-card-system-sub,
+html[data-theme="dark"] .gt-mob-operator-desc,
+html.dark .gt-mob-operator-desc {
   color: #94a3b8 !important;
+}
+
+html[data-theme="dark"] .gt-mobile-quick-actions,
+html.dark .gt-mobile-quick-actions {
+  background: #111c38 !important;
+  border-color: #1e293b !important;
+}
+
+html[data-theme="dark"] .gt-quick-action-text,
+html.dark .gt-quick-action-text {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] .gt-quick-action-divider,
+html.dark .gt-quick-action-divider {
+  background: #1e293b !important;
 }

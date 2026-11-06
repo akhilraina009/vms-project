@@ -147,6 +147,11 @@ export default function PublicVisitorPass({ token }) {
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        if (response.status === 410 && data && data.visit_id) {
+          setPass({ ...data, status: "EXPIRED", is_expired: true });
+          setLastUpdated(new Date());
+          return;
+        }
         if (response.status === 410) {
           throw new Error("This visitor pass has expired. Please contact reception.");
         }
@@ -296,6 +301,7 @@ export default function PublicVisitorPass({ token }) {
       if (rawStatus === "PENDING") return "Awaiting Admin Review";
       if (rawStatus === "WAITING") return "Host Busy (On Hold)";
       if (rawStatus === "REJECTED") return "Entry Declined";
+      if (rawStatus === "EXPIRED") return "Pass Validity Expired";
       return "Pending Gate Check-in";
     }
     const parsedTime = new Date(checkInTime);
@@ -480,6 +486,28 @@ export default function PublicVisitorPass({ token }) {
         </div>
       </div>
     );
+  } else if (rawStatus === "EXPIRED" || pass?.is_expired) {
+    statusBadgeText = "PASS EXPIRED · VALIDITY LAPSED";
+    statusBadgeClass = "amber";
+    statusBanner = (
+      <div className="pass-status-banner banner-amber">
+        <div className="pass-banner-icon-box">
+          <Hourglass size={20} className="pass-banner-icon" />
+        </div>
+        <div className="pass-banner-content">
+          <strong className="pass-banner-title">
+            Pass Validity Lapsed · Renewal Required
+          </strong>
+          <p className="pass-banner-desc">
+            This visitor pass has exceeded its scheduled validity window. If you require entrance today, please check in with reception to renew or issue an updated gate pass.
+          </p>
+          <span className="pass-banner-live-tag">
+            <span className="pass-pulse-dot amber"></span>
+            Contact Reception Desk
+          </span>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -648,6 +676,8 @@ export default function PublicVisitorPass({ token }) {
                   ? "AWAITING ADMIN CLEARANCE"
                   : rawStatus === "WAITING"
                   ? "HOST BUSY · PLEASE WAIT IN LOBBY"
+                  : rawStatus === "EXPIRED" || pass?.is_expired
+                  ? "PASS VALIDITY PERIOD LAPSED"
                   : "ENTRY AUTHORIZATION STATUS"}
               </span>
               <p className="pass-scan-instruction-desc">
@@ -659,6 +689,8 @@ export default function PublicVisitorPass({ token }) {
                   ? "Host is occupied. Please remain comfortably in the reception lounge."
                   : rawStatus === "REJECTED"
                   ? "Entry authorization was denied for this visit."
+                  : rawStatus === "EXPIRED" || pass?.is_expired
+                  ? "This pass has exceeded its scheduled validity. Present this badge at reception to verify or issue an updated pass."
                   : "Security gate officers scan this code for access control & exit clearance."}
               </p>
             </div>

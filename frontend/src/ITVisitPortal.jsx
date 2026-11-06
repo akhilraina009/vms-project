@@ -62,7 +62,7 @@ export default function ITVisitPortal() {
                 <img src="/vms-logo.png" alt="VMS Logo" />
               </div>
               <div className="public-brand-text">
-                <h1>Visitor Management</h1>
+                <h1>Visitor Management System</h1>
                 <p>IT Visitor Registration Portal</p>
               </div>
             </div>
@@ -103,7 +103,7 @@ export default function ITVisitPortal() {
                 <img src="/vms-logo.png" alt="VMS Logo" />
               </div>
               <div className="public-brand-text">
-                <h1>Visitor Management</h1>
+                <h1>Visitor Management System</h1>
                 <p>IT Visitor Registration Portal</p>
               </div>
             </div>

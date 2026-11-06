@@ -197,6 +197,7 @@ body {
   font-weight: 600 !important;
   color: #64748b !important;
   letter-spacing: 0.2px !important;
+  white-space: nowrap !important;
 }
 
 /* Middle Navigation Scrollable Area */
@@ -7276,7 +7277,7 @@ html[data-theme="dark"] body .preapproval-create-card .form-field textarea,
 html[data-theme="dark"] body .form-field input,
 html[data-theme="dark"] body .form-field select,
 html[data-theme="dark"] body .form-field textarea,
-html[data-theme="dark"] body input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] body input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 html[data-theme="dark"] body select,
 html[data-theme="dark"] body textarea,
 html.dark body .preapproval-create-card .form-field input,
@@ -7285,10 +7286,10 @@ html.dark body .preapproval-create-card .form-field textarea,
 html.dark body .form-field input,
 html.dark body .form-field select,
 html.dark body .form-field textarea,
-html.dark body input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input),
+html.dark body input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 html.dark body select,
 html.dark body textarea,
-[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input),
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 [data-theme="dark"] select,
 [data-theme="dark"] textarea {
   background: #111827 !important;
@@ -9205,13 +9206,13 @@ html.dark body .vms-settings-btn-logout,
 
 /* A. Universal Form Elements in Dark Theme */
 html[data-theme="dark"] select,
-html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]),
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 html[data-theme="dark"] textarea,
 html.dark select,
-html.dark input:not([type="checkbox"]):not([type="radio"]),
+html.dark input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 html.dark textarea,
 [data-theme="dark"] select,
-[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input),
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 [data-theme="dark"] textarea {
   background: #111827 !important;
   color: #f1f5f9 !important;
@@ -10064,31 +10065,31 @@ html.dark .it-btn-more-options:hover {
    ========================================================================== */
 
 /* 1. UNIVERSAL INPUTS & CONTROLS ACROSS ALL PAGES & MODALS (EXCLUDING PUBLIC REGISTRATION) */
-html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input,
+html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input:not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) select,
 html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) textarea,
-html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="text"]:not(.login-input-wrap input),
+html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="text"]:not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="date"],
 html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="datetime-local"],
 html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="time"],
-html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="search"],
-html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="tel"],
-html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="email"]:not(.login-input-wrap input),
-html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="number"],
+html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="search"]:not(.search-field input):not([class*="search"] input),
+html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="tel"]:not(.search-field input):not([class*="search"] input),
+html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="email"]:not(.login-input-wrap input):not(.search-field input):not([class*="search"] input),
+html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="number"]:not(.search-field input):not([class*="search"] input),
 html[data-theme="dark"] body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="password"]:not(.login-input-wrap input),
-html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input,
+html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input:not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) select,
 html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) textarea,
-html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="text"]:not(.login-input-wrap input),
+html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="text"]:not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="date"],
 html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="datetime-local"],
 html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="time"],
-html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="search"],
-html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="tel"],
-html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="email"]:not(.login-input-wrap input),
-html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="number"],
+html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="search"]:not(.search-field input):not([class*="search"] input),
+html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="tel"]:not(.search-field input):not([class*="search"] input),
+html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="email"]:not(.login-input-wrap input):not(.search-field input):not([class*="search"] input),
+html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="number"]:not(.search-field input):not([class*="search"] input),
 html.dark body:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input[type="password"]:not(.login-input-wrap input),
-[data-theme="dark"]:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input,
+[data-theme="dark"]:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) input:not(.login-input-wrap input):not(.search-field input):not(.notif-search-field input):not(.ch-search-input):not(.ch-search-box input):not(.sgp-search-box input):not(.sgp-search-input-wrap input):not([class*="search"] input):not([class*="Search"] input):not(.vms-search-box-input),
 [data-theme="dark"]:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) select,
 [data-theme="dark"]:not(:has(.public-page)):not(:has(.public-card)):not(:has(.login-page)) textarea {
   background-color: #111827 !important;
@@ -15118,6 +15119,27 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
         height: auto !important;
       }
 
+      /* In print/PDF: suppress phone card layout, display official A4 clearance certificate */
+      body .mobile-technician-dossier,
+      body .it-asset-modal-inner .mobile-technician-dossier {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        max-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+      }
+
+      body .has-mobile-dossier .it-dossier-desktop-view,
+      body .ch-dossier-overlay .it-dossier-desktop-view,
+      body .it-asset-modal-inner .it-dossier-desktop-view {
+        display: block !important;
+        visibility: visible !important;
+        width: 100% !important;
+        max-width: 100% !important;
+      }
+
       /* Printable Header */
       .vms-dossier-print-header {
         display: block !important;
@@ -15234,9 +15256,30 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
         margin-bottom: 4px !important;
       }
 
+      .it-asset-cat-pill,
       .it-asset-cat-box {
         flex: 1 !important;
-        padding: 3px 6px !important;
+        padding: 4px 6px !important;
+        font-size: 8pt !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        box-sizing: border-box !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 6px !important;
+        background: #ffffff !important;
+      }
+
+      .it-asset-cat-header {
+        display: flex !important;
+        align-items: center !important;
+        gap: 4px !important;
+        font-size: 7.5pt !important;
+      }
+
+      .it-asset-cat-count {
+        font-weight: 700 !important;
+        font-size: 8.5pt !important;
       }
 
       .it-asset-item-card {
@@ -18287,36 +18330,62 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
         box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25) !important;
       }
 
-      /* 8. Search Field (Right Aligned, Clean Width) */
+      /* 8. Search Field (Right Aligned, Spacious & Clean) */
       html:not([data-theme="dark"]):not(.dark) body .vms-desktop-only .notif-search-field,
       body .vms-desktop-only .notif-search-field {
         display: flex !important;
         flex-direction: row !important;
         align-items: center !important;
-        gap: 8px !important;
-        width: 250px !important;
-        min-width: 210px !important;
-        max-width: 300px !important;
-        height: 36px !important;
+        gap: 10px !important;
+        width: 360px !important;
+        min-width: 280px !important;
+        max-width: 440px !important;
+        height: 40px !important;
         background: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
-        border-radius: 8px !important;
-        padding: 0 10px !important;
-        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        border: 1.5px solid #cbd5e1 !important;
+        border-radius: 10px !important;
+        padding: 0 14px !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05) !important;
         box-sizing: border-box !important;
         margin: 0 !important;
         margin-left: auto !important;
         flex-shrink: 0 !important;
+        transition: all 0.18s ease !important;
+      }
+
+      body .vms-desktop-only .notif-search-field:hover {
+        border-color: #94a3b8 !important;
       }
 
       body .vms-desktop-only .notif-search-field:focus-within {
         border-color: #2563eb !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15), 0 1px 3px rgba(15, 23, 42, 0.05) !important;
       }
 
       body .vms-desktop-only .notif-search-field input {
-        font-size: 12.5px !important;
+        font-size: 13.5px !important;
+        font-weight: 500 !important;
         color: #0f172a !important;
+        width: 100% !important;
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        padding: 0 !important;
+      }
+
+      body .vms-desktop-only .notif-search-field input::placeholder {
+        color: #94a3b8 !important;
+        font-size: 13px !important;
+        font-weight: 400 !important;
+      }
+
+      body .vms-desktop-only .notif-search-field svg {
+        color: #64748b !important;
+        flex-shrink: 0 !important;
+      }
+
+      body .vms-desktop-only .notif-search-field:focus-within svg {
+        color: #2563eb !important;
       }
 
       /* 9. Dark Mode Overrides for Desktop IT Notifications */
@@ -18379,14 +18448,95 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
       html[data-theme="dark"] body .vms-desktop-only .notif-search-field,
       html.dark body .vms-desktop-only .notif-search-field,
       [data-theme="dark"] .vms-desktop-only .notif-search-field {
-        background: #1e293b !important;
-        border-color: #334155 !important;
+        background: #111827 !important;
+        border: 1.5px solid #334155 !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+      }
+
+      html[data-theme="dark"] body .vms-desktop-only .notif-search-field:hover,
+      html.dark body .vms-desktop-only .notif-search-field:hover,
+      [data-theme="dark"] .vms-desktop-only .notif-search-field:hover {
+        border-color: #475569 !important;
+      }
+
+      html[data-theme="dark"] body .vms-desktop-only .notif-search-field:focus-within,
+      html.dark body .vms-desktop-only .notif-search-field:focus-within,
+      [data-theme="dark"] .vms-desktop-only .notif-search-field:focus-within {
+        background: #0f172a !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
       }
 
       html[data-theme="dark"] body .vms-desktop-only .notif-search-field input,
       html.dark body .vms-desktop-only .notif-search-field input,
       [data-theme="dark"] .vms-desktop-only .notif-search-field input {
         color: #ffffff !important;
+      }
+
+      html[data-theme="dark"] body .vms-desktop-only .notif-search-field input::placeholder,
+      html.dark body .vms-desktop-only .notif-search-field input::placeholder,
+      [data-theme="dark"] .vms-desktop-only .notif-search-field input::placeholder {
+        color: #64748b !important;
+      }
+
+      html[data-theme="dark"] body .vms-desktop-only .notif-search-field svg,
+      html.dark body .vms-desktop-only .notif-search-field svg,
+      [data-theme="dark"] .vms-desktop-only .notif-search-field svg {
+        color: #94a3b8 !important;
+      }
+
+      html[data-theme="dark"] body .vms-desktop-only .notif-search-field:focus-within svg,
+      html.dark body .vms-desktop-only .notif-search-field:focus-within svg,
+      [data-theme="dark"] .vms-desktop-only .notif-search-field:focus-within svg {
+        color: #3b82f6 !important;
+      }
+
+      /* Workable Notification Stat Cards (Pointer, Hover, & Active Ring) */
+      .notif-stat-card {
+        cursor: pointer !important;
+        user-select: none !important;
+        transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease !important;
+        position: relative !important;
+      }
+
+      .notif-stat-card:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08) !important;
+      }
+
+      .notif-stat-card.active {
+        border-color: #2563eb !important;
+        background: #f8faff !important;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.22), 0 4px 14px rgba(37, 99, 235, 0.1) !important;
+      }
+
+      /* Dark Mode Stat Card Active / Hover */
+      html[data-theme="dark"] body .notif-stat-card:hover,
+      html.dark body .notif-stat-card:hover,
+      [data-theme="dark"] .notif-stat-card:hover {
+        transform: translateY(-2px) !important;
+        border-color: #475569 !important;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4) !important;
+      }
+
+      html[data-theme="dark"] body .notif-stat-card.active,
+      html.dark body .notif-stat-card.active,
+      [data-theme="dark"] .notif-stat-card.active {
+        border-color: #3b82f6 !important;
+        background: #1e293b !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35), 0 4px 18px rgba(0, 0, 0, 0.45) !important;
+      }
+
+      /* Mobile Stat Card Active state */
+      .mobile-visitor-notif-stat-card {
+        cursor: pointer !important;
+        user-select: none !important;
+        transition: all 0.18s ease !important;
+      }
+
+      .mobile-visitor-notif-stat-card.active {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3) !important;
       }
     }
 
@@ -24610,7 +24760,7 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
    MOBILE IT PERSONNEL DOSSIER & HARDWARE CLEARANCE OVERRIDES
    Exact layout matching user reference media_1793448988959_89e0f7d8.png
    ========================================================================== */
-    @media (max-width: 768px) {
+    @media screen and (max-width: 768px) {
 
       /* Hide the top view mode switcher pills entirely on mobile */
       body .it-asset-view-switcher-bar,
@@ -24659,6 +24809,13 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
         max-width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
+      }
+
+      /* When mobile technician dossier is active on mobile screen, hide desktop view completely */
+      body .has-mobile-dossier .it-dossier-desktop-view,
+      body .ch-dossier-overlay .it-dossier-desktop-view,
+      body .it-asset-modal-inner:has(.mobile-technician-dossier) .it-dossier-desktop-view {
+        display: none !important;
       }
 
       /* Main Dossier Card */
@@ -25332,3 +25489,396 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
         margin-top: 4px !important;
       }
     }
+
+
+/* ==========================================================================
+   UNIVERSAL VMS CLEAN SEARCH BOX SYSTEM (SIMPLE, MODERN, ZERO INNER BORDERS)
+   Applied cleanly across the entire VMS for both Light & Dark modes
+   ========================================================================== */
+
+/* 1. Outer Search Field Containers */
+body .search-field,
+body .notif-search-field,
+body .ch-search-box,
+body .sgp-search-input-wrap,
+body .visitor-toolbar-actions .search-field,
+body .table-toolbar .search-field,
+body .hosts-toolbar .search-field,
+body .preapprovals-toolbar .search-field,
+body .directory-toolbar .search-field,
+body .it-search-field-executive {
+  width: 360px !important;
+  min-width: 280px !important;
+  max-width: 100% !important;
+  height: 38px !important;
+  min-height: 38px !important;
+  border-radius: 8px !important;
+  padding: 0 12px !important;
+  gap: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease !important;
+}
+
+/* Light Theme Container */
+html:not([data-theme="dark"]):not(.dark) body .search-field,
+html:not([data-theme="dark"]):not(.dark) body .notif-search-field,
+html:not([data-theme="dark"]):not(.dark) body .ch-search-box,
+html:not([data-theme="dark"]):not(.dark) body .sgp-search-input-wrap,
+html:not([data-theme="dark"]):not(.dark) body .visitor-toolbar-actions .search-field,
+html:not([data-theme="dark"]):not(.dark) body .table-toolbar .search-field,
+html:not([data-theme="dark"]):not(.dark) body .it-search-field-executive {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html:not([data-theme="dark"]):not(.dark) body .search-field:hover,
+html:not([data-theme="dark"]):not(.dark) body .notif-search-field:hover,
+html:not([data-theme="dark"]):not(.dark) body .ch-search-box:hover,
+html:not([data-theme="dark"]):not(.dark) body .sgp-search-input-wrap:hover,
+html:not([data-theme="dark"]):not(.dark) body .visitor-toolbar-actions .search-field:hover,
+html:not([data-theme="dark"]):not(.dark) body .table-toolbar .search-field:hover {
+  border-color: #94a3b8 !important;
+}
+
+html:not([data-theme="dark"]):not(.dark) body .search-field:focus-within,
+html:not([data-theme="dark"]):not(.dark) body .notif-search-field:focus-within,
+html:not([data-theme="dark"]):not(.dark) body .ch-search-box:focus-within,
+html:not([data-theme="dark"]):not(.dark) body .sgp-search-input-wrap:focus-within,
+html:not([data-theme="dark"]):not(.dark) body .visitor-toolbar-actions .search-field:focus-within,
+html:not([data-theme="dark"]):not(.dark) body .table-toolbar .search-field:focus-within {
+  border-color: #e43b24 !important;
+  box-shadow: 0 0 0 2px rgba(228, 59, 36, 0.15) !important;
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+/* Dark Theme Container */
+html[data-theme="dark"] body .search-field,
+html[data-theme="dark"] body .notif-search-field,
+html[data-theme="dark"] body .ch-search-box,
+html[data-theme="dark"] body .sgp-search-input-wrap,
+html[data-theme="dark"] body .visitor-toolbar-actions .search-field,
+html[data-theme="dark"] body .table-toolbar .search-field,
+html[data-theme="dark"] body .it-search-field-executive,
+html.dark body .search-field,
+html.dark body .notif-search-field,
+html.dark body .ch-search-box,
+html.dark body .sgp-search-input-wrap,
+html.dark body .visitor-toolbar-actions .search-field,
+html.dark body .table-toolbar .search-field,
+html.dark body .it-search-field-executive,
+[data-theme="dark"] .search-field,
+[data-theme="dark"] .notif-search-field,
+[data-theme="dark"] .ch-search-box,
+[data-theme="dark"] .sgp-search-input-wrap {
+  background: #111827 !important;
+  background-color: #111827 !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+}
+
+html[data-theme="dark"] body .search-field:hover,
+html[data-theme="dark"] body .notif-search-field:hover,
+html[data-theme="dark"] body .ch-search-box:hover,
+html[data-theme="dark"] body .sgp-search-input-wrap:hover,
+html[data-theme="dark"] body .visitor-toolbar-actions .search-field:hover,
+html[data-theme="dark"] body .table-toolbar .search-field:hover,
+html.dark body .search-field:hover,
+html.dark body .notif-search-field:hover,
+html.dark body .ch-search-box:hover,
+html.dark body .sgp-search-input-wrap:hover,
+html.dark body .visitor-toolbar-actions .search-field:hover,
+html.dark body .table-toolbar .search-field:hover,
+[data-theme="dark"] .search-field:hover,
+[data-theme="dark"] .notif-search-field:hover,
+[data-theme="dark"] .ch-search-box:hover,
+[data-theme="dark"] .sgp-search-input-wrap:hover {
+  border-color: #475569 !important;
+}
+
+html[data-theme="dark"] body .search-field:focus-within,
+html[data-theme="dark"] body .notif-search-field:focus-within,
+html[data-theme="dark"] body .ch-search-box:focus-within,
+html[data-theme="dark"] body .sgp-search-input-wrap:focus-within,
+html[data-theme="dark"] body .visitor-toolbar-actions .search-field:focus-within,
+html[data-theme="dark"] body .table-toolbar .search-field:focus-within,
+html.dark body .search-field:focus-within,
+html.dark body .notif-search-field:focus-within,
+html.dark body .ch-search-box:focus-within,
+html.dark body .sgp-search-input-wrap:focus-within,
+html.dark body .visitor-toolbar-actions .search-field:focus-within,
+html.dark body .table-toolbar .search-field:focus-within,
+[data-theme="dark"] .search-field:focus-within,
+[data-theme="dark"] .notif-search-field:focus-within,
+[data-theme="dark"] .ch-search-box:focus-within,
+[data-theme="dark"] .sgp-search-input-wrap:focus-within {
+  border-color: #e43b24 !important;
+  box-shadow: 0 0 0 2px rgba(228, 59, 36, 0.25) !important;
+  background: #0b1120 !important;
+  background-color: #0b1120 !important;
+}
+
+/* 2. Universal Search Icon */
+body .search-field svg,
+body .notif-search-field svg,
+body .ch-search-box svg,
+body .sgp-search-input-wrap svg,
+body .visitor-toolbar-actions .search-field svg,
+body .table-toolbar .search-field svg {
+  color: #64748b !important;
+  flex-shrink: 0 !important;
+  width: 14px !important;
+  height: 14px !important;
+  transition: color 0.15s ease !important;
+}
+
+body .search-field:focus-within svg,
+body .notif-search-field:focus-within svg,
+body .ch-search-box:focus-within svg,
+body .sgp-search-input-wrap:focus-within svg,
+body .visitor-toolbar-actions .search-field:focus-within svg,
+body .table-toolbar .search-field:focus-within svg {
+  color: #e43b24 !important;
+}
+
+/* 3. Universal Search Input (100% CLEAN: ZERO INNER BORDER, ZERO INNER BACKGROUND) */
+body .search-field input,
+body .notif-search-field input,
+body .ch-search-box input,
+body .ch-search-input,
+body .sgp-search-input-wrap input,
+body .visitor-toolbar-actions .search-field input,
+body .table-toolbar .search-field input,
+body .hosts-toolbar .search-field input,
+body .preapprovals-toolbar .search-field input,
+body .directory-toolbar .search-field input,
+body .it-search-field-executive input,
+html[data-theme="dark"] body .search-field input,
+html[data-theme="dark"] body .notif-search-field input,
+html[data-theme="dark"] body .ch-search-box input,
+html[data-theme="dark"] body .ch-search-input,
+html[data-theme="dark"] body .sgp-search-input-wrap input,
+html[data-theme="dark"] body .visitor-toolbar-actions .search-field input,
+html[data-theme="dark"] body .table-toolbar .search-field input,
+html[data-theme="dark"] body .hosts-toolbar .search-field input,
+html[data-theme="dark"] body .preapprovals-toolbar .search-field input,
+html[data-theme="dark"] body .it-search-field-executive input,
+html.dark body .search-field input,
+html.dark body .notif-search-field input,
+html.dark body .ch-search-box input,
+html.dark body .ch-search-input,
+html.dark body .sgp-search-input-wrap input,
+html.dark body .visitor-toolbar-actions .search-field input,
+html.dark body .table-toolbar .search-field input,
+html.dark body .hosts-toolbar .search-field input,
+html.dark body .preapprovals-toolbar .search-field input,
+html.dark body .it-search-field-executive input,
+[data-theme="dark"] .search-field input,
+[data-theme="dark"] .notif-search-field input,
+[data-theme="dark"] .ch-search-box input,
+[data-theme="dark"] .ch-search-input,
+[data-theme="dark"] .sgp-search-input-wrap input {
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  border: none !important;
+  border-width: 0 !important;
+  border-style: none !important;
+  border-color: transparent !important;
+  outline: none !important;
+  outline-width: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border-radius: 0 !important;
+  font-size: 13.5px !important;
+  font-family: inherit !important;
+  font-weight: 400 !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  line-height: normal !important;
+}
+
+/* Light theme input text & placeholder */
+html:not([data-theme="dark"]):not(.dark) body .search-field input,
+html:not([data-theme="dark"]):not(.dark) body .notif-search-field input,
+html:not([data-theme="dark"]):not(.dark) body .ch-search-box input,
+html:not([data-theme="dark"]):not(.dark) body .sgp-search-input-wrap input {
+  color: #0f172a !important;
+}
+
+html:not([data-theme="dark"]):not(.dark) body .search-field input::placeholder,
+html:not([data-theme="dark"]):not(.dark) body .notif-search-field input::placeholder,
+html:not([data-theme="dark"]):not(.dark) body .ch-search-box input::placeholder,
+html:not([data-theme="dark"]):not(.dark) body .sgp-search-input-wrap input::placeholder {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+  opacity: 1 !important;
+}
+
+/* Dark theme input text & placeholder */
+html[data-theme="dark"] body .search-field input,
+html[data-theme="dark"] body .notif-search-field input,
+html[data-theme="dark"] body .ch-search-box input,
+html[data-theme="dark"] body .sgp-search-input-wrap input,
+html.dark body .search-field input,
+html.dark body .notif-search-field input,
+html.dark body .ch-search-box input,
+html.dark body .sgp-search-input-wrap input,
+[data-theme="dark"] .search-field input,
+[data-theme="dark"] .notif-search-field input,
+[data-theme="dark"] .ch-search-box input,
+[data-theme="dark"] .sgp-search-input-wrap input {
+  color: #f8fafc !important;
+}
+
+html[data-theme="dark"] body .search-field input::placeholder,
+html[data-theme="dark"] body .notif-search-field input::placeholder,
+html[data-theme="dark"] body .ch-search-box input::placeholder,
+html[data-theme="dark"] body .sgp-search-input-wrap input::placeholder,
+html.dark body .search-field input::placeholder,
+html.dark body .notif-search-field input::placeholder,
+html.dark body .ch-search-box input::placeholder,
+html.dark body .sgp-search-input-wrap input::placeholder,
+[data-theme="dark"] .search-field input::placeholder,
+[data-theme="dark"] .notif-search-field input::placeholder,
+[data-theme="dark"] .ch-search-box input::placeholder,
+[data-theme="dark"] .sgp-search-input-wrap input::placeholder {
+  color: #64748b !important;
+  font-size: 13px !important;
+  opacity: 1 !important;
+}
+
+/* 4. Clear Button inside search fields */
+body .search-field button,
+body .notif-search-field button,
+body .ch-search-box button,
+body .clear-search-btn,
+body .notif-search-clear,
+body .ch-search-clear {
+  background: transparent !important;
+  border: none !important;
+  padding: 4px !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  color: #94a3b8 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  transition: all 0.15s ease !important;
+  flex-shrink: 0 !important;
+  width: 22px !important;
+  height: 22px !important;
+}
+
+body .search-field button:hover,
+body .notif-search-field button:hover,
+body .ch-search-box button:hover,
+body .clear-search-btn:hover,
+body .notif-search-clear:hover,
+body .ch-search-clear:hover {
+  color: #e43b24 !important;
+  background: rgba(228, 59, 36, 0.1) !important;
+}
+
+/* 5. Companion Refresh Button (Clean, Uniform 38px matching search box) */
+body .it-refresh-btn,
+body .refresh-button,
+body button.it-refresh-btn,
+body button.refresh-button {
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  border-radius: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  cursor: pointer !important;
+  box-sizing: border-box !important;
+  transition: all 0.15s ease !important;
+}
+
+/* Refresh button Light Theme */
+html:not([data-theme="dark"]):not(.dark) body .it-refresh-btn,
+html:not([data-theme="dark"]):not(.dark) body .refresh-button,
+html:not([data-theme="dark"]):not(.dark) body button.it-refresh-btn,
+html:not([data-theme="dark"]):not(.dark) body button.refresh-button {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #475569 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+html:not([data-theme="dark"]):not(.dark) body .it-refresh-btn:hover:not(:disabled),
+html:not([data-theme="dark"]):not(.dark) body .refresh-button:hover:not(:disabled) {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+}
+
+/* Refresh button Dark Theme */
+html[data-theme="dark"] body .it-refresh-btn,
+html[data-theme="dark"] body .refresh-button,
+html[data-theme="dark"] body button.it-refresh-btn,
+html[data-theme="dark"] body button.refresh-button,
+html.dark body .it-refresh-btn,
+html.dark body .refresh-button,
+html.dark body button.it-refresh-btn,
+html.dark body button.refresh-button,
+[data-theme="dark"] .it-refresh-btn,
+[data-theme="dark"] .refresh-button {
+  background: #111827 !important;
+  background-color: #111827 !important;
+  border: 1px solid #334155 !important;
+  color: #cbd5e1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25) !important;
+}
+
+html[data-theme="dark"] body .it-refresh-btn:hover:not(:disabled),
+html[data-theme="dark"] body .refresh-button:hover:not(:disabled),
+html.dark body .it-refresh-btn:hover:not(:disabled),
+html.dark body .refresh-button:hover:not(:disabled),
+[data-theme="dark"] .it-refresh-btn:hover:not(:disabled),
+[data-theme="dark"] .refresh-button:hover:not(:disabled) {
+  background: #1e293b !important;
+  border-color: #475569 !important;
+  color: #ffffff !important;
+}
+
+body .it-refresh-btn:active,
+body .refresh-button:active {
+  transform: scale(0.96) !important;
+}
+
+/* 6. Toolbar Alignment */
+body .visitor-toolbar-actions,
+body .table-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* 7. Mobile Media Query Override: Clean 100% width on phones */
+@media (max-width: 768px) {
+  body .visitor-toolbar-actions .search-field,
+  body .table-toolbar .search-field,
+  body .search-field,
+  body .notif-search-field,
+  body .ch-search-box {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 1 auto !important;
+  }
+}

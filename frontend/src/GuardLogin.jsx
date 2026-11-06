@@ -16,6 +16,7 @@ import {
   Sun,
   Moon,
   User,
+  ClipboardCheck,
 } from "lucide-react";
 import "./GuardLogin.css";
 import { authStorage } from "./utils/authStorage";
@@ -122,15 +123,25 @@ export default function GuardLogin({ onLogin }) {
 
           {/* Right Header Status Pill & Controls */}
           <div className="gt-header-actions">
-            <div className="gt-terminal-pill">
+            <div className="gt-terminal-pill gt-desktop-only">
               <ShieldCheck size={14} className="gt-pill-icon" />
+              <span>Gate Terminal</span>
+            </div>
+
+            {/* Mobile Header Badge (Gate Terminal) */}
+            <div className="gt-mobile-header-badge gt-mobile-only">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="gt-mob-turnstile-icon">
+                <rect x="3" y="5" width="6" height="14" rx="2" />
+                <rect x="15" y="5" width="6" height="14" rx="2" />
+                <line x1="9" y1="12" x2="15" y2="12" />
+              </svg>
               <span>Gate Terminal</span>
             </div>
 
             {/* Subtle Theme Toggle */}
             <button
               type="button"
-              className="gt-theme-toggle-btn"
+              className="gt-theme-toggle-btn gt-desktop-only"
               onClick={toggleTheme}
               title={theme === "dark" ? "Switch to Light Mode" : "Switch to Dark Mode"}
               aria-label="Toggle theme"
@@ -141,7 +152,7 @@ export default function GuardLogin({ onLogin }) {
             {/* Mobile Hamburger Button */}
             <button
               type="button"
-              className="gt-mobile-menu-trigger"
+              className="gt-mobile-menu-trigger gt-desktop-only"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-label="Toggle navigation menu"
             >
@@ -256,24 +267,37 @@ export default function GuardLogin({ onLogin }) {
                     <img src="/vms-logo.png" alt="VMS Logo" className="gt-mob-card-logo" />
                     <span className="gt-mob-card-brand-name">VMS</span>
                   </div>
-                  <div className="gt-mob-card-system-title">Visitor Management System</div>
-                  <div className="gt-mob-card-terminal-badge">Gate Terminal</div>
+                  <h2 className="gt-mob-card-system-title">Gate Terminal Access</h2>
+                  <p className="gt-mob-card-system-sub">Security Guard Kiosk · Optical Pass Clearance</p>
+                  <div className="gt-mob-card-red-bar" />
                 </div>
 
-                <div className="gt-mob-card-intro">
-                  <h2 className="gt-mob-card-signin-title">Sign In</h2>
-                  <p className="gt-mob-card-signin-desc">
-                    Access the gate terminal to manage visitor entry and exit.
+                <div className="gt-mob-operator-wrap">
+                  <div className="gt-mob-operator-title-row">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0b1b3b" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className="gt-mob-operator-icon">
+                      <path d="M3 13.5c2.5 1 5.5 1.5 9 1.5s6.5-.5 9-1.5" />
+                      <path d="M4.2 13.5l1.1-4.8c.7-3.2 3.4-5.2 6.7-5.2s6 2 6.7 5.2l1.1 4.8" />
+                      <path d="M2.5 15C4.5 17.5 8 18.5 12 18.5s7.5-1 9.5-3.5" />
+                      <circle cx="12" cy="8.5" r="1.5" fill="#0b1b3b" />
+                    </svg>
+                    <h3 className="gt-mob-operator-heading">Operator Login</h3>
+                  </div>
+                  <p className="gt-mob-operator-desc">
+                    Sign in to access the gate terminal.
                   </p>
                 </div>
               </div>
 
               {/* Form with Clean Search-Box Inputs */}
               <form onSubmit={handleSubmit} className="gt-login-form">
+                {/* Mobile Label 1 */}
+                <label className="gt-mob-input-label gt-mobile-only" htmlFor="gt-email-mob">
+                  Guard Email / ID
+                </label>
                 {/* Search Box 1: Guard Email / User ID */}
                 <div className="gt-search-box-wrap">
                   <span className="gt-input-icon-desktop"><Mail size={16} className="gt-search-box-icon" /></span>
-                  <span className="gt-input-icon-mobile"><User size={16} className="gt-search-box-icon" /></span>
+                  <span className="gt-input-icon-mobile"><Mail size={16} className="gt-search-box-icon" /></span>
                   <input
                     id="gt-email"
                     type="text"
@@ -289,15 +313,19 @@ export default function GuardLogin({ onLogin }) {
                     id="gt-email-mob"
                     type="text"
                     className="gt-search-box-input gt-mobile-input"
-                    placeholder="User ID / Email"
+                    placeholder="Enter guard email or ID"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="username"
-                    aria-label="User ID or Email"
+                    aria-label="Guard Email or ID"
                   />
                 </div>
 
+                {/* Mobile Label 2 */}
+                <label className="gt-mob-input-label gt-mobile-only" htmlFor="gt-password-mob">
+                  Security Password
+                </label>
                 {/* Search Box 2: Security Password */}
                 <div className="gt-search-box-wrap">
                   <LockKeyhole size={16} className="gt-search-box-icon" />
@@ -316,12 +344,12 @@ export default function GuardLogin({ onLogin }) {
                     id="gt-password-mob"
                     type={showPassword ? "text" : "password"}
                     className="gt-search-box-input gt-password-input gt-mobile-input"
-                    placeholder="Password"
+                    placeholder="Enter your security password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete="current-password"
-                    aria-label="Password"
+                    aria-label="Security Password"
                   />
                   <button
                     type="button"
@@ -360,7 +388,7 @@ export default function GuardLogin({ onLogin }) {
                         <ArrowRight size={16} strokeWidth={2.2} className="gt-btn-arrow" />
                       </span>
                       <span className="gt-btn-content-mobile">
-                        <span className="gt-btn-text">Sign In to Gate</span>
+                        <span className="gt-btn-text">Access Guard Station</span>
                         <ArrowRight size={16} strokeWidth={2.2} className="gt-btn-arrow" />
                       </span>
                     </>
@@ -375,8 +403,37 @@ export default function GuardLogin({ onLogin }) {
               </div>
               <div className="gt-card-security-note gt-mobile-only">
                 <ShieldCheck size={14} className="gt-note-shield" />
-                <span>Protected by Role-Based Access Control (RBAC)</span>
+                <span>Authenticated Officer Access · RBAC Protected</span>
               </div>
+            </div>
+
+            {/* Quick Actions (Mobile Viewport Only) */}
+            <div className="gt-mobile-quick-actions gt-mobile-only">
+              <div className="gt-quick-action-item">
+                <div className="gt-quick-action-icon">
+                  <Scan size={20} color="#ed202b" strokeWidth={2.2} />
+                </div>
+                <span className="gt-quick-action-text">Scan Pass</span>
+              </div>
+              <div className="gt-quick-action-divider" />
+              <div className="gt-quick-action-item">
+                <div className="gt-quick-action-icon">
+                  <ClipboardCheck size={20} color="#ed202b" strokeWidth={2.2} />
+                </div>
+                <span className="gt-quick-action-text">Verify Visit</span>
+              </div>
+              <div className="gt-quick-action-divider" />
+              <div className="gt-quick-action-item">
+                <div className="gt-quick-action-icon">
+                  <Package size={20} color="#ed202b" strokeWidth={2.2} />
+                </div>
+                <span className="gt-quick-action-text">Asset Clearance</span>
+              </div>
+            </div>
+
+            {/* Mobile Centered Footer (Mobile Viewport Only) */}
+            <div className="gt-mobile-page-footer gt-mobile-only">
+              © VMS – Visitor Management System
             </div>
           </div>
 

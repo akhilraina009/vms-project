@@ -472,6 +472,7 @@ async def verify_visitor_pass(
         )
 
     now = datetime.utcnow()
+    is_expired = False
 
     # Handle timezone-aware database timestamps safely.
     if pass_record and pass_record.expires_at:
@@ -479,14 +480,23 @@ async def verify_visitor_pass(
         if expires_at.tzinfo is not None:
             expires_at = expires_at.replace(tzinfo=None)
 
-        # Allow actively on-site visitors to verify their pass for gate departure check-out
-        if expires_at <= now and visit.status != "ACTIVE":
-            raise HTTPException(
-                status_code=410,
-                detail="Visitor pass has expired.",
-            )
+        # If visit is APPROVED or ACTIVE, ensure pass validity extends through current operations
+        if visit.status in ["ACTIVE", "APPROVED"]:
+            if expires_at <= now:
+                expires_at = now + timedelta(days=2)
+                try:
+                    pass_record.expires_at = expires_at
+                    await db.commit()
+                except Exception:
+                    pass
+        elif expires_at <= now and visit.status != "CHECKED_OUT":
+            is_expired = True
     else:
-        expires_at = visit.expected_out_time or (datetime.utcnow() + timedelta(days=1))
+        expires_at = visit.expected_out_time or (now + timedelta(days=1))
+        if expires_at and expires_at.tzinfo is not None:
+            expires_at = expires_at.replace(tzinfo=None)
+        if expires_at <= now and visit.status not in ["ACTIVE", "APPROVED", "CHECKED_OUT"]:
+            is_expired = True
 
     visitor_result = await db.execute(
         select(Visitor).where(
@@ -552,6 +562,11 @@ async def verify_visitor_pass(
         if pre_app.status in ["RESCHEDULED", "WAITING", "REJECTED", "APPROVED"]:
             live_status = pre_app.status
 
+    if live_status in ["ACTIVE", "APPROVED", "CHECKED_OUT"]:
+        is_expired = False
+    elif is_expired:
+        live_status = "EXPIRED"
+
     # Return visitor details, including live status, address, check_in_time
     return {
         "visit_id": str(visit.visit_id),
@@ -570,6 +585,7 @@ async def verify_visitor_pass(
         "host_department": host.department if host else "General",
         "purpose": visit.purpose,
         "status": live_status,
+        "is_expired": is_expired,
         "expected_in_time": expected_in_time,
         "check_in_time": visit.check_in_time,
         "expected_out_time": visit.expected_out_time,

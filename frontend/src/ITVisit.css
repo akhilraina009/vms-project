@@ -860,21 +860,39 @@
   margin: auto;
 }
 
-.it-asset-view-switcher-bar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.it-dossier-desktop-view {
+  width: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  margin: 0 auto !important;
+}
+
+.it-asset-view-switcher-bar,
+.it-dossier-desktop-view .it-asset-view-switcher-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   gap: 8px;
-  margin-bottom: 16px;
+  margin: 0 auto 16px auto !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  align-self: center !important;
   background: rgba(15, 23, 42, 0.88);
   padding: 6px 12px;
   border-radius: 30px;
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  width: fit-content;
+  width: fit-content !important;
   max-width: 100%;
   flex-wrap: wrap;
+}
+
+.it-dossier-desktop-view > div:not(.it-asset-view-switcher-bar) {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: center !important;
 }
 
 .it-asset-switcher-pill {
@@ -1848,7 +1866,7 @@ html.dark .it-asset-btn-toggle.retained.active,
   }
 }
 
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   /* Prevent background scroll when modal open */
   body:has(.it-asset-modal-overlay) {
     overflow: hidden !important;
@@ -2486,13 +2504,20 @@ html.dark .it-asset-btn-toggle.retained.active,
   }
 }
 
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   .it-dossier-desktop-view {
     display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  /* When mobile technician dossier is present (Checkout History), hide desktop view on screen */
+  .has-mobile-dossier .it-dossier-desktop-view,
+  .ch-dossier-overlay .it-dossier-desktop-view,
+  .it-asset-modal-inner:has(.mobile-technician-dossier) .it-dossier-desktop-view {
+    display: none !important;
   }
 
   .mobile-technician-dossier {
@@ -3712,7 +3737,7 @@ html.dark .mobile-btn-back {
 }
 
 /* Compact Mobile Screen Layout Adjustments */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   .mobile-technician-dossier {
     gap: 8px !important;
   }
@@ -3813,18 +3838,28 @@ html.dark .mobile-btn-back {
     border: none !important;
   }
 
-  /* Ensure Mobile Technician Dossier renders cleanly in print */
+  /* Suppress phone card UI in print/PDF - use official A4 clearance certificate */
   .mobile-technician-dossier,
-  body .mobile-technician-dossier {
+  body .mobile-technician-dossier,
+  .it-asset-modal-inner .mobile-technician-dossier {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Ensure official enterprise A4 clearance dossier renders in print */
+  .it-dossier-desktop-view,
+  body .it-dossier-desktop-view,
+  .ch-dossier-overlay .it-dossier-desktop-view,
+  .has-mobile-dossier .it-dossier-desktop-view {
     display: block !important;
     visibility: visible !important;
     width: 100% !important;
     max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: #ffffff !important;
-    color: #0f172a !important;
-    gap: 6px !important;
   }
 
   /* Show Print Certificate Header */
@@ -3951,7 +3986,7 @@ html.dark .mobile-btn-back {
    (Applied ONLY when viewport <= 768px, Desktop 100% untouched)
    ========================================================= */
 
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   .it-preapprovals-desktop-view,
   .it-visitors-desktop-view {
     display: none !important;
@@ -3965,7 +4000,7 @@ html.dark .mobile-btn-back {
   }
 }
 
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   body .stats-grid.stats-grid-6,
   body .stats-grid.stats-grid-4 {
     display: grid !important;
@@ -4511,7 +4546,7 @@ html.dark .mobile-btn-back {
    Supports Dark & Light Theme, Edge-to-Edge Fluidity, and Sticky Actions
    ========================================================================== */
 
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   /* Full-bleed native app modal overlay */
   .it-asset-modal-overlay.has-mobile-dossier {
     position: fixed !important;
@@ -4963,7 +4998,7 @@ html.dark .mobile-btn-back {
 /* ==========================================================================
    MOBILE IT PERSONNEL DOSSIER & HARDWARE CLEARANCE (Exact match for user ref)
    ========================================================================== */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   /* Hide the top view mode switcher pills entirely on mobile */
   .it-asset-view-switcher-bar,
   body .it-asset-view-switcher-bar,
@@ -5012,6 +5047,13 @@ html.dark .mobile-btn-back {
     max-width: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
+  }
+
+  /* When mobile technician dossier is present (Checkout History), hide desktop view on screen */
+  .has-mobile-dossier .it-dossier-desktop-view,
+  .ch-dossier-overlay .it-dossier-desktop-view,
+  .it-asset-modal-inner:has(.mobile-technician-dossier) .it-dossier-desktop-view {
+    display: none !important;
   }
 
   /* Main Dossier Card */
@@ -5687,7 +5729,7 @@ html.dark .mobile-btn-back {
 }
 
 /* Mobile & Tablet Scoped Responsive View */
-@media (max-width: 768px) {
+@media screen and (max-width: 768px) {
   /* 1. Modal Overlay & Natural Single Scroll (Anti-Trap) */
   .it-asset-modal-overlay,
   .it-asset-modal-overlay.has-mobile-dossier {
@@ -6355,5 +6397,76 @@ html.dark .mobile-btn-back {
     border-radius: 8px !important;
     font-size: 12.5px !important;
     font-weight: 700 !important;
+  }
+}
+
+/* ==========================================================================
+   DEFINITIVE MASTER PRINT & PDF RULES (A4 Official Dossier Certificate)
+   ========================================================================== */
+@media print {
+  /* 1. Never print mobile cards or buttons */
+  .mobile-technician-dossier,
+  body .mobile-technician-dossier,
+  .it-asset-modal-inner .mobile-technician-dossier,
+  .mobile-dossier-actions-bar,
+  .mobile-dossier-close-btn {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    max-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 2. Unconditionally render official enterprise dossier certificate */
+  html body .it-asset-modal-overlay .it-dossier-desktop-view,
+  html body .has-mobile-dossier .it-dossier-desktop-view,
+  html body .ch-dossier-overlay .it-dossier-desktop-view,
+  html body .it-asset-modal-inner .it-dossier-desktop-view,
+  html body .it-dossier-desktop-view,
+  body .it-dossier-desktop-view,
+  body .has-mobile-dossier .it-dossier-desktop-view,
+  body .ch-dossier-overlay .it-dossier-desktop-view,
+  body .it-asset-modal-inner .it-dossier-desktop-view,
+  .it-dossier-desktop-view {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  body .vms-dossier-modal,
+  .it-asset-modal-inner .vms-dossier-modal {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    background: #ffffff !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 3. Dual Hardware Tracker cards clean grid layout in print */
+  .it-asset-cards-wrapper,
+  .it-asset-cards-wrapper.it-dual-horizontal {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+    width: 100% !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .it-asset-tracker-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 1.5px solid #0f172a !important;
+    border-radius: 8px !important;
+    background: #ffffff !important;
+    padding: 6px 8px !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }

@@ -31,7 +31,7 @@ export default function ITPortalQRPage() {
             <img src="/vms-logo.png" alt="VMS Logo" />
           </span>
           <div>
-            <h1>Visitor Management</h1>
+            <h1>Visitor Management System</h1>
             <p>IT Department Gate Pass &amp; Registration</p>
           </div>
         </div>
