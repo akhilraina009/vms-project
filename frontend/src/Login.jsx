@@ -469,7 +469,7 @@ export default function Login({ onLogin }) {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                       autoComplete="username"
-                      className="vms-search-box-input"
+                      className="vms-search-box-input vms-login-input vms-input-field"
                       aria-label="Email address or User ID"
                     />
                   </div>
@@ -491,7 +491,7 @@ export default function Login({ onLogin }) {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       autoComplete="current-password"
-                      className="vms-search-box-input vms-password-input"
+                      className="vms-search-box-input vms-login-input vms-input-field vms-password-input"
                       aria-label="Security Password"
                     />
                     <button

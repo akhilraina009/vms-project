@@ -729,6 +729,76 @@
   box-shadow: 0 0 0 3px rgba(228, 59, 36, 0.15) !important;
 }
 
+/* Dark Mode Form Inputs for Login Card */
+html[data-theme="dark"] .vms-login-card .vms-search-input-wrap .vms-search-box-input,
+html[data-theme="dark"] .vms-login-card .vms-search-input-wrap .vms-login-input,
+html[data-theme="dark"] .vms-login-card .vms-search-input-wrap .vms-input-field,
+html[data-theme="dark"] .vms-search-input-wrap input[type="email"].vms-search-box-input,
+html[data-theme="dark"] .vms-search-input-wrap input[type="password"].vms-search-box-input,
+html[data-theme="dark"] .vms-search-input-wrap input[type="text"].vms-search-box-input,
+html[data-theme="dark"] .vms-login-card input,
+html.dark .vms-login-card .vms-search-input-wrap .vms-search-box-input,
+html.dark .vms-login-card .vms-search-input-wrap .vms-login-input,
+html.dark .vms-login-card .vms-search-input-wrap .vms-input-field,
+html.dark .vms-search-input-wrap input[type="email"].vms-search-box-input,
+html.dark .vms-search-input-wrap input[type="password"].vms-search-box-input,
+html.dark .vms-search-input-wrap input[type="text"].vms-search-box-input,
+html.dark .vms-login-card input,
+[data-theme="dark"] .vms-login-card .vms-search-input-wrap .vms-search-box-input,
+[data-theme="dark"] .vms-login-card input {
+  background: #111827 !important;
+  background-color: #111827 !important;
+  border: 1.5px solid #334155 !important;
+  color: #ffffff !important;
+  color-scheme: dark !important;
+  box-shadow: none !important;
+}
+
+html[data-theme="dark"] .vms-login-card .vms-search-input-wrap .vms-search-box-input::placeholder,
+html[data-theme="dark"] .vms-login-card .vms-search-input-wrap .vms-login-input::placeholder,
+html[data-theme="dark"] .vms-login-card .vms-input-field::placeholder,
+html[data-theme="dark"] .vms-search-input-wrap input.vms-search-box-input::placeholder,
+html[data-theme="dark"] .vms-login-card input::placeholder,
+html.dark .vms-login-card .vms-search-input-wrap .vms-search-box-input::placeholder,
+html.dark .vms-login-card .vms-search-input-wrap .vms-login-input::placeholder,
+html.dark .vms-login-card .vms-input-field::placeholder,
+html.dark .vms-search-input-wrap input.vms-search-box-input::placeholder,
+html.dark .vms-login-card input::placeholder,
+[data-theme="dark"] .vms-login-card input::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+html[data-theme="dark"] .vms-login-card .vms-search-input-wrap .vms-search-box-input:focus,
+html[data-theme="dark"] .vms-login-card .vms-search-input-wrap .vms-login-input:focus,
+html[data-theme="dark"] .vms-login-card .vms-input-field:focus,
+html[data-theme="dark"] .vms-search-input-wrap input.vms-search-box-input:focus,
+html[data-theme="dark"] .vms-login-card input:focus,
+html.dark .vms-login-card .vms-search-input-wrap .vms-search-box-input:focus,
+html.dark .vms-login-card .vms-search-input-wrap .vms-login-input:focus,
+html.dark .vms-login-card .vms-input-field:focus,
+html.dark .vms-search-input-wrap input.vms-search-box-input:focus,
+html.dark .vms-login-card input:focus,
+[data-theme="dark"] .vms-login-card input:focus {
+  border-color: #e43b24 !important;
+  box-shadow: 0 0 0 3px rgba(228, 59, 36, 0.25) !important;
+}
+
+/* Autofill dark mode styling */
+html[data-theme="dark"] .vms-login-card input:-webkit-autofill,
+html[data-theme="dark"] .vms-login-card input:-webkit-autofill:hover,
+html[data-theme="dark"] .vms-login-card input:-webkit-autofill:focus,
+html.dark .vms-login-card input:-webkit-autofill,
+html.dark .vms-login-card input:-webkit-autofill:hover,
+html.dark .vms-login-card input:-webkit-autofill:focus,
+[data-theme="dark"] .vms-login-card input:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #111827 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  box-shadow: 0 0 0 1000px #111827 inset !important;
+  transition: background-color 5000s ease-in-out 0s;
+  caret-color: #ffffff !important;
+}
+
 .vms-password-input-wrap .vms-password-input {
   padding-right: 42px !important;
 }
@@ -1520,19 +1590,31 @@ html.dark .vms-form-label {
 }
 
 html[data-theme="dark"] .vms-input-field,
-html.dark .vms-input-field {
-  background: #0b1120 !important;
+html.dark .vms-input-field,
+html[data-theme="dark"] .vms-login-card input,
+html.dark .vms-login-card input,
+[data-theme="dark"] .vms-login-card input {
+  background: #111827 !important;
+  background-color: #111827 !important;
+  border: 1.5px solid #334155 !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
+  color-scheme: dark !important;
 }
 
 html[data-theme="dark"] .vms-input-field::placeholder,
-html.dark .vms-input-field::placeholder {
+html.dark .vms-input-field::placeholder,
+html[data-theme="dark"] .vms-login-card input::placeholder,
+html.dark .vms-login-card input::placeholder,
+[data-theme="dark"] .vms-login-card input::placeholder {
   color: #64748b !important;
 }
 
 html[data-theme="dark"] .vms-input-field:focus,
-html.dark .vms-input-field:focus {
+html.dark .vms-input-field:focus,
+html[data-theme="dark"] .vms-login-card input:focus,
+html.dark .vms-login-card input:focus,
+[data-theme="dark"] .vms-login-card input:focus {
   border-color: #ef4444 !important;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.25) !important;
 }
