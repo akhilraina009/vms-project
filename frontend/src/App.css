@@ -9659,15 +9659,32 @@ button.refresh-button svg,
 }
 
 .vms-dossier-avatar-box img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  z-index: 2;
 }
 
 .vms-dossier-avatar-initials {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 32px;
   font-weight: 700;
   color: #64748b;
+  z-index: 1;
+}
+
+.vms-dossier-avatar-initials.hidden {
+  display: none !important;
 }
 
 .vms-dossier-change-photo-btn {

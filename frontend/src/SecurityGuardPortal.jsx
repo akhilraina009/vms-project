@@ -5284,13 +5284,12 @@ function SecurityGuardPortalInner({ currentUser, onLogout, authToken: propToken 
                                   onError={(e) => {
                                     e.currentTarget.style.display = "none";
                                     const fb = e.currentTarget.parentElement?.querySelector(".sgp-mob-dossier-avatar-initials");
-                                    if (fb) fb.style.display = "flex";
+                                    if (fb) fb.classList.remove("hidden");
                                   }}
                                 />
                               ) : null}
                               <span
-                                className="sgp-mob-dossier-avatar-initials"
-                                style={{ display: visitorPhotoUrl ? "none" : "flex" }}
+                                className={`sgp-mob-dossier-avatar-initials${visitorPhotoUrl ? " hidden" : ""}`}
                               >
                                 {getMonogram(visitorFullName)}
                               </span>

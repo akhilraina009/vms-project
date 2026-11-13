@@ -7274,17 +7274,16 @@ const renderVisitors = () => {
                               onError={(e) => {
                                 e.currentTarget.style.display = "none";
                                 const fallback = e.currentTarget.parentElement?.querySelector(".vms-dossier-avatar-initials");
-                                if (fallback) fallback.style.display = "flex";
+                                if (fallback) fallback.classList.remove("hidden");
                               }}
                               onLoad={(e) => {
                                 const fallback = e.currentTarget.parentElement?.querySelector(".vms-dossier-avatar-initials");
-                                if (fallback) fallback.style.display = "none";
+                                if (fallback) fallback.classList.add("hidden");
                               }}
                             />
                           ) : null}
                           <span
-                            className="vms-dossier-avatar-initials"
-                            style={{ display: dossierData.visitor?.photo_url ? "none" : "flex" }}
+                            className={`vms-dossier-avatar-initials${dossierData.visitor?.photo_url ? " hidden" : ""}`}
                           >
                             {getInitials(`${dossierData.visitor?.first_name || ""} ${dossierData.visitor?.last_name || ""}`)}
                           </span>
