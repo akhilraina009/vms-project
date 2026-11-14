@@ -12536,7 +12536,7 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
   /* C. Minimum 44x44 Touch Target Accessibility on Touch Devices */
   @media (max-width: 768px) {
 
-    button,
+    button:not(.vms-theme-toggle-btn):not(.gt-theme-toggle-btn):not(.mobile-topbar-user),
     .btn,
     .action-btn,
     .submit-btn,
@@ -15057,7 +15057,7 @@ html:not(.dark) body .it-preapproval-modal .it-btn-reject {
       .vms-dossier-footer,
       .vms-dossier-header.no-print,
       .no-print,
-      button,
+      button:not(.vms-theme-toggle-btn):not(.gt-theme-toggle-btn):not(.mobile-topbar-user),
       input,
       select,
       textarea,

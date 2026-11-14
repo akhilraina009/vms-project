@@ -113,18 +113,33 @@
 
 /* Theme Toggle Button (Light & Dark Mode) */
 .vms-theme-toggle-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  border-radius: 8px !important;
   background: #f1f5f9;
   border: 1px solid #e2e8f0;
   color: #64748b;
   cursor: pointer;
   transition: all 0.15s ease;
-  flex-shrink: 0;
+  flex-shrink: 0 !important;
+  box-sizing: border-box !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  align-self: center !important;
+}
+
+.vms-theme-toggle-btn svg {
+  display: block !important;
+  flex-shrink: 0 !important;
+  margin: auto !important;
 }
 
 .vms-theme-toggle-btn:hover {
@@ -1089,36 +1104,51 @@ html.dark .vms-login-card input:-webkit-autofill:focus,
   .vms-mobile-header-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-shrink: 0;
   }
 
   .vms-mobile-secure-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    padding: 3px 7px;
-    background: #f1f5f9;
-    border: 1px solid #e2e8f0;
-    border-radius: 9999px;
-    font-size: 10px;
-    font-weight: 600;
-    color: #334155;
-    white-space: nowrap;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 0 10px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    max-height: 30px !important;
+    background: #edf4ff !important;
+    border: 1px solid #c7dcff !important;
+    border-radius: 9999px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #1351b4 !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    align-self: center !important;
+    flex-shrink: 0 !important;
   }
 
   .vms-mobile-secure-badge .vms-header-icon {
-    color: #2563eb;
+    color: #1351b4 !important;
   }
 
-  .vms-theme-toggle-mobile {
-    width: 28px;
-    height: 28px;
-    padding: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
+  .vms-theme-toggle-mobile,
+  .vms-theme-toggle-btn.vms-theme-toggle-mobile {
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+    min-height: 30px !important;
+    max-width: 30px !important;
+    max-height: 30px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+    align-self: center !important;
+    flex-shrink: 0 !important;
   }
 
   .vms-mobile-menu-trigger {
